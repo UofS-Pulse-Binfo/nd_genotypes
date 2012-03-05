@@ -1,0 +1,10 @@
+package = Tripal Extensions
+name = Natural Diversity Genotypes
+description = Provides an interface for genotypes and the experiments that generate them
+version = 6.x-0.3.1b-0.1a
+core = 6.x
+
+dependancies[] = tripal_project
+dependancies[] = tripal_genetic
+dependancies[] = tripal_stock
+dependancies[] = tripal_natural_diversity
