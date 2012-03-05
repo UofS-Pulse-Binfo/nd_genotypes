@@ -1,6 +1,7 @@
 <?php
 
 require_once('nd_genotypes.admin.inc');
+require_once('nd_genotypes.loader.inc');
 
 /**
  * Register any menu items for this module
