@@ -1,0 +1,25 @@
+<?php
+
+require_once('nd_genotypes.admin.inc');
+
+/**
+ * Register any menu items for this module
+ */
+function nd_genotypes_menu () {
+	$items = array();
+	
+	$items['admin/tripal/nd_genotypes'] = array(
+    'page callback' => 'nd_genotypes_admin_description',
+    'title' => 'ND Genotypes',
+    'access arguments' => array('administer site configuration'),
+  );
+
+  $items['admin/tripal/nd_genotypes/configuration'] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('nd_genotypes_configuration_form'),
+    'title' => 'Configuration',
+    'access arguments' => array('administer site configuration'),
+  );
+  
+	return $items;
+}
