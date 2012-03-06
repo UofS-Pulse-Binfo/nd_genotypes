@@ -127,4 +127,8 @@ function nd_genotypes_register_nd_genotype_experiment_mview () {
       // special index
       ''
     );
+    
+    //Populate
+    $mview_id = tripal_mviews_get_mview_id($view_name);
+    tripal_update_mview($mview_id);
 }
