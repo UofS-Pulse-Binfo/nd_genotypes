@@ -37,9 +37,10 @@ function nd_genotypes_uninstall () {
  *
  * Each row in this table corresponds to a genotype observed in a stock. 
  * Assumptions: 
- *   - the stock <=> genotype, genotype <=> feature are 1:1 relationships
- *   - 1 nd_experiment_stock, 1 nd_experiment_genotype per nd_experiment
- *   - 1 feature_genotype per genotype
+ *   - 1 nd_experiment_stock per nd_experiment
+ *   - 1 nd_experiment_project per nd_experiment
+ *   - 1+ nd_experiment_genotype per nd_experiment
+ *   - 1 feature per genotype
  *
  * Columns:
  *   - stock_id: unique key of the stock the genotype was sampled from
