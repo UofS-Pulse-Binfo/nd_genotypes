@@ -1,5 +1,7 @@
 <?php
 
+module_load_include('tripal_core','tripal_views.api','inc');
+
 /**
  * Ran when the module is installed
  */
@@ -14,6 +16,14 @@ function nd_genotypes_install () {
   tripal_db_set_active($previous_db);
 	nd_genotypes_register_nd_genotype_experiment_mview();
 	
+}
+
+function nd_genotypes_enable () {
+  tripal_core_views_integration_add_entry(nd_genotype_experiment_views_integration());
+}
+
+function nd_genotypes_disable () {
+  tripal_core_views_integration_remove_entry('nd_genotype_experiment',9);
 }
 
 /**
@@ -142,4 +152,237 @@ function nd_genotypes_register_nd_genotype_experiment_mview () {
     //Populate
     $mview_id = tripal_mviews_get_mview_id($view_name);
     tripal_update_mview($mview_id);
+}
+
+/**
+ * Provide default views integration for the nd_genotype_experiment Materialized View
+ */
+function nd_genotype_experiment_views_integration () {
+
+ return array(
+    'table' => 'nd_genotype_experiment',
+    'type' => 'mview',
+    'name' => 'Natural Diversity Genotype Experiments',
+    'description' => 'List genotype experiments.',
+    'priority' => 9,
+    'fields' => array(
+      'stock_id' => array(
+        'name' => 'stock_id',
+        'title' => 'Stock ID',
+        'type' => 'integer',
+        'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field_numeric'),
+          'filter' => array('name' => 'chado_views_handler_filter_numeric'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(
+          'stock' => array(
+            'table' => 'stock',
+            'field' => 'stock_id',
+          ),
+        ),
+      ),
+			'stock_name' => array( 
+			  'name' => 'stock_name',
+			  'title' => 'Stock Name',
+			  'type' => 'varchar(255)',
+			  'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field'),
+          'filter' => array('name' => 'chado_views_handler_filter_string'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(),
+			),
+			'stock_experiment_relationship_type_id' => array( 
+			  'name' => 'stock_experiment_relationship_type_id',
+			  'title' => 'Stock <=> Experiment Relationship Type ID',
+			  'type' => 'integer',
+        'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field_numeric'),
+          'filter' => array('name' => 'chado_views_handler_filter_numeric'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(),
+			),
+			'stock_experiment_relationship_type_name' => array( 
+			  'name' => 'stock_experiment_relationship_type_name',
+			  'title' => 'Stock <=> Experiment Relationship Type',
+			  'type' => 'varchar(255)',
+			  'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field'),
+          'filter' => array('name' => 'chado_views_handler_filter_string'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(),
+			),
+			'genotype_id' => array( 
+			  'name' => 'genotype_id',
+			  'title' => 'Genotype ID',
+			  'type' => 'integer[]',
+        'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field_numeric'),
+          'filter' => array('name' => 'chado_views_handler_filter_numeric'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(
+          'genotype' => array(
+            'table' => 'genotype',
+            'field' => 'genotype_id',
+          ),
+        ),
+			),
+			'genotype_uniquename' => array( 
+			  'name' => 'genotype_uniquename',
+			  'title' => 'Genotype Unique Name',
+			  'type' => 'text[]',
+			  'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field'),
+          'filter' => array('name' => 'chado_views_handler_filter_string'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(),
+			),
+			'genotype_description' => array( 
+			  'name' => 'genotype_description',
+			  'title' => 'Genotype Allele',
+			  'type' => 'text[]',
+			  'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field'),
+          'filter' => array('name' => 'chado_views_handler_filter_string'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(),
+			),
+			'feature_genotype_relationship_type_id' => array( 
+			  'name' => 'feature_genotype_relationship_type_id',
+			  'title' => 'Feature <=> Genotype Relationship Type ID',
+			  'type' => 'integer[]',
+        'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field_numeric'),
+          'filter' => array('name' => 'chado_views_handler_filter_numeric'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(),
+			),
+			'feature_genotype_relationship_type_name' => array( 
+			  'name' => 'feature_genotype_relationship_type_name',
+			  'title' => 'Feature <=> Genotype Relationship Type',
+			  'type' => 'varchar(255)[]',
+			  'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field'),
+          'filter' => array('name' => 'chado_views_handler_filter_string'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(),
+			),
+			'feature_id' => array( 
+			  'name' => 'feature_id',
+			  'title' => 'Feature ID',
+			  'type' => 'integer[]',
+        'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field_numeric'),
+          'filter' => array('name' => 'chado_views_handler_filter_numeric'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(
+          'feature' => array(
+            'table' => 'feature',
+            'field' => 'feature_id',
+          ),
+        ),
+			),
+			'feature_name' => array( 
+			  'name' => 'feature_name',
+			  'title' => 'Feature Name',
+			  'type' => 'varchar(255)[]',
+			  'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field'),
+          'filter' => array('name' => 'chado_views_handler_filter_string'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(),
+			),
+			'nd_experiment_id' => array( 
+			  'name' => 'nd_experiment_id',
+			  'title' => 'ND Experiment ID',
+			  'type' => 'integer',
+        'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field_numeric'),
+          'filter' => array('name' => 'chado_views_handler_filter_numeric'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(
+          'nd_experiment' => array(
+            'table' => 'nd_experiment',
+            'field' => 'nd_experiment_id'
+          ),
+        ),
+			),
+			'nd_geolocation_id' => array( 
+			  'name' => 'nd_geolocation_id',
+			  'title' => 'ND Geolocation ID',
+			  'type' => 'integer',
+        'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field_numeric'),
+          'filter' => array('name' => 'chado_views_handler_filter_numeric'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(
+          'nd_geolocation' => array(
+            'table' => 'nd_geolocation',
+            'field' => 'nd_geolocation_id',
+          ),
+        ),
+			),
+			'nd_geolocation_description' => array( 
+			  'name' => 'nd_geolocation_description',
+			  'title' => 'ND Geolocation Description',
+			  'type' => 'varchar(255)',
+			  'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field'),
+          'filter' => array('name' => 'chado_views_handler_filter_string'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(),
+			),
+			'project_id' => array( 
+			  'name' => 'project_id',
+			  'title' => 'Project ID',
+			  'type' => 'integer',
+        'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field_numeric'),
+          'filter' => array('name' => 'chado_views_handler_filter_numeric'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(
+          'project' => array(
+            'table' => 'project',
+            'field' => 'project_id',
+          ),
+        ),
+			),
+			'project_name' => array( 
+			  'name' => 'project_name',
+			  'title' => 'Project Name',
+			  'type' => 'varchar(255)',
+			  'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field'),
+          'filter' => array('name' => 'chado_views_handler_filter_string'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(),
+			),
+			'nd_genotype_experiment_id' => array( 
+			  'name' => 'nd_genotype_experiment_id',
+			  'title' => 'ND Genotype Experiment ID',
+			  'type' => 'serial',
+        'handlers' => array(
+          'field' => array('name' => 'chado_views_handler_field_numeric'),
+          'filter' => array('name' => 'chado_views_handler_filter_numeric'),
+          'sort' => array('name' => 'chado_views_handler_sort'),
+        ),
+        'joins' => array(),
+			),
+    ),
+  );
 }
