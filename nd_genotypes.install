@@ -1,6 +1,6 @@
 <?php
 
-module_load_include('tripal_core','tripal_views.api','inc');
+module_load_include('tripal_views','tripal_views.api','inc');
 
 /**
  * Ran when the module is installed
@@ -19,11 +19,11 @@ function nd_genotypes_install () {
 }
 
 function nd_genotypes_enable () {
-  tripal_core_views_integration_add_entry(nd_genotype_experiment_views_integration());
+  tripal_views_integration_add_entry(nd_genotype_experiment_views_integration());
 }
 
 function nd_genotypes_disable () {
-  tripal_core_views_integration_remove_entry('nd_genotype_experiment',9);
+  tripal_views_integration_remove_entry_by_table_name('nd_genotype_experiment',9);
 }
 
 /**
@@ -170,6 +170,7 @@ function nd_genotype_experiment_views_integration () {
         'name' => 'stock_id',
         'title' => 'Stock ID',
         'type' => 'integer',
+        'description' => 'the unique idenfier for stocks',
         'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field_numeric'),
           'filter' => array('name' => 'chado_views_handler_filter_numeric'),
@@ -186,6 +187,7 @@ function nd_genotype_experiment_views_integration () {
 			  'name' => 'stock_name',
 			  'title' => 'Stock Name',
 			  'type' => 'varchar(255)',
+			  'description' => 'Human-readable stock name',
 			  'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field'),
           'filter' => array('name' => 'chado_views_handler_filter_string'),
@@ -196,6 +198,7 @@ function nd_genotype_experiment_views_integration () {
 			'stock_experiment_relationship_type_id' => array( 
 			  'name' => 'stock_experiment_relationship_type_id',
 			  'title' => 'Stock <=> Experiment Relationship Type ID',
+			  'description' => 'The type of relationship joining this stock to this genotype experiment.',
 			  'type' => 'integer',
         'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field_numeric'),
@@ -207,6 +210,7 @@ function nd_genotype_experiment_views_integration () {
 			'stock_experiment_relationship_type_name' => array( 
 			  'name' => 'stock_experiment_relationship_type_name',
 			  'title' => 'Stock <=> Experiment Relationship Type',
+			  'description' => 'The type of relationship joining this stock to this genotype experiment.',
 			  'type' => 'varchar(255)',
 			  'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field'),
@@ -218,6 +222,7 @@ function nd_genotype_experiment_views_integration () {
 			'genotype_id' => array( 
 			  'name' => 'genotype_id',
 			  'title' => 'Genotype ID',
+			  'description' => 'Unique IDs of the genotypes associated with this experiment',
 			  'type' => 'integer[]',
         'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field_numeric'),
@@ -228,12 +233,14 @@ function nd_genotype_experiment_views_integration () {
           'genotype' => array(
             'table' => 'genotype',
             'field' => 'genotype_id',
+            'handler' => 'views_handler_join_chado_aggregtor',
           ),
         ),
 			),
 			'genotype_uniquename' => array( 
 			  'name' => 'genotype_uniquename',
 			  'title' => 'Genotype Unique Name',
+			  'description' => 'Unique name of the genotypes associated with this experiment',
 			  'type' => 'text[]',
 			  'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field'),
@@ -245,6 +252,7 @@ function nd_genotype_experiment_views_integration () {
 			'genotype_description' => array( 
 			  'name' => 'genotype_description',
 			  'title' => 'Genotype Allele',
+			  'description' => 'The genotypes/alleles associated with this experiment',
 			  'type' => 'text[]',
 			  'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field'),
@@ -256,6 +264,7 @@ function nd_genotype_experiment_views_integration () {
 			'feature_genotype_relationship_type_id' => array( 
 			  'name' => 'feature_genotype_relationship_type_id',
 			  'title' => 'Feature <=> Genotype Relationship Type ID',
+			  'description' => 'The type of relationship this genotype has to this feature',
 			  'type' => 'integer[]',
         'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field_numeric'),
@@ -267,6 +276,7 @@ function nd_genotype_experiment_views_integration () {
 			'feature_genotype_relationship_type_name' => array( 
 			  'name' => 'feature_genotype_relationship_type_name',
 			  'title' => 'Feature <=> Genotype Relationship Type',
+			  'description' => 'The type of relationship this genotype has to this feature',
 			  'type' => 'varchar(255)[]',
 			  'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field'),
@@ -278,6 +288,7 @@ function nd_genotype_experiment_views_integration () {
 			'feature_id' => array( 
 			  'name' => 'feature_id',
 			  'title' => 'Feature ID',
+			  'description' => 'Unique ID for features associated with this genotype experiment.',
 			  'type' => 'integer[]',
         'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field_numeric'),
@@ -288,12 +299,14 @@ function nd_genotype_experiment_views_integration () {
           'feature' => array(
             'table' => 'feature',
             'field' => 'feature_id',
+            'handler' => 'views_handler_join_chado_aggregtor',
           ),
         ),
 			),
 			'feature_name' => array( 
 			  'name' => 'feature_name',
 			  'title' => 'Feature Name',
+			  'description' => 'Human-readable name of the features associated with this genotype experiment.',
 			  'type' => 'varchar(255)[]',
 			  'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field'),
@@ -305,6 +318,7 @@ function nd_genotype_experiment_views_integration () {
 			'nd_experiment_id' => array( 
 			  'name' => 'nd_experiment_id',
 			  'title' => 'ND Experiment ID',
+			  'description' => 'Unique ID for this genotype experiment.',
 			  'type' => 'integer',
         'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field_numeric'),
@@ -321,6 +335,7 @@ function nd_genotype_experiment_views_integration () {
 			'nd_geolocation_id' => array( 
 			  'name' => 'nd_geolocation_id',
 			  'title' => 'ND Geolocation ID',
+			  'description' => 'Unique ID for the location in which this experiment was done.',
 			  'type' => 'integer',
         'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field_numeric'),
@@ -337,6 +352,7 @@ function nd_genotype_experiment_views_integration () {
 			'nd_geolocation_description' => array( 
 			  'name' => 'nd_geolocation_description',
 			  'title' => 'ND Geolocation Description',
+			  'description' => 'A short description of the location where this experiment was done',
 			  'type' => 'varchar(255)',
 			  'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field'),
@@ -348,6 +364,7 @@ function nd_genotype_experiment_views_integration () {
 			'project_id' => array( 
 			  'name' => 'project_id',
 			  'title' => 'Project ID',
+			  'description' => 'Unique ID of the project this experiment was part of',
 			  'type' => 'integer',
         'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field_numeric'),
@@ -364,6 +381,7 @@ function nd_genotype_experiment_views_integration () {
 			'project_name' => array( 
 			  'name' => 'project_name',
 			  'title' => 'Project Name',
+			  'description' => 'Human-readable name of the project this experiment was part of',
 			  'type' => 'varchar(255)',
 			  'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field'),
@@ -375,6 +393,7 @@ function nd_genotype_experiment_views_integration () {
 			'nd_genotype_experiment_id' => array( 
 			  'name' => 'nd_genotype_experiment_id',
 			  'title' => 'ND Genotype Experiment ID',
+			  'description' => 'Unique ID of the Genotype Experiment',
 			  'type' => 'serial',
         'handlers' => array(
           'field' => array('name' => 'chado_views_handler_field_numeric'),
