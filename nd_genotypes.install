@@ -19,11 +19,15 @@ function nd_genotypes_install () {
 }
 
 function nd_genotypes_enable () {
-  tripal_views_integration_add_entry(nd_genotype_experiment_views_integration());
+  if (module_exists('tripal_views')) {
+    tripal_views_integration_add_entry(nd_genotype_experiment_views_integration());
+  }
 }
 
 function nd_genotypes_disable () {
-  tripal_views_integration_remove_entry_by_table_name('nd_genotype_experiment',9);
+  if (module_exists('tripal_views')) {
+    tripal_views_integration_remove_entry_by_table_name('nd_genotype_experiment',9);
+  }
 }
 
 /**
