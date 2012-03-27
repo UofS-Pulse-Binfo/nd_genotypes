@@ -33,6 +33,14 @@ function nd_genotypes_views_handlers() {
       'views_handler_filter_germplasm_genotype_by_stock' => array(
         'parent' => 'views_handler_filter_string',
       ),
+
+      // This filter allows users to add new germplasm genotype field/filters
+      // ie: it exposes a form that looks like a germplasm genotype filter 
+      // and uses those values to create a new filter/field combo with those as defaults
+      'views_handler_filter_add_germplasm_genotype_by_stock_field_filter' => array(
+        'parent' => 'views_handler_filter_germplasm_genotype_by_stock'
+      ),
+      
     ),
   );
 }
@@ -358,92 +366,14 @@ function nd_genotypes_retrieve_nd_genotype_experiment_views_data () {
      ),
   );
   
-  /*.......................................................
-   * Beginning of Example Field definitions
-   * Remove this section when done
-
-  //Field: plain_text_field (chado datatype)   
-  $data['nd_genotype_experiment']['plain_text_field'] = array(
-    'title' => t('Human-Readable Name'),
-    'help' => t('Description of this field.'),
-    'field' => array(
-      'handler' => 'views_handler_field',
-      'click sortable' => TRUE,
-     ),
-    'sort' => array(
-      'handler' => 'views_handler_sort',
-    ),
+  //Expose filter to allow users to add additional germplasm_genotype field/filter combinations
+  $data['nd_genotype_experiment']['add_germplasm_genotype'] = array(
+    'title' => t('Add Genotypes for Stock'),
+    'description' => t('When exposed allows users to dynamically add additional germplasm genotype field/filter combinations.'),
     'filter' => array(
-      'handler' => 'views_handler_filter_string',
-    ),
-    'argument' => array(
-      'handler' => 'views_handler_argument_string',
+      'handler' => 'views_handler_filter_add_germplasm_genotype_by_stock_field_filter',
     ),
   );
-
-  //Field: numeric_field (chado datatype)   
-  $data['nd_genotype_experiment']['numeric_field'] = array(
-    'title' => t('Human-Readable Name'),
-    'help' => t('Description of this field.'),
-    'field' => array(
-      'handler' => 'views_handler_field_numeric',
-      'click sortable' => TRUE,
-     ),
-    'sort' => array(
-      'handler' => 'views_handler_sort',
-    ),
-    'filter' => array(
-      'handler' => 'views_handler_filter_numeric',
-    ),
-  );
-
-  //Field: boolean_field (chado datatype)   
-  $data['nd_genotype_experiment']['boolean_field'] = array(
-    'title' => t('Human-Readable Name'),
-    'help' => t('Description of this field.'),
-    'field' => array(
-      'handler' => 'views_handler_field_boolean',
-      'click sortable' => TRUE,
-     ),
-    'sort' => array(
-      'handler' => 'views_handler_sort',
-    ),
-    'filter' => array(
-      'handler' => 'views_handler_filter_boolean_operator',
-    ),
-  );
-
-  //Field: unix_timestamp (chado datatype)   
-  $data['nd_genotype_experiment']['unix_timestamp'] = array(
-    'title' => t('Human-Readable Name'),
-    'help' => t('Description of this field.'),
-    'field' => array(
-      'handler' => 'views_handler_field_date',
-      'click sortable' => TRUE,
-     ),
-    'sort' => array(
-      'handler' => 'views_handler_sort_date',
-    ),
-    'filter' => array(
-      'handler' => 'views_handler_filter_date',
-    ),
-  );
-
-  //Field: human_readable_date (chado datatype)   
-  $data['nd_genotype_experiment']['human_readable_date'] = array(
-    'title' => t('Human-Readable Name'),
-    'help' => t('Description of this field.'),
-    'field' => array(
-      'handler' => 'views_handler_field_readble_date',
-      'click sortable' => TRUE,
-     ),
-    'sort' => array(
-      'handler' => 'views_handler_sort_date',
-    ),
-  );
-   
-    * End of Example Field definitions
-    */
   
   return $data;
 }
