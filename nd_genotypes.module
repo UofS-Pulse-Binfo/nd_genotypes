@@ -4,6 +4,23 @@ require_once('nd_genotypes.admin.inc');
 require_once('nd_genotypes.loader.inc');
 
 /**
+ * Implements hook_views_api()
+ *
+ * Purpose: Essentially this hook tells drupal that there is views support for
+ *  for this module which then includes kp_genotypes.views.inc where all the
+ *  views integration code is
+ *
+ * @return
+ *   An array with fields important for views integration
+ *
+ */ 
+function nd_genotypes_views_api() {
+   return array(
+      'api' => 2.0,
+   );
+}
+
+/**
  * Register any menu items for this module
  */
 function nd_genotypes_menu () {
