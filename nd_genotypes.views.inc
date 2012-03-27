@@ -423,7 +423,5 @@ function nd_genotypes_retrieve_nd_genotype_experiment_views_data () {
     * End of Example Field definitions
     */
   
-  dpm($data ,'views integration');
-  
   return $data;
 }
