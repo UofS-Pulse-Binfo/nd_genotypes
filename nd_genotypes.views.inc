@@ -1,5 +1,7 @@
 <?php
 
+include_once('views/handlers/views_handler_join_chado_aggregator.inc');
+
 /**
  * Implements hook_views_handlers()
  *
@@ -103,6 +105,8 @@ function nd_genotypes_retrieve_nd_genotype_experiment_views_data () {
     'left_field' => 'genotype_id',
     'field' => 'genotype_id',
     'handler' => 'views_handler_join_chado_aggregator',
+    'pre-aggregated' => TRUE,
+    'table_aggregated' => 'CURRENT',
   ); 
   
   //Join: genotype => nd_genotype_experiment
@@ -113,6 +117,8 @@ function nd_genotypes_retrieve_nd_genotype_experiment_views_data () {
     'left_field' => 'genotype_id',
     'field' => 'genotype_id',
     'handler' => 'views_handler_join_chado_aggregator',
+    'pre-aggregated' => TRUE,
+    'table_aggregated' => 'CURRENT',
   ); 
 
 
@@ -124,6 +130,8 @@ function nd_genotypes_retrieve_nd_genotype_experiment_views_data () {
     'left_field' => 'feature_id',
     'field' => 'feature_id',
     'handler' => 'views_handler_join_chado_aggregator',
+    'pre-aggregated' => TRUE,
+    'table_aggregated' => 'CURRENT',
   ); 
 
 
@@ -135,6 +143,8 @@ function nd_genotypes_retrieve_nd_genotype_experiment_views_data () {
     'left_field' => 'feature_id',
     'field' => 'feature_id',
     'handler' => 'views_handler_join_chado_aggregator',
+    'pre-aggregated' => TRUE,
+    'table_aggregated' => 'CURRENT',
   ); 
   
   //Join: nd_experiment => nd_genotype_experiment
@@ -412,6 +422,8 @@ function nd_genotypes_retrieve_nd_genotype_experiment_views_data () {
    
     * End of Example Field definitions
     */
-    
+  
+  dpm($data ,'views integration');
+  
   return $data;
 }

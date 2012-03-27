@@ -1,7 +1,6 @@
 <?php
 
 require_once('nd_genotypes.admin.inc');
-require_once('nd_genotypes.loader.inc');
 
 /**
  * Implements hook_views_api()
