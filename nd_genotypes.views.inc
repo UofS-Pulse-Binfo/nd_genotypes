@@ -12,10 +12,10 @@ include_once('views/handlers/views_handler_join_chado_aggregator.inc');
  * @return array
  *   An array of handler definitions
  */
-function kp_genotypes_views_handlers() {
+function nd_genotypes_views_handlers() {
   return array(
     'info' => array(
-      'path' => drupal_get_path('module', 'kp_genotypes') . '/views/handlers',
+      'path' => drupal_get_path('module', 'nd_genotypes') . '/views/handlers',
     ),
     'handlers' => array(
 
@@ -23,7 +23,16 @@ function kp_genotypes_views_handlers() {
       'views_handler_join_chado_aggregator' => array(
        'parent' => 'views_join',
       ),   
-      
+
+      // These two handlers go hand-in-hand
+      // The first renders the field 
+      // based on the germplasm provided by the second
+      'views_handler_field_germplasm_genotype' => array(
+        'parent' => 'views_handler_field_prerender_list',
+      ),    
+      'views_handler_filter_germplasm_genotype_by_stock' => array(
+        'parent' => 'views_handler_filter_string',
+      ),
     ),
   );
 }
@@ -334,6 +343,19 @@ function nd_genotypes_retrieve_nd_genotype_experiment_views_data () {
     'argument' => array(
       'handler' => 'views_handler_argument_string',
     ),
+  );
+
+  // Calculated Field: genotype.description from nd_genotype_experiment.genotype_description
+  // Allows filtering based on germplasm
+  $data['nd_genotype_experiment']['germplasm_genotype'] = array(
+    'title' => t('Genotypes for Stock'),
+    'help' => t('Genotypes of a given stock for each marker.'),
+    'field' => array(
+      'handler' => 'views_handler_field_germplasm_genotype',
+     ),
+     'filter' => array(
+      'handler' => 'views_handler_filter_germplasm_genotype_by_stock',
+     ),
   );
   
   /*.......................................................
