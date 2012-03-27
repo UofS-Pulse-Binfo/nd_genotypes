@@ -1,6 +1,7 @@
 <?php
 
 require_once('nd_genotypes.admin.inc');
+require_once('nd_genotypes.form_elements.inc');
 
 /**
  * Implements hook_views_api()
@@ -39,4 +40,11 @@ function nd_genotypes_menu () {
   );
   
 	return $items;
+}
+
+/**
+ * Register any theme functions/templates for this module
+ */
+function nd_genotypes_theme () {
+  return nd_genotypes_form_element_theme();
 }
