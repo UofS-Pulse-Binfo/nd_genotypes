@@ -1,7 +1,5 @@
 <?php
 
-include_once('views/handlers/views_handler_join_chado_aggregator.inc');
-
 /**
  * Implements hook_views_handlers()
  *
@@ -13,16 +11,11 @@ include_once('views/handlers/views_handler_join_chado_aggregator.inc');
  *   An array of handler definitions
  */
 function nd_genotypes_views_handlers() {
-  return array(
+  $handlers = array(
     'info' => array(
       'path' => drupal_get_path('module', 'nd_genotypes') . '/views/handlers',
     ),
     'handlers' => array(
-
-      // Join Handler (postgresql array <=> single)
-      'views_handler_join_chado_aggregator' => array(
-       'parent' => 'views_join',
-      ),   
 
       // These two handlers go hand-in-hand
       // The first renders the field 
@@ -43,6 +36,16 @@ function nd_genotypes_views_handlers() {
       
     ),
   );
+  
+  // Join Handler (postgresql array <=> single)
+  if (!module_exists('tripal_views')) {
+    $handler['views_handler_join_chado_aggregator'] = array(
+     'parent' => 'views_join',
+    ); 
+    include_once('views/handlers/views_handler_join_chado_aggregator.inc');
+  }
+  
+  return $handlers;
 }
 
 /**
