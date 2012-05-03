@@ -2,6 +2,15 @@
 
 require_once('nd_genotypes.admin.inc');
 require_once('nd_genotypes.form_elements.inc');
+require_once('nd_genotypes.genotype_summary.inc');
+
+// Mviews
+include_once('mviews/nd_genotype_experiment.inc');
+include_once('mviews/nd_genotype_polymorphism.inc');
+include_once('mviews/nd_genotype_experiment_summary.inc');
+
+// Views data export
+include_once('views_data_export/nd_genotypes.views_data_export.inc');
 
 /**
  * Implements hook_views_api()
@@ -38,7 +47,13 @@ function nd_genotypes_menu () {
     'title' => 'Configuration',
     'access arguments' => array('administer site configuration'),
   );
-  
+ 
+   $items['genotype/summary'] = array(
+    'page callback' => 'nd_genotypes_genotype_summary_page',
+    'title' => 'Genotype Summary',
+    'access arguments' => array('access content'),
+  );
+   
 	return $items;
 }
 

@@ -1,7 +1,5 @@
 <?php
 
-include_once('views/handlers/views_handler_join_chado_aggregator.inc');
-
 /**
  * Implements hook_views_handlers()
  *
@@ -13,16 +11,11 @@ include_once('views/handlers/views_handler_join_chado_aggregator.inc');
  *   An array of handler definitions
  */
 function nd_genotypes_views_handlers() {
-  return array(
+  $handlers = array(
     'info' => array(
       'path' => drupal_get_path('module', 'nd_genotypes') . '/views/handlers',
     ),
-    'handlers' => array(
-
-      // Join Handler (postgresql array <=> single)
-      'views_handler_join_chado_aggregator' => array(
-       'parent' => 'views_join',
-      ),   
+    'handlers' => array(  
 
       // These two handlers go hand-in-hand
       // The first renders the field 
@@ -40,9 +33,33 @@ function nd_genotypes_views_handlers() {
       'views_handler_filter_add_germplasm_genotype_by_stock_field_filter' => array(
         'parent' => 'views_handler_filter_germplasm_genotype_by_stock'
       ),
+ 
+      // Allows users to only display polymorphic markers
+      // ie: you select 2 germplasm genotype fields and if they
+      // have different genotypes for a marker then it's polymorphic
+      'views_handler_filter_germplasm_genotype_polymorphic' => array(
+      	'parent' => 'views_handler_filter_string',
+      ),
       
+      // Returns the residues of a marker/locus parent feature with the
+      // position of the marker/locus highlighted by square brackets and
+      // the alleles associated with the current marker/locus listed
+      // ie: AATTGGTGACACCGT[A/T]GTGGCACGTGCA
+      'views_handler_field_markedup_parent_residues' => array(
+        'parent' => 'views_handler_field',
+      ),
     ),
   );
+  
+  if (!module_exists('tripal_views')) {
+    // Join Handler (postgresql array <=> single)
+    include_once('views/handlers/views_handler_join_chado_aggregator.inc');
+    $handlers['handlers']['views_handler_join_chado_aggregator'] = array(
+       'parent' => 'views_join',
+      );
+  }
+  
+  return $handlers;
 }
 
 /**
@@ -62,14 +79,70 @@ function nd_genotypes_views_data()  {
   // then use the old style chado views integration
   if (!module_exists('tripal_views') && module_exists('views')) {
     $data = array_merge($data, nd_genotypes_retrieve_nd_genotype_experiment_views_data());
+    $data = array_merge($data, nd_genotypes_retrieve_nd_genotype_experiment_summary_views_data ());
   }
+
+  $data['feature']['markedup_parent_residues'] = array(
+    'title' => t('Marked-up Parent Residues'), 
+    'help' => t('The sequence the current feature is located on including markup indicating the location of this feature.'), 
+    'field' => array(
+      'handler' => 'views_handler_field_markedup_parent_residues', 
+      'click sortable' => TRUE,
+    ), 
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ), 
+  );
   
+  // REMOVE for Tripal 0.4
+  $data['featureloc']['table'] = array(
+    'field' => 'featureloc_id', 
+    'title' => t('Feature Locations'), 
+    'help' => t("Locations of features on each other."), 
+    'join' => array(
+      'feature' => array(
+        'left_field' => 'feature_id',
+        'field' => 'feature_id'
+      ),
+    ),
+    'group' => 'Feature Locations',
+  );
+  
+  $data['featureloc']['fmin'] = array(
+   'title' => t('Start'), 
+    'help' => t('Start'), 
+    'field' => array(
+      'handler' => 'views_handler_field_numeric', 
+      'click sortable' => TRUE,
+    ), 
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ), 
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+
+  $data['featureloc']['fmax'] = array(
+   'title' => t('End'), 
+    'help' => t('End'), 
+    'field' => array(
+      'handler' => 'views_handler_field_numeric', 
+      'click sortable' => TRUE,
+    ), 
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ), 
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+      
   return $data;
 }
 
 /**
  * Old style Views integration hook for nd_genotype_experiment materialized view
- *
  */
 function nd_genotypes_retrieve_nd_genotype_experiment_views_data () {
   global $db_url;
@@ -122,7 +195,6 @@ function nd_genotypes_retrieve_nd_genotype_experiment_views_data () {
     'left_field' => 'genotype_id',
     'field' => 'genotype_id',
     'handler' => 'views_handler_join_chado_aggregator',
-    'pre-aggregated' => TRUE,
     'table_aggregated' => 'CURRENT',
   ); 
   
@@ -134,7 +206,6 @@ function nd_genotypes_retrieve_nd_genotype_experiment_views_data () {
     'left_field' => 'genotype_id',
     'field' => 'genotype_id',
     'handler' => 'views_handler_join_chado_aggregator',
-    'pre-aggregated' => TRUE,
     'table_aggregated' => 'CURRENT',
   ); 
 
@@ -147,7 +218,6 @@ function nd_genotypes_retrieve_nd_genotype_experiment_views_data () {
     'left_field' => 'feature_id',
     'field' => 'feature_id',
     'handler' => 'views_handler_join_chado_aggregator',
-    'pre-aggregated' => TRUE,
     'table_aggregated' => 'CURRENT',
   ); 
 
@@ -160,7 +230,6 @@ function nd_genotypes_retrieve_nd_genotype_experiment_views_data () {
     'left_field' => 'feature_id',
     'field' => 'feature_id',
     'handler' => 'views_handler_join_chado_aggregator',
-    'pre-aggregated' => TRUE,
     'table_aggregated' => 'CURRENT',
   ); 
   
@@ -372,6 +441,158 @@ function nd_genotypes_retrieve_nd_genotype_experiment_views_data () {
     'description' => t('When exposed allows users to dynamically add additional germplasm genotype field/filter combinations.'),
     'filter' => array(
       'handler' => 'views_handler_filter_add_germplasm_genotype_by_stock_field_filter',
+    ),
+  );
+
+  //Calculated Field: filter to allow pairwise comparison of stock genotypes
+  $data['nd_genotype_experiment']['polymorphic'] = array(
+    'title' => t('Polymorphic?'),
+    'help' => t('Whether a given marker is polymorphic/monomorphic for two stocks.'),
+     'filter' => array(
+      'handler' => 'views_handler_filter_germplasm_genotype_polymorphic',
+     ),
+  );
+  
+  return $data;
+}
+
+/**
+ * Old style Views integration hook for nd_genotype_experiment_summary materialized view
+ */
+function nd_genotypes_retrieve_nd_genotype_experiment_summary_views_data () {
+  global $db_url;
+  $data = array();
+
+  // if the chado database is not local to the drupal database
+  // then we need to set the database name.  This should always
+  // be 'chado'.
+  if(is_array($db_url) and array_key_exists('chado',$db_url)){
+    $database = 'chado';
+  }
+   
+  //Basic table definition-----------------------------------
+  $data['nd_genotype_experiment_summary']['table']['group'] = t('ND Genotype Experiment Summary');
+  
+  $data['nd_genotype_experiment_summary']['table']['base'] = array(
+    'field' => 'nd_genotype_experiment_summary_id',
+    'title' => t('ND Genotype Experiment Summary'),
+    'help' => t('Summary statistics regarding natural diversity genotype experiments'),
+  );
+  if($database){
+     $data['nd_genotype_experiment_summary']['table']['base']['database'] = $database;
+  }
+
+  $data['nd_genotype_experiment_summary']['stocka_name'] = array(
+    'title' => t('StockA Name'),
+    'help' => t('The name of the first stock in the comparison.'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+  );
+
+  $data['nd_genotype_experiment_summary']['stocka_id'] = array(
+    'title' => t('StockA ID'),
+    'help' => t('The unique identifier of the first stock in the comparison.'),
+    'argument' => array(
+      'handler' => 'views_handler_argument_numeric',
+    ),
+  );
+  
+  $data['nd_genotype_experiment_summary']['stockb_name'] = array(
+    'title' => t('StockB Name'),
+    'help' => t('The name of the second stock in the comparison.'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+  );
+
+  $data['nd_genotype_experiment_summary']['stockb_id'] = array(
+    'title' => t('StockB ID'),
+    'help' => t('The unique identifier of the second stock in the comparison.'),
+    'argument' => array(
+      'handler' => 'views_handler_argument_numeric',
+    ),
+  );
+
+  $data['nd_genotype_experiment_summary']['project_id'] = array(
+    'title' => t('Project ID'),
+    'help' => t('The unique identifier of the project.'),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+    
+  $data['nd_genotype_experiment_summary']['project_name'] = array(
+    'title' => t('Project Name'),
+    'help' => t('The name of the project genotypes were generated from.'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+  );
+
+  $data['nd_genotype_experiment_summary']['num_shared_features'] = array(
+    'title' => t('Number of Shared Features'),
+    'help' => t('The number of unique features with genotypes for both stocks.'),
+    'field' => array(
+      'handler' => 'views_handler_field_numeric',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+
+  $data['nd_genotype_experiment_summary']['num_polymorphic_features'] = array(
+    'title' => t('Number of Polymorphic Features'),
+    'help' => t('The number of unique features with different genotypes between stocks.'),
+    'field' => array(
+      'handler' => 'views_handler_field_numeric',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  ); 
+   
+  $data['nd_genotype_experiment_summary']['num_monomorphic_features'] = array(
+    'title' => t('Number of Monomorphic Features'),
+    'help' => t('The number of unique features with the same genotypes between stocks.'),
+    'field' => array(
+      'handler' => 'views_handler_field_numeric',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
     ),
   );
   

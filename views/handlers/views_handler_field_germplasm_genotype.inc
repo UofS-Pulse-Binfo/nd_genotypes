@@ -50,9 +50,9 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
   function query() {
     
     //Set label to be stock_name
-    if (!empty($this->stock_name)) {
+    if (!empty($this->original_stock_name)) {
       foreach ($this->view->display as $display) {
-        $display->handler->options['fields'][ $this->options['use_filter'] ]['label'] = $this->stock_name;
+        $display->handler->options['fields'][ $this->aliases['genotypes'] ]['label'] = $this->original_stock_name;
       }
       $this->options['label'] = $this->original_stock_name;
     }
@@ -66,6 +66,37 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
 				$this->stock_name[ $stock[0]->stock_id ] = $stock[0]->name;
 				$this->organism_id[ $stock[0]->stock_id ] = $stock[0]->organism_id;
 			}
+		}
+		
+		// Add to query
+		if (sizeof($this->stock_id) > 0) {
+			// Make our own join
+			// (don't just ensure_my_table b/c this way we can limit to only showing genotype_description)
+			$table_alias = 'nd_genotype_experiment_stock_'.$this->original_stock_id;
+			$def = array();
+			if (sizeof($this->stock_id) == 1) {
+				$def['table'] = '(SELECT feature_id, array_agg(genotype_description) as genotype_description, array_agg(genotype_id) as genotype_id FROM nd_genotype_experiment WHERE stock_id='.reset($this->stock_id).' GROUP BY feature_id)';
+			} else {
+				$def['table'] = '(SELECT feature_id, array_agg(genotype_description) as genotype_description, array_agg(genotype_id) as genotype_id FROM nd_genotype_experiment WHERE stock_id IN ('.implode(',',$this->stock_id).') GROUP BY feature_id)';
+			}
+			$def['field'] = 'feature_id';
+			$def['left_table'] = 'feature';
+			$def['left_field'] = 'feature_id';
+	
+			$join = new views_join();
+			$join->definition = $def;
+			$join->construct();
+			$join->adjusted = TRUE;
+	
+			$this->query->add_relationship($table_alias, $join, $def['table']);
+			
+			// genotype_description field
+			$this->alias = $this->query->add_field($table_alias,'genotype_description', 'stock'.$this->original_stock_id.'_allele');
+			
+			// genotype_id field
+			$this->genotype_id_field_alias = $this->query->add_field($table_alias,'genotype_id', 'stock'.$this->original_stock_id.'_genotype_id');				
+
+			$this->added_to_query = TRUE;
 		}
   }
   
@@ -144,73 +175,35 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
   // Add genotypes to $view->result (results of the query) and $this->items (used in rendering)
   function pre_render($values) {  
     
-    // Keep track of stocks with genotypes so we can alert the user where the genotypes are comming from
-    $stocks_with_genotypes = array();
-    
-    //add genotypes to results if they're not already there
-    // and there is at least one record
-    if (isset($this->view->result[0]->feature_id)) {
-    
-      if (!empty($this->stock_id)) {
-
-        $this->view->result[0]->{$this->aliases['genotypes']}['stock_name'] = $this->stock_name;
-        $this->view->result[0]->{$this->aliases['genotypes']}['stock_id'] = $this->stock_id;
-        
-        // retrieve the chado_id for each record in the views current page
-        $feature_ids = array();
-        foreach ($this->view->result as $row_num => $row) {
-          if (isset($row->feature_id)) {
-            $feature_ids[$row_num] = $row->feature_id;
-          }
-        }
-
-        // Add genotypes to the view results & set items to be rendered
-        if (sizeof($feature_ids) > 0) {
-          if (sizeof($this->stock_id) == 1) {
-            $sql = "SELECT * FROM nd_genotype_experiment ndgexp "
-                    ."WHERE ndgexp.stock_id = %d AND ndgexp.feature_id <@ ARRAY[%s]";
-            $resource = db_query($sql, reset($this->stock_id), implode(',',$feature_ids));
-          } else {
-            $sql = "SELECT * FROM nd_genotype_experiment ndgexp "
-                    ."WHERE ndgexp.stock_id IN (%s) AND ndgexp.feature_id <@ ARRAY[%s]";  
-            $resource = db_query($sql, implode(',',$this->stock_id), implode(',',$feature_ids));
-          }
-
-          while ($r = db_fetch_object($resource)) {
-            //un-aggregate results
-            $r->feature_id = $this->chado_wrapper_split_array_agg_results($r->feature_id);
-            $r->genotype_id = $this->chado_wrapper_split_array_agg_results($r->genotype_id);
-            $r->genotype_description = $this->chado_wrapper_split_array_agg_results($r->genotype_description);
-            
-            foreach ($r->feature_id as $k => $feature_id) {
-              $key = array_search($feature_id, $feature_ids);
-              if (is_numeric($key)) {
-              
-                // Add to results
-                $this->view->result[ $key ]->{$this->aliases['genotypes']}[] = clone $r;
-                $this->counts[ $r->feature_id[$k] ][ $r->genotype_id[$k] ]++;
-                
-                
-                // Add to items to be rendered
-                $this->items[$r->feature_id[$k]][$r->genotype_id[$k]]['feature_id'] = $r->feature_id[$k];
-                $this->items[$r->feature_id[$k]][$r->genotype_id[$k]]['genotype_id'] = $r->genotype_id[$k];
-                $this->items[$r->feature_id[$k]][$r->genotype_id[$k]]['genotype'] = $r->genotype_description[$k];          
-                $this->items[$r->feature_id[$k]][$r->genotype_id[$k]]['percent_per_genotype_per_stock'] = 1 / sizeof($r->genotype_id);
-              }
-            }
-          } 
-        }
-      } 
-      
-    }
-    
-    // if there are any stocks with genotypes
-    if (sizeof($stocks_with_genotypes)) {
-      // and either there are 2+ stocks with genotypes or the only stock with genotypes isn't the original one
-      if (!(sizeof($stocks_with_genotypes)==1 && isset($stocks_with_genotypes[$this->original_stock_id]))) {
-        drupal_set_message('Genotypes displayed for '.$this->original_stock_name.' include those from the following selections: '.implode(', ',$stocks_with_genotypes).'.', 'warning');
-      }
-    }
+    if ($this->added_to_query) {
+			foreach ($values as $k => $v ) {
+				$values[$k]->{$this->alias} = $this->chado_wrapper_split_array_agg_results($v->{$this->alias});
+				$values[$k]->{$this->genotype_id_field_alias} = $this->chado_wrapper_split_array_agg_results($v->{$this->genotype_id_field_alias});
+	
+				$num_genotypes = sizeof($values[$k]->{$this->alias});
+				
+				foreach ($values[$k]->{$this->alias} as $sk => $allele) {
+					$genotype_id = $values[$k]->{$this->alias}[$sk];
+					$this->items[$v->feature_id][$genotype_id]['feature_id'] = $v->feature_id;
+					$this->items[$v->feature_id][$genotype_id]['genotype_id'] = $genotype_id;
+					$this->items[$v->feature_id][$genotype_id]['genotype'] = $allele;          
+					$this->items[$v->feature_id][$genotype_id]['percent_per_genotype_per_stock'] = 1 / $num_genotypes;
+	
+					$this->counts[ $v->feature_id ][ $genotype_id ]++;
+				}
+			}
+			
+			// Keep track of stocks with genotypes so we can alert the user where the genotypes are comming from
+			$stocks_with_genotypes = array();
+			
+			// if there are any stocks with genotypes
+			if (sizeof($stocks_with_genotypes)) {
+				// and either there are 2+ stocks with genotypes or the only stock with genotypes isn't the original one
+				if (!(sizeof($stocks_with_genotypes)==1 && isset($stocks_with_genotypes[$this->original_stock_id]))) {
+					drupal_set_message('Genotypes displayed for '.$this->original_stock_name.' include those from the following selections: '.implode(', ',$stocks_with_genotypes).'.', 'warning');
+				}
+			}
+		}
   }
 
   /**
@@ -317,6 +310,10 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
    */
   function chado_wrapper_split_array_agg_results($field) {
   
+  	if (is_array($field)) {
+  		return $field;
+  	}
+  	
     if(preg_match('/^{(.*)}$/',$field, $matches)) {
       return str_getcsv($matches[1]);
     } else {
