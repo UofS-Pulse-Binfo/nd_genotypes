@@ -15,7 +15,7 @@ function nd_genotypes_views_handlers() {
     'info' => array(
       'path' => drupal_get_path('module', 'nd_genotypes') . '/views/handlers',
     ),
-    'handlers' => array(  
+    'handlers' => array(
 
       // These two handlers go hand-in-hand
       // The first renders the field 
@@ -51,12 +51,12 @@ function nd_genotypes_views_handlers() {
     ),
   );
   
+  // Join Handler (postgresql array <=> single)
   if (!module_exists('tripal_views')) {
-    // Join Handler (postgresql array <=> single)
+    $handler['views_handler_join_chado_aggregator'] = array(
+     'parent' => 'views_join',
+    ); 
     include_once('views/handlers/views_handler_join_chado_aggregator.inc');
-    $handlers['handlers']['views_handler_join_chado_aggregator'] = array(
-       'parent' => 'views_join',
-      );
   }
   
   return $handlers;
