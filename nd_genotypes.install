@@ -29,6 +29,15 @@ function nd_genotypes_install () {
   tripal_db_set_active($previous_db);
 	nd_genotypes_register_nd_genotype_polymoprhism_mview();
 
+	// Add nd_genotype_experiment_summary materialized view
+  $previous_db = tripal_db_set_active('chado');
+  if (db_table_exists('nd_genotype_experiment_summary')) {
+    $sql = "DROP TABLE nd_genotype_experiment_summary";
+    db_query($sql);
+  }
+  tripal_db_set_active($previous_db);
+	nd_genotypes_register_nd_genotype_experiment_summary_mview();
+	
   // Add Generic Bulk Loader
 	nd_genotypes_add_generic_experiment_bulk_loader();
 
