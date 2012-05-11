@@ -22,7 +22,8 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
 
     
     // Determine stock name and organism_id and stock_id
-    $filter_value = $_GET[ $this->options['use_filter'] ];
+    $filter_identifier = $this->view->display['default']->display_options['filters'][ $this->options['use_filter'] ]['expose']['identifier'];
+    $filter_value = $_GET[ $filter_identifier ];
     if (!empty($filter_value['stock_name']) ) {
       $this->stock_name = $filter_value['stock_name'];
       $this->organism_id = $filter_value['organism_id'];

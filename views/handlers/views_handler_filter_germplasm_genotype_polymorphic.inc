@@ -11,15 +11,8 @@ class views_handler_filter_germplasm_genotype_polymorphic extends views_handler_
     $this->field_options['<NONE>'] = 'None';
     foreach ($this->view->display['default']->display_options['fields'] as $name => $field) {
       if ($field['field'] == 'germplasm_genotype') {
-      	if (isset($field['germplasm']['stock_name']) && isset($field['germplasm']['organism_id'])) {
-					$stock = tripal_stock_get_stock_by_name_identifier($field['germplasm']['stock_name'], $field['germplasm']['organism_id']);
-					if (!empty($stock[0]->stock->stock_id)) {
-						if (!empty($field['label'])) {
-							$this->field_options[$stock[0]->stock->stock_id] = $field['label'];
-						} else {
-							$this->field_options[$stock[0]->stock->stock_id] = $field['germplasm']['stock_name'];
-						}
-					}
+        if (!$field['exclude']) {
+          $this->field_options[$name] = $field['label'];
 				}
       }
     }
@@ -30,7 +23,25 @@ class views_handler_filter_germplasm_genotype_polymorphic extends views_handler_
 
     // neither can be <NONE>
     if (!preg_match('/NONE/i',$this->value['first']) OR !preg_match('/NONE/i',$this->value['second'])) {
-    
+        
+      // Lookup stock_id for first stock
+      $field = $this->view->display['default']->display_options['fields'][ $this->value['first'] ];
+      if (!empty($field['use_filter']) && empty($field['germplasm']['stock_name'])) {
+        $filter_identifier = $this->view->display['default']->display_options['filters'][ $field['use_filter'] ]['expose']['identifier'];
+        $field['germplasm'] = $_GET[ $filter_identifier ];
+      }
+      $stock = tripal_stock_get_stock_by_name_identifier($field['germplasm']['stock_name'], $field['germplasm']['organism_id']);
+			$this->value['first'] = $stock[0]->stock->stock_id;
+
+      // Lookup stock_id for second stock
+      $field = $this->view->display['default']->display_options['fields'][ $this->value['second'] ];
+      if (!empty($field['use_filter']) && empty($field['germplasm']['stock_name'])) {
+        $filter_identifier = $this->view->display['default']->display_options['filters'][ $field['use_filter'] ]['expose']['identifier'];
+        $field['germplasm'] = $_GET[ $filter_identifier ];
+      }
+      $stock = tripal_stock_get_stock_by_name_identifier($field['germplasm']['stock_name'], $field['germplasm']['organism_id']);
+			$this->value['second'] = $stock[0]->stock->stock_id;
+				  			
       // Make our own join
       // (don't just ensure_my_table b/c this way we can limit to only showing genotype_description)
       $table_alias = 'nd_genotype_polymorphism_'.$this->value['first'].'_by_'.$this->value['second'];
