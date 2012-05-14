@@ -266,12 +266,14 @@ function pairwise_compare_germplasm_validate ($element) {
   
   // Remove generic "An illegal choice has been detected. Please contact the site administrator." message.
   // This is shown because the options array is not of the expected format
-  $key = array_search('An illegal choice has been detected. Please contact the site administrator.',$_SESSION['messages']['error']);
-  unset($_SESSION['messages']['error'][$key]);
-  if (empty($_SESSION['messages']['error'])) {
-    unset($_SESSION['messages']['error']);
+  if (is_array($_SESSION['messages']['error'])) {
+    $key = array_search('An illegal choice has been detected. Please contact the site administrator.',$_SESSION['messages']['error']);
+    unset($_SESSION['messages']['error'][$key]);
+    if (empty($_SESSION['messages']['error'])) {
+      unset($_SESSION['messages']['error']);
+    }
   }
-  
+    
   // Furthermore, remove highlighting of error form elements
   // -current form errors
   $form = form_set_error();

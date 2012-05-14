@@ -66,71 +66,88 @@ class views_handler_filter_add_germplasm_genotype_by_stock_field_filter extends 
 		}
 		
 		$this->value = $_GET['add_germplasm_genotype'];
-    
+		
+		// Now add fields
+		// Add them here rather then pre_query so they get added to exports
+		// Check if already set since init is run multiple times
+		if (empty($this->view->germplasm_genotype_fields_added)) {
+
+      // every-time this is run each previously added as well as the newly added germplasm genotype fields
+      // need to be added to the view. This is due to the state of the view not being saved when the Apply button is clicked.
+      // Also ensures if you bookmark it you'll still have your added fields
+      if (!$this->value) { $this->value = array(); }
+      $this->view->germplasm_genotype_fields_added = 0;
+      foreach ($this->value as $i => $spec) {
+        
+        // Add Field //////////////////////
+        $max_key = 0;
+        $max_position = 0;
+        foreach ($this->view->field as $key => $field) {
+          //determine the max key and store an existing germplasm_genotype field for cloning
+          if (preg_match('/germplasm_genotype_{0,1}(\d*)/',$key,$matches)) {
+            $existing_field = $field;
+            if (!empty($matches[1]) && $matches[1] > $max_key) {
+              $max_key = $matches[1];
+            }
+          }
+          
+          // determine the last position already containing a field
+          if ($field->position > $max_position) {
+            $max_position = $field->position;
+          }
+        }
+  
+        if ($existing_field) {
+          $this->view->germplasm_genotype_fields_added++;
+          $alias = 'germplasm_genotype_'. ($max_key+1);
+                 
+          // Add the new field to the view
+          $new_field = new views_handler_field_germplasm_genotype();
+          $new_field->field_alias = 'feature_id';
+          $new_field->aliases['feature_id'] = 'feature_id';
+          $new_field->options = $existing_field->options;
+          $new_field->definition = $existing_field->definition;
+          $new_field->additional_fields = array();
+          $new_field->view = $existing_field->view;
+          $new_field->table = 'genotype';
+          $new_field->field = 'germplasm_genotype';
+          $new_field->real_field = 'germplasm_genotype';
+          $new_field->query = $existing_field->query;
+          
+          $new_field->aliases['genotypes'] = $alias;        
+          $new_field->options['label'] = 'New Germplasm Genotype';
+          $new_field->options['id'] = $alias;
+          $new_field->options['use_filter'] = '<NONE>';
+          $new_field->options['germplasm']['stock_name'] = $spec['stock_name'];
+          $new_field->options['germplasm']['organism_id'] = $spec['organism_id'];
+          $new_field->options['exclude'] = FALSE;
+          $new_field->stock_name = array($spec['stock_id'] => $spec['stock_name']);
+          $new_field->organism_id = array($spec['stock_id'] => $spec['organism_id']);
+          $new_field->stock_id = array($spec['stock_id'] => $spec['stock_id']);
+          $new_field->original_stock_id = $spec['stock_id'];
+          $new_field->original_stock_name = $spec['stock_name'];
+          $new_field->position = $max_position+1;
+  
+          // add field to current display
+          $this->view->field[ $alias ] = $new_field;
+          
+          //also add to default and export view displays
+          foreach ($this->view->display as $display_name => $display) {
+            if ($display->display_plugin == 'default') {
+              $this->view->display[$display_name]->display_options['fields'][ $alias ] = (array) $new_field;
+            } elseif ($display->display_plugin == 'views_data_export') {
+              $this->view->display[$display_name]->display_options['fields'][ $alias ] = (array) $new_field;
+            }
+          }
+        }
+      }
+    }
   }
 
   // Add the fields to the view before the query is run
   function pre_query() {
     parent::pre_query();
 
-    // every-time this is run each previously added as well as the newly added germplasm genotype fields
-    // need to be added to the view. This is due to the state of the view not being saved when the Apply button is clicked.
-    // Also ensures if you bookmark it you'll still have your added fields
-    if (!$this->value) { $this->value = array(); }
-    foreach ($this->value as $i => $spec) {
-      
-      // Add Field //////////////////////
-      $max_key = 0;
-      $max_position = 0;
-      foreach ($this->view->field as $key => $field) {
-        //determine the max key and store an existing germplasm_genotype field for cloning
-        if (preg_match('/germplasm_genotype_{0,1}(\d*)/',$key,$matches)) {
-          $existing_field = $field;
-          if (!empty($matches[1]) && $matches[1] > $max_key) {
-            $max_key = $matches[1];
-          }
-        }
-        
-        // determine the last position already containing a field
-        if ($field->position > $max_position) {
-          $max_position = $field->position;
-        }
-      }
-
-      if ($existing_field) {
-        $alias = 'germplasm_genotype_'. ($max_key+1);
-               
-        // Add the new field to the view
-        $new_field = new views_handler_field_germplasm_genotype();
-        $new_field->field_alias = 'feature_id';
-        $new_field->aliases['feature_id'] = 'feature_id';
-        $new_field->options = $existing_field->options;
-        $new_field->definition = $existing_field->definition;
-        $new_field->additional_fields = array();
-        $new_field->view = $existing_field->view;
-        $new_field->table = 'genotype';
-        $new_field->field = 'germplasm_genotype';
-        $new_field->real_field = 'germplasm_genotype';
-        $new_field->query = $existing_field->query;
-        
-        $new_field->aliases['genotypes'] = $alias;        
-        $new_field->options['label'] = 'New Germplasm Genotype';
-        $new_field->options['id'] = $alias;
-        $new_field->options['use_filter'] = '<NONE>';
-        $new_field->options['germplasm']['stock_name'] = $spec['stock_name'];
-        $new_field->options['germplasm']['organism_id'] = $spec['organism_id'];
-        $new_field->options['exclude'] = FALSE;
-        $new_field->stock_name = array($spec['stock_id'] => $spec['stock_name']);
-        $new_field->organism_id = array($spec['stock_id'] => $spec['organism_id']);
-        $new_field->stock_id = array($spec['stock_id'] => $spec['stock_id']);
-        $new_field->original_stock_id = $spec['stock_id'];
-        $new_field->original_stock_name = $spec['stock_name'];
-        $new_field->position = $max_position+1;
-
-        $this->view->field[ $alias ] = $new_field;
-      }
-    }
-    
   }
 
   // This is needed to ensure query is not inherited

@@ -63,6 +63,23 @@ function nd_genotypes_views_handlers() {
 }
 
 /**
+ * Implements hook_views_pre_render
+ *
+ * Purpose: Intercepts the view after the query has been executed
+ *   All the results are stored in $view->result
+ */
+function nd_genotypes_views_pre_render	(&$view) {
+
+   // We need to unset the exposed_input for the view so we can repopulate that 
+   // variable. get_exposed_input() retrieves values from $_GET and assigns them
+   // to the $values array. This is needed to ensure the view and form results
+   // are in-sync.
+   unset($view->exposed_input);
+   $query = $view->get_exposed_input();
+
+}
+
+/**
  * Implements hook_views_data(): Describe chado/tripal tables & fields to views
  *
  * @return array
