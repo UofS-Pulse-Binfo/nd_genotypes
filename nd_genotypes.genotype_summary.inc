@@ -16,7 +16,20 @@ function nd_genotypes_genotype_summary_page () {
   $form_state['values']['stockA']['stock_name'] = $_GET['stockA_name'];
   $form_state['values']['stockB']['organism_id'] = $_GET['stockB_organism_id'];
   $form_state['values']['stockB']['stock_name'] = $_GET['stockB_name'];
+
+  // Title
+  if ($stockA_id && $stockB_id) {
+    $output .= '<br /><h3>Comparison of Genotypes between '.$stockA.' and '.$stockB.'</h3>';
+  }
+    
+  // Header
+  $output .= "<p>By entering the name of a line/variety in the 'First Line/Variety' and 
+              'Second Line/Variety' filter below you can get an idea of the number of 
+              polymorphic/monomorphic loci between them. The 'All' row provides
+              the number of unique polymorphic/monomorphic loci between the two
+              lines/varieties.</p>";
   
+  // Filters
   $output .= '<div class="views-widget">';
   $output .= drupal_get_form(
     'nd_genotypes_genotype_summary_filter_form',
@@ -26,10 +39,15 @@ function nd_genotypes_genotype_summary_page () {
     $_GET['stockB_name']
   );
   $output .= '</div>';
-    
+  
+  // View  
   if ($stockA_id && $stockB_id) {
-    $output .= '<br /><h3>Comparison of Genotypes between '.$stockA.' and '.$stockB.'</h3>';
-    $output .= views_embed_view('genotype_summary', 'default', $stockA_id,$stockB_id);
+    $view_output = views_embed_view('genotype_summary', 'default', $stockA_id,$stockB_id);
+    $output .= "<br>".$view_output;
+    
+    if (!$view_output) {
+      drupal_set_message('genotype_summary view is missing.','error');
+    }
   }
   
   return $output;
@@ -100,7 +118,7 @@ function nd_genotypes_genotype_summary_filter_form_submit (&$form, &$form_state)
     // make sure the smallest stock_id is stockA
     if ($stockA[0]->stock->stock_id < $stockB[0]->stock->stock_id) {
       drupal_goto(
-        'genotype/summary',
+        'genotypes/summary',
         array(
           'stockA_id'=> $stockA[0]->stock->stock_id,
           'stockA_organism_id'=> $stockA[0]->stock->organism_id->organism_id,
@@ -112,7 +130,7 @@ function nd_genotypes_genotype_summary_filter_form_submit (&$form, &$form_state)
       );
     } else {
       drupal_goto(
-        'genotype/summary',
+        'genotypes/summary',
         array(
           'stockB_id'=> $stockA[0]->stock->stock_id,
           'stockB_organism_id'=> $stockA[0]->stock->organism_id->organism_id,

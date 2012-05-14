@@ -48,7 +48,7 @@ function nd_genotypes_menu () {
     'access arguments' => array('administer site configuration'),
   );
  
-   $items['genotype/summary'] = array(
+   $items['genotypes/summary'] = array(
     'page callback' => 'nd_genotypes_genotype_summary_page',
     'title' => 'Genotype Summary',
     'access arguments' => array('access content'),
