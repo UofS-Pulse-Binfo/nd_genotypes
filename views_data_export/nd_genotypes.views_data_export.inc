@@ -32,7 +32,7 @@ function nd_genotypes_views_plugins() {
         'export feed type' => 'marked-up fasta',
         'export feed text' => 'Marked-up FASTA',
         'export feed file' => '%view.fna',
-        'export feed icon' => $tc_path . '/views_data_export/images/fasta.png',
+        'export feed icon' => $tc_path . '/views_data_export/images/markedup_fasta.png',
         'additional themes' => array(
           'views_data_export_snp_markedup_fasta_header' => 'style',
           'views_data_export_snp_markedup_fasta_body' => 'style',
