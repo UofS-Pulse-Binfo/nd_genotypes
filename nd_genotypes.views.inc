@@ -63,6 +63,56 @@ function nd_genotypes_views_handlers() {
 }
 
 /**
+ * Generate the path to the corresponding genotype summary view based on a feature
+ * view listing genotypes.
+ *
+ * @param $view
+ *   The view object from the head of the current view: views_get_current_view()
+ * @return $url
+ *   The URL of a genotype_summary view for the first two germplasm_genotype fields
+ */
+function nd_genotypes_genotype_summary_view_path ($view) {
+  global $base_url;
+  
+  // Retrieve details for the first two germplasm_genotype fields
+  $stocks = array();
+  foreach($view->field as $name => $field) {
+    if ($field->field == 'germplasm_genotype' && sizeof($stocks) < 2 ) {
+      preg_match('/^(\d+)/',$field->organism_id, $matches);
+      if ($field->original_stock_id AND $field->original_stock_name AND $matches[1]) {
+        $stocks[] = array(
+          'id' => $field->original_stock_id,
+          'name' => $field->original_stock_name,
+          'organism_id' => $matches[1]
+        );
+      }
+    }
+  }
+  
+  // Determine which of the two stocks has the smallest stock_id and create the url
+  $format = "genotype/summary?stockB_id=%d&stockB_name=%s&stockB_organism_id=%d&stockA_id=%d%d&stockA_name=%s&stockA_organism_id=";
+  if ($stocks) {
+    if ($stocks[0]['id'] < $stocks[1]['id']) {
+      $params = array(
+        'stockA_id'=>$stocks[0]['id'], 'stockA_name' => $stocks[0]['name'], 'stockA_organism_id' => $stocks[0]['organism_id'],
+        'stockB_id'=>$stocks[1]['id'], 'stockB_name' => $stocks[1]['name'], 'stockB_organism_id' => $stocks[1]['organism_id']
+      );
+      $url = $base_url .'/'. vsprintf($format,$params);
+    } else {
+      $params = array(
+        'stockA_id'=>$stocks[1]['id'], 'stockA_name' => $stocks[1]['name'], 'stockA_organism_id' => $stocks[1]['organism_id'],
+        'stockB_id'=>$stocks[0]['id'], 'stockB_name' => $stocks[0]['name'], 'stockB_organism_id' => $stocks[0]['organism_id']
+      );
+      $url = $base_url .'/'. vsprintf($format,$params);
+    }
+  } else {
+    $url = $base_url.'/genotypes/summary';
+  }
+  
+  return $url;
+}
+
+/**
  * Implements hook_views_pre_render
  *
  * Purpose: Intercepts the view after the query has been executed
