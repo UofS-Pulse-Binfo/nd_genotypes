@@ -23,11 +23,21 @@ function nd_genotypes_genotype_summary_page () {
   }
     
   // Header
+  $genotype_listing_url = nd_genotypes_genotype_comparison_view_path(
+    array('id'=>$_GET['stockA_id'],'name'=>$_GET['stockA_name'],'organism_id'=>$_GET['stockA_organism_id']), 
+    array('id'=>$_GET['stockB_id'],'name'=>$_GET['stockB_name'],'organism_id'=>$_GET['stockB_organism_id'])
+  );
+  $genotype_dynamic_listing_url = nd_genotypes_genotype_comparison_dynamic_view_path(
+    array('id'=>$_GET['stockA_id'],'name'=>$_GET['stockA_name'],'organism_id'=>$_GET['stockA_organism_id']), 
+    array('id'=>$_GET['stockB_id'],'name'=>$_GET['stockB_name'],'organism_id'=>$_GET['stockB_organism_id'])
+  );
   $output .= "<p>By entering the name of a line/variety in the 'First Line/Variety' and 
               'Second Line/Variety' filter below you can get an idea of the number of 
               polymorphic/monomorphic loci between them. The 'All' row provides
               the number of unique polymorphic/monomorphic loci between the two
-              lines/varieties.</p>";
+              lines/varieties.</p>
+              <p>If you would like more detail including the actual allele calls for
+              a set of markers, then use <a href='".$genotype_listing_url."'>Genotype Comparison</a> or if you might want to add additional lines/varieties to the comparison then use the <a href='".$genotype_dynamic_listing_url.".'>Genus-specific Genotype Comparison</a></p>";
   
   // Filters
   $output .= '<div class="views-widget">';
@@ -51,6 +61,78 @@ function nd_genotypes_genotype_summary_page () {
   }
   
   return $output;
+}
+
+/**
+ * Generate the path to the corresponding genotype comparison view based on a 
+ * genotype summary page.
+ *
+ * @param $stock1
+ *   an array containing the id (stock_id), name, organism_id for the first line/variety
+ * @param $stock2
+ *   an array containing the id (stock_id), name, organism_id for the second line/variety
+ * @return $url
+ *   The URL of an nd_genotype_comparison view for the first/second line/variety fields
+ */
+function nd_genotypes_genotype_comparison_view_path ($stock1, $stock2) {
+  global $base_url;
+  
+  // Determine which of the two stocks has the smallest stock_id and create the url
+  $format = "genotypes?line1%%5Borganism_id%%5D=%d&line1%%5Bstock_name%%5D=%s&line2%%5Borganism_id%%5D=%d&line2%%5Bstock_name%%5D=%s&polymorphic%%5Bfirst%%5D=<NONE>&polymorphic%%5Bsecond%%5D=<NONE>&genus=%s";
+  if ($stock1['id']) {
+
+    $previous_db = tripal_db_set_active('chado');
+    $organism = db_fetch_object(db_query('SELECT genus FROM organism WHERE organism_id=%d',$stock1['organism_id']));
+    tripal_db_set_active($previous_db);
+    
+    $params = array(
+      'stock1_organism_id' => trim($stock1['organism_id']), 'stock1_name' => trim($stock1['name']),
+      'stock2_organism_id' => trim($stock2['organism_id']), 'stock2_name' => trim($stock2['name']),
+      $organism->genus
+    );  
+    $url = $base_url .'/'. vsprintf($format,$params);
+  } else {
+    $url = $base_url.'/genotypes';
+  }
+  dpm($params, 'params');
+  
+  return $url;
+}
+
+/**
+ * Generate the path to the corresponding genotype comparison view based on a 
+ * genotype summary page.
+ *
+ * @param $stock1
+ *   an array containing the id (stock_id), name, organism_id for the first line/variety
+ * @param $stock2
+ *   an array containing the id (stock_id), name, organism_id for the second line/variety
+ * @return $url
+ *   The URL of an nd_genotype_comparison view for the first/second line/variety fields
+ */
+function nd_genotypes_genotype_comparison_dynamic_view_path ($stock1, $stock2) {
+  global $base_url;
+  
+  // Determine which of the two stocks has the smallest stock_id and create the url
+  $format = "genotype/%s/comparison?add_germplasm_genotype[0][stock_name]=%s&add_germplasm_genotype[0][stock_id]=%d&add_germplasm_genotype[0][organism_id]=%d&add_germplasm_genotype[1][stock_name]=%s&add_germplasm_genotype[1][stock_id]=%d&add_germplasm_genotype[1][organism_id]=%d";
+  if ($stock1['id']) {
+
+    $previous_db = tripal_db_set_active('chado');
+    $organism = db_fetch_object(db_query('SELECT genus FROM organism WHERE organism_id=%d',$stock1['organism_id']));
+    tripal_db_set_active($previous_db);
+    
+    $params = array(
+      $organism->genus,
+      'stock1_name' => trim($stock1['name']),'stock1_id' => trim($stock1['id']),'stock1_organism_id' => trim($stock1['organism_id']), 
+      'stock2_name' => trim($stock2['name']),'stock2_id' => trim($stock2['id']),'stock2_organism_id' => trim($stock2['organism_id'])
+    );  
+    $url = $base_url .'/'. vsprintf($format,$params);
+  } else {
+    $url = $base_url.'/genotype/all/comparison';
+  }
+  dpm($params, 'params');
+  
+  return $url;
 }
 
 /**

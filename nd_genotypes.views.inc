@@ -78,37 +78,46 @@ function nd_genotypes_genotype_summary_view_path ($view) {
   $stocks = array();
   foreach($view->field as $name => $field) {
     if ($field->field == 'germplasm_genotype' && sizeof($stocks) < 2 ) {
-      preg_match('/^(\d+)/',$field->organism_id, $matches);
-      if ($field->original_stock_id AND $field->original_stock_name AND $matches[1]) {
+      if (isset($field->original_organism_id)) {
+        $organism_id = $field->original_organism_id;
+      } elseif (!is_array($field->organism_id)) {
+        preg_match('/^(\d+)/',$field->organism_id, $matches);
+        $organism_id = $matches[1];
+      }
+      if ($field->original_stock_id AND $field->original_stock_name AND $organism_id) {
         $stocks[] = array(
           'id' => $field->original_stock_id,
           'name' => $field->original_stock_name,
-          'organism_id' => $matches[1]
+          'organism_id' => $organism_id
         );
       }
     }
   }
   
   // Determine which of the two stocks has the smallest stock_id and create the url
-  $format = "genotype/summary?stockB_id=%d&stockB_name=%s&stockB_organism_id=%d&stockA_id=%d%d&stockA_name=%s&stockA_organism_id=";
+  $format = "genotypes/summary?stockA_id=%d&stockA_name=%s&stockA_organism_id=%d&stockB_id=%d&stockB_name=%s&stockB_organism_id=%d";
   if ($stocks) {
+    // remove added letter to the stock_name
+    $stocks[0]['name'] = trim($stocks[0]['name']);
+    $stocks[0]['name'] = substr($stocks[0]['name'],0,-1);
+    $stocks[1]['name'] = trim($stocks[1]['name']);
+    $stocks[1]['name'] = substr($stocks[1]['name'],0,-1);
+    
     if ($stocks[0]['id'] < $stocks[1]['id']) {
       $params = array(
         'stockA_id'=>trim($stocks[0]['id']), 'stockA_name' => trim($stocks[0]['name']), 'stockA_organism_id' => trim($stocks[0]['organism_id']),
         'stockB_id'=>trim($stocks[1]['id']), 'stockB_name' => trim($stocks[1]['name']), 'stockB_organism_id' => trim($stocks[1]['organism_id'])
       );
-      $url = $base_url .'/'. vsprintf($format,$params);
     } else {
       $params = array(
         'stockA_id'=>trim($stocks[1]['id']), 'stockA_name' => trim($stocks[1]['name']), 'stockA_organism_id' => trim($stocks[1]['organism_id']),
         'stockB_id'=>trim($stocks[0]['id']), 'stockB_name' => trim($stocks[0]['name']), 'stockB_organism_id' => trim($stocks[0]['organism_id'])
       );
-      $url = $base_url .'/'. vsprintf($format,$params);
-    }
+    }  
+    $url = $base_url .'/'. vsprintf($format,$params);
   } else {
     $url = $base_url.'/genotypes/summary';
   }
-  dpm($params, 'params');
   
   return $url;
 }
