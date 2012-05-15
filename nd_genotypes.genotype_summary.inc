@@ -42,11 +42,11 @@ function nd_genotypes_genotype_summary_page () {
   
   // View  
   if ($stockA_id && $stockB_id) {
-    $view_output = views_embed_view('genotype_summary', 'default', $stockA_id,$stockB_id);
+    $view_output = views_embed_view('nd_genotype_summary', 'default', $stockA_id,$stockB_id);
     $output .= "<br>".$view_output;
     
     if (!$view_output) {
-      drupal_set_message('genotype_summary view is missing.','error');
+      drupal_set_message('nd_genotype_summary view is missing.','error');
     }
   }
   
