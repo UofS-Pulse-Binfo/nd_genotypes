@@ -130,7 +130,6 @@ function nd_genotypes_genotype_comparison_dynamic_view_path ($stock1, $stock2) {
   } else {
     $url = $base_url.'/genotype/all/comparison';
   }
-  dpm($params, 'params');
   
   return $url;
 }
