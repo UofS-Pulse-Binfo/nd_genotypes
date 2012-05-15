@@ -82,25 +82,28 @@ function nd_genotypes_register_nd_genotype_experiment_mview () {
 					LEFT JOIN cvterm fg_cvt ON fg_cvt.cvterm_id=fg.cvterm_id
 					LEFT JOIN feature f ON f.feature_id=fg.feature_id";
 
-		//create
-    tripal_add_mview(
-      // view name
-      $view_name,
-      // module creating materialized view
-      'nd_genotypes',
-      // view table name
-      $view_name,
-      // schema definition
-      $schema_definition,
-      // columns to index
-      'nd_genotype_experiment_id',
-      // SQL to populate materialized view
-      $sql,
-      // special index
-      ''
-    );
+    $mview_id = tripal_mviews_get_mview_id($view_name);
+    if (!$mview_id) {
+      //create
+      tripal_add_mview(
+        // view name
+        $view_name,
+        // module creating materialized view
+        'nd_genotypes',
+        // view table name
+        $view_name,
+        // schema definition
+        $schema_definition,
+        // columns to index
+        'nd_genotype_experiment_id',
+        // SQL to populate materialized view
+        $sql,
+        // special index
+        ''
+      );
+      $mview_id = tripal_mviews_get_mview_id($view_name);
+    }
     
     //Populate
-    $mview_id = tripal_mviews_get_mview_id($view_name);
     tripal_update_mview($mview_id);
 }
