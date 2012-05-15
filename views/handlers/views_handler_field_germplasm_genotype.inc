@@ -115,12 +115,14 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
     
     // set the germplasm_genotype filter that can change the above default
     $options['<NONE>'] = 'None';
-    foreach ($this->view->display['default']->display_options['filters'] as $name => $filter) {
-      if ($filter['field'] == 'germplasm_genotype') {
-        if (isset($filter['expose'])) {
-          $options[$name] = $filter['expose']['label'];
-        } else {
-          $options[$name] = $name;
+    if (isset($this->view->display['default']->display_options['filters'])) {
+      foreach ($this->view->display['default']->display_options['filters'] as $name => $filter) {
+        if ($filter['field'] == 'germplasm_genotype') {
+          if (isset($filter['expose'])) {
+            $options[$name] = $filter['expose']['label'];
+          } else {
+            $options[$name] = $name;
+          }
         }
       }
     }
