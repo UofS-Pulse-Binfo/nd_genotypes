@@ -94,7 +94,6 @@ function nd_genotypes_genotype_comparison_view_path ($stock1, $stock2) {
   } else {
     $url = $base_url.'/genotypes';
   }
-  dpm($params, 'params');
   
   return $url;
 }
