@@ -8,12 +8,12 @@ class views_handler_filter_germplasm_genotype_polymorphic extends views_handler_
     parent::init($view, $options);
   
   	// Set admin added germplasm_genotype fields as options
-    $this->field_options['<NONE>'] = 'None';
-    foreach ($this->view->display['default']->display_options['fields'] as $name => $field) {
-      if ($field['field'] == 'germplasm_genotype') {
-        if (!$field['exclude']) {
-          $this->field_options[$name] = $field['label'];
-				}
+    $this->germplasm_genotype_filters = array();
+    //dpm($this->view, 'view');
+    foreach ($this->view->display['default']->display_options['filters'] as $name => $filter) {
+      //dpm($filter, 'filter');
+      if ($filter['field'] == 'germplasm_genotype') {
+        $this->germplasm_genotype_filters[$name] = $filter['expose']['identifier'];
       }
     }
 
@@ -23,25 +23,9 @@ class views_handler_filter_germplasm_genotype_polymorphic extends views_handler_
 
     // neither can be <NONE>
     if (!preg_match('/NONE/i',$this->value['first']) OR !preg_match('/NONE/i',$this->value['second'])) {
-        
-      // Lookup stock_id for first stock
-      $field = $this->view->display['default']->display_options['fields'][ $this->value['first'] ];
-      if (!empty($field['use_filter']) && empty($field['germplasm']['stock_name'])) {
-        $filter_identifier = $this->view->display['default']->display_options['filters'][ $field['use_filter'] ]['expose']['identifier'];
-        $field['germplasm'] = $_GET[ $filter_identifier ];
-      }
-      $stock = tripal_stock_get_stock_by_name_identifier($field['germplasm']['stock_name'], $field['germplasm']['organism_id']);
-			$this->value['first'] = $stock[0]->stock->stock_id;
-
-      // Lookup stock_id for second stock
-      $field = $this->view->display['default']->display_options['fields'][ $this->value['second'] ];
-      if (!empty($field['use_filter']) && empty($field['germplasm']['stock_name'])) {
-        $filter_identifier = $this->view->display['default']->display_options['filters'][ $field['use_filter'] ]['expose']['identifier'];
-        $field['germplasm'] = $_GET[ $filter_identifier ];
-      }
-      $stock = tripal_stock_get_stock_by_name_identifier($field['germplasm']['stock_name'], $field['germplasm']['organism_id']);
-			$this->value['second'] = $stock[0]->stock->stock_id;
-				  			
+      
+      dpm($this->value, 'values in query');
+					
       // Make our own join
       // (don't just ensure_my_table b/c this way we can limit to only showing genotype_description)
       $table_alias = 'nd_genotype_polymorphism_'.$this->value['first'].'_by_'.$this->value['second'];
@@ -96,13 +80,26 @@ class views_handler_filter_germplasm_genotype_polymorphic extends views_handler_
   function value_form (&$form, &$form_state) {
     parent::value_form($form, $form_state);
 
+    // Set options from "Add/Remove Germplasm Genotype Fields"
 		$options = $this->field_options;
 		if (isset($_GET['add_germplasm_genotype']) && is_array($_GET['add_germplasm_genotype'])) {
 			foreach ($_GET['add_germplasm_genotype'] as $g) {
 				$options[ $g['stock_id'] ] = $g['stock_name'];
 			}
 		}
-		
+
+    // Set Options from Germplasm Genotype Filters
+    if (isset($this->germplasm_genotype_filters)) {
+      foreach ($this->germplasm_genotype_filters as $filter => $identifier) {
+        if (isset($_GET[$identifier]['stock_name']) AND isset($_GET[$identifier]['organism_id'])) {
+          $stock = tripal_stock_get_stock_by_name_identifier($_GET[$identifier]['stock_name'], $_GET[$identifier]['organism_id']);
+          if ($stock[0]->stock->stock_id) {
+            $options[ $stock[0]->stock->stock_id ] = $_GET[$identifier]['stock_name'];
+          }
+        }
+      }
+    }
+    		
     $this->value_form = array(
       '#type' => 'pairwise_compare_germplasm',
 			'#title' => 'Value',
