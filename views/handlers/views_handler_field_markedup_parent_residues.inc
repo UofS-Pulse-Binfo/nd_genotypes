@@ -158,7 +158,9 @@ class views_handler_field_markedup_parent_residues extends views_handler_field {
       // Now deal with adjacent markers
       $v->{$this->aliases['adjacent_markers']} = $this->split_adjacent_markers($v->{$this->aliases['adjacent_markers']});
       foreach ($v->{$this->aliases['adjacent_markers']} as $am) {
-        $seq[$am['fmin']] = $am['IUPAC'];
+        if(!empty($am['IUPAC'])) {
+          $seq[$am['fmin']] = $am['IUPAC'];
+        }
       }
       
       $values[$k]->markedup_parent_residues = wordwrap(implode('',$seq),80," ",TRUE);
