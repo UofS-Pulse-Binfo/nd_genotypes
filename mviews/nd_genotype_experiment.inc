@@ -51,6 +51,7 @@ function nd_genotypes_register_nd_genotype_experiment_mview () {
 												nd_geolocation_description varchar(255),
 												project_id integer,
 												project_name varchar(255),
+												polymorphic_with text,
 												nd_genotype_experiment_id serial';
 	$sql = "SELECT 
 						s.stock_id, 
@@ -106,4 +107,36 @@ function nd_genotypes_register_nd_genotype_experiment_mview () {
     
     //Populate
     tripal_update_mview($mview_id);
+    
+    // Update polymorphic_with column
+    $update_sql = "UPDATE nd_genotype_experiment SET polymorphic_with=subq.polymorphic_with
+      FROM (SELECT poly.feature_id, poly.stockA_id as stock_id, array_agg(poly.stockB_id) as polymorphic_with
+       FROM (
+         SELECT 
+             nd1.feature_id, 
+             nd1.stock_id as stockA_id,
+             nd2.stock_id as stockB_id,
+             (CASE WHEN array_agg(nd1.genotype_description) = array_agg(nd2.genotype_description) THEN FALSE ELSE TRUE END) as is_polymorphic 
+         FROM nd_genotype_experiment nd1 
+         CROSS JOIN nd_genotype_experiment nd2 
+         WHERE 
+             nd1.feature_id = nd2.feature_id 
+             AND nd1.genotype_description IS NOT NULL
+             AND nd2.genotype_description IS NOT NULL
+         GROUP BY 
+             nd1.feature_id, 
+             nd1.stock_id,
+             nd2.stock_id
+         ORDER BY 
+             nd1.feature_id,
+             nd1.stock_id,
+             is_polymorphic
+         ) poly
+       WHERE
+         poly.is_polymorphic
+       GROUP BY
+         poly.feature_id, 
+         poly.stockA_id) as subq
+      WHERE subq.feature_id=nd_genotype_experiment.feature_id AND subq.stock_id=nd_genotype_experiment.stock_id";
+    db_query($update_sql);
 }

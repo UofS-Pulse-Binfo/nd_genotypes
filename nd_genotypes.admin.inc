@@ -82,3 +82,55 @@ function nd_genotypes_configuration_form_submit ($form, &$form_state) {
 		
 	}
 }
+
+function nd_genotypes_mviews_update_form ($form_state = NULL) {
+  $form = array();
+  
+  $form['msg'] = array(
+    '#type' => 'item',
+    '#value' => 'This is the preferred method to update materialized views used by the 
+      Natural Diversity Genotypes module. This will ensure that any additional 
+      materialized views or queries that need to be are run when a given materialized view
+      is updated.'
+  );
+  
+  $form['mviews'] = array(
+    '#type' => 'checkboxes',
+    '#title' => 'Materialized Views to Update',
+    '#options' => array(
+      'nd_genotype_experiment' => 'ND Genotype Experiment: This is the main view needed to display genotypes associated with a given stock for a list of features.',
+      'nd_genotype_experiment_summary' => 'ND Genotype Experiment Summary: This view is used to count the number of polymorphic/monomorphic markers between two stocks.'
+    ),
+  );
+  
+  $form['update'] = array(
+    '#type' => 'submit',
+    '#value' => 'Update Selected',
+  );
+
+  $form['update_all'] = array(
+    '#type' => 'submit',
+    '#value' => 'Update All',
+  );
+  
+  return $form;
+}
+
+function nd_genotypes_mviews_update_form_submit ($form, $form_state) {
+  global $user;
+  
+  foreach ($form_state['values']['mviews'] as $mview_name => $checkbox_value) {
+    // update the materialized view if either:
+    // 1) it was checked
+    // 2) Update All was clicked
+    if ($checkbox_value OR ($form_state['values']['op'] == $form_state['values']['update_all'])) {
+      tripal_add_job(
+        'Update '.$mview_name,
+        'nd_genotypes',
+        'nd_genotypes_register_'.$mview_name.'_mview',
+        array(),
+        $user->uid
+      );
+    }
+  }
+}
