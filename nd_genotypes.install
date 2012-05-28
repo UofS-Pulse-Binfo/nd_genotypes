@@ -5,6 +5,7 @@ module_load_include('tripal_views','tripal_views.api','inc');
 // Materialized Views
 require_once('mviews/nd_genotype_experiment.inc');
 require_once('mviews/nd_genotype_polymorphism.inc');
+require_once('mviews/nd_genotype_experiment_summary.inc');
 
 /**
  * Ran when the module is installed
