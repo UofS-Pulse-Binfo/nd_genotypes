@@ -48,6 +48,13 @@ function nd_genotypes_menu () {
     'access arguments' => array('administer site configuration'),
   );
  
+   $items['admin/tripal/nd_genotypes/mviews'] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('nd_genotypes_mviews_update_form'),
+    'title' => 'Materialized Views',
+    'access arguments' => array('administer site configuration'),
+  );
+  
    $items['genotypes/summary'] = array(
     'page callback' => 'nd_genotypes_genotype_summary_page',
     'title' => 'Genotype Summary',
