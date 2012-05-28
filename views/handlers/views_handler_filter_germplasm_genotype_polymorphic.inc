@@ -9,9 +9,7 @@ class views_handler_filter_germplasm_genotype_polymorphic extends views_handler_
   
   	// Set admin added germplasm_genotype fields as options
     $this->germplasm_genotype_filters = array();
-    //dpm($this->view, 'view');
     foreach ($this->view->display['default']->display_options['filters'] as $name => $filter) {
-      //dpm($filter, 'filter');
       if ($filter['field'] == 'germplasm_genotype') {
         $this->germplasm_genotype_filters[$name] = $filter['expose']['identifier'];
       }
@@ -24,43 +22,19 @@ class views_handler_filter_germplasm_genotype_polymorphic extends views_handler_
     // neither can be <NONE>
     if (!preg_match('/NONE/i',$this->value['first']) OR !preg_match('/NONE/i',$this->value['second'])) {
       
-      dpm($this->value, 'values in query');
-					
-      // Make our own join
-      // (don't just ensure_my_table b/c this way we can limit to only showing genotype_description)
-      $table_alias = 'nd_genotype_polymorphism_'.$this->value['first'].'_by_'.$this->value['second'];
-      $def = array();
-      $def['table'] = 'nd_genotype_polymorphism';
-      $def['field'] = 'feature_id';
-      $def['left_table'] = 'feature';
-      $def['left_field'] = 'feature_id';
-  
-      $join = new views_join();
-      $join->definition = $def;
-      $join->construct();
-      $join->adjusted = TRUE;
-  
-      $this->query->add_relationship($table_alias, $join, $def['table']);
+      // table giving genotype for first stock
+      $table_alias = 'nd_genotype_experiment_stock_'.$this->value['first'];
       
       // add field (all columns in where should also be in fields)
-      $this->alias = $this->query->add_field($table_alias,'is_polymorphic');
+      $this->alias = $this->query->add_field($table_alias,'polymorphic_with');
   
       // filter join based on stocks selected
-      if ($this->value['first'] < $this->value['second']) {
-        $where = $table_alias .'.stockA_id = '.$this->value['first'];
-        $this->query->add_where($group, $where);
-        $where = $table_alias .'.stockB_id = '.$this->value['second'];
-        $this->query->add_where($group, $where);
-      } else {
-        $where = $table_alias .'.stockA_id = '.$this->value['second'];
-        $this->query->add_where($group, $where);
-        $where = $table_alias .'.stockB_id = '.$this->value['first'];
-        $this->query->add_where($group, $where);
-      }
-            
-      // add where is_polymorphic = TRUE
-      // since field is a boolean we don't need to make a comparison
-      $where = $table_alias .'.is_polymorphic';
+			$where = $table_alias .".polymorphic_with ~ ':".$this->value['second'].":'";
+			$this->query->add_where($group, $where);
+
+      // ensure there is a genotype for each feature
+      // needed so we don't just have blank rows for monomorphic markers
+      $where = $table_alias .'.polymorphic_with IS NOT NULL';
       $this->query->add_where($group, $where);
 
 	  }

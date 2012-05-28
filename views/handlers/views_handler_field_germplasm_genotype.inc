@@ -76,9 +76,9 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
 			$table_alias = 'nd_genotype_experiment_stock_'.$this->original_stock_id;
 			$def = array();
 			if (sizeof($this->stock_id) == 1) {
-				$def['table'] = '(SELECT feature_id, array_agg(genotype_description) as genotype_description, array_agg(genotype_id) as genotype_id FROM nd_genotype_experiment WHERE stock_id='.reset($this->stock_id).' GROUP BY feature_id)';
+				$def['table'] = "(SELECT feature_id, array_agg(genotype_description) as genotype_description, array_agg(genotype_id) as genotype_id, ':'||array_to_string(array_agg(polymorphic_with),':')||':' as polymorphic_with FROM nd_genotype_experiment WHERE stock_id=".reset($this->stock_id).' GROUP BY feature_id)';
 			} else {
-				$def['table'] = '(SELECT feature_id, array_agg(genotype_description) as genotype_description, array_agg(genotype_id) as genotype_id FROM nd_genotype_experiment WHERE stock_id IN ('.implode(',',$this->stock_id).') GROUP BY feature_id)';
+				$def['table'] = "(SELECT feature_id, array_agg(genotype_description) as genotype_description, array_agg(genotype_id) as genotype_id, ':'||array_to_string(array_agg(polymorphic_with),':')||':' as polymorphic_with FROM nd_genotype_experiment WHERE stock_id IN (".implode(',',$this->stock_id).') GROUP BY feature_id)';
 			}
 			$def['field'] = 'feature_id';
 			$def['left_table'] = 'feature';
