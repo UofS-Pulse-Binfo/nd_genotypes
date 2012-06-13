@@ -442,6 +442,7 @@ function nd_genotypes_retrieve_nd_genotype_experiment_views_data () {
     ),
   );
 
+  
   //Field: feature_name (chado datatype)   
   $data['nd_genotype_experiment']['feature_name'] = array(
     'title' => t('Feature Name'),
