@@ -1,16 +1,11 @@
 <?php
 
-require_once('nd_genotypes.admin.inc');
-require_once('nd_genotypes.form_elements.inc');
-require_once('nd_genotypes.genotype_summary.inc');
+require_once 'includes/nd_genotypes.admin.inc';
 
 // Mviews
-include_once('mviews/nd_genotype_experiment.inc');
-include_once('mviews/nd_genotype_polymorphism.inc');
-include_once('mviews/nd_genotype_experiment_summary.inc');
-
-// Views data export
-include_once('views_data_export/nd_genotypes.views_data_export.inc');
+require_once 'includes/mviews/nd_genotype_experiment.inc';
+require_once 'includes/mviews/nd_genotype_polymorphism.inc';
+require_once 'includes/mviews/nd_genotype_experiment_summary.inc';
 
 /**
  * Implements hook_views_api()
@@ -22,11 +17,12 @@ include_once('views_data_export/nd_genotypes.views_data_export.inc');
  * @return
  *   An array with fields important for views integration
  *
- */ 
+ */
 function nd_genotypes_views_api() {
-   return array(
-      'api' => 2.0,
-   );
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'nd_genotypes') . '/includes/views',
+  );
 }
 
 /**
@@ -34,39 +30,38 @@ function nd_genotypes_views_api() {
  */
 function nd_genotypes_menu () {
 	$items = array();
-	
-	$items['admin/tripal/nd_genotypes'] = array(
+
+	$items['admin/tripal/extension/nd_genotypes'] = array(
     'page callback' => 'nd_genotypes_admin_description',
-    'title' => 'ND Genotypes',
-    'access arguments' => array('administer site configuration'),
+    'title' => 'Natural Diversity Genotypes',
+    'description' => 'Provides an interface for genotypes and the experiments that generate them.',
+    'access arguments' => array('administer tripal'),
+    'page callback' => 'nd_genotypes_admin_launchpad'
   );
 
-  $items['admin/tripal/nd_genotypes/configuration'] = array(
+  $items['admin/tripal/extension/nd_genotypes/configuration'] = array(
+    'title' => 'Settings',
+    'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('nd_genotypes_configuration_form'),
-    'title' => 'Configuration',
-    'access arguments' => array('administer site configuration'),
+    'access arguments' => array('administer tripal'),
   );
- 
-   $items['admin/tripal/nd_genotypes/mviews'] = array(
+
+   $items['admin/tripal/extension/nd_genotypes/mviews'] = array(
+    'title' => 'Materialized Views',
+    'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('nd_genotypes_mviews_update_form'),
-    'title' => 'Materialized Views',
-    'access arguments' => array('administer site configuration'),
+    'access arguments' => array('administer tripal'),
   );
-  
-   $items['genotypes/summary'] = array(
-    'page callback' => 'nd_genotypes_genotype_summary_page',
-    'title' => 'Genotype Summary',
-    'access arguments' => array('access content'),
-  );
-   
+
 	return $items;
 }
 
 /**
  * Register any theme functions/templates for this module
  */
-function nd_genotypes_theme () {
-  return nd_genotypes_form_element_theme();
+function nd_genotypes_theme() {
+  return array();
+  //return nd_genotypes_form_element_theme();
 }
