@@ -1,6 +1,7 @@
 <?php
 
 require_once 'includes/nd_genotypes.admin.inc';
+require_once 'includes/nd_genotypes.form_elements.inc';
 
 // Mviews
 require_once 'includes/mviews/nd_genotype_experiment.inc';
@@ -31,8 +32,15 @@ function nd_genotypes_views_api() {
 function nd_genotypes_menu () {
 	$items = array();
 
+  $items['form/test'] = array(
+    'title' => 'Natural Diversity Genotypes',
+    'description' => 'Provides an interface for genotypes and the experiments that generate them.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('nd_genotypes_test_form'),
+    'access arguments' => array('access content'),
+  );
+
 	$items['admin/tripal/extension/nd_genotypes'] = array(
-    'page callback' => 'nd_genotypes_admin_description',
     'title' => 'Natural Diversity Genotypes',
     'description' => 'Provides an interface for genotypes and the experiments that generate them.',
     'access arguments' => array('administer tripal'),

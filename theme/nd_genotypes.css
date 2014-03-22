@@ -1,0 +1,17 @@
+
+#genotype {
+  font-weight: bold;
+}
+
+#genotype.A {
+  color: green;
+}
+#genotype.T {
+  color: red;
+}
+#genotype.G {
+  color: black;
+}
+#genotype.C {
+  color: blue;
+}

@@ -46,7 +46,29 @@ function nd_genotypes_install () {
 
 function nd_genotypes_enable () {
 
+  // First add our special integration for the nd_genotype_experiment table
+  // Although this is integrated by default (priority 10) already, we want to add
+  // a more specific integration (priority 9).
+  // ------------------------
   tripal_add_views_integration(nd_genotype_experiment_views_integration());
+
+  // We also need to add reciprocal joins to the existing feature, genotype,
+  // nd_experiment, nd_geolocation, project and stock integrations so that
+  // nd_genotype_experiment fields can be added to views with a base table of
+  // these types. These should be relationship only joins.
+  // ------------------------
+  $tables = array('feature', 'genotype', 'nd_experiment', 'nd_geolocation', 'project', 'stock');
+  foreach ($tables as $table) {
+    $key = $table . '_id';
+    $join = array(
+      'base_table' => $table,
+      'base_field' => $key,
+      'left_table' => 'nd_genotype_experiment',
+      'left_field' => $key,
+      'relationship_only' => 1,
+    );
+    tripal_add_join_to_views_integration($table, 7, $join);
+  }
 
 }
 
@@ -331,6 +353,20 @@ function nd_genotype_experiment_views_integration () {
         ),
         'joins' => array(),
 			),
+
+			// Calculated Field: genotype.description from nd_genotype_experiment.genotype_description
+      // Allows filtering based on germplasm
+      'germplasm_genotype' => array(
+        'name' => 'germplasm_genotype',
+        'title' => 'Genotypes for Stock',
+        'description' => 'Genotypes of a given stock for each marker.',
+        'type' => 'text',
+        'handlers' => array(
+          'field' => array('name' => 'views_handler_field_germplasm_genotype'),
+          'filter' => array('name' => 'views_handler_filter_germplasm_genotype_by_stock'),
+        ),
+        'joins' => array(),
+      ),
     ),
   );
 }
