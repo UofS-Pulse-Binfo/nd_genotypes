@@ -53,9 +53,11 @@ class views_handler_filter_germplasm_genotype_by_stock extends views_handler_fil
 
     $form['value'] = array(
       '#type' => 'organism_stock',
+      '#organism_title' => 'Source Species',
       '#default_value' => $default,
+      '#organism_weight' => 10
     );
-    if (isset($organism_options)) {
+    if (isset($organism_options) AND sizeof($organism_options) > 1) {
       $form['value']['#organism_options'] = $organism_options;
     }
 

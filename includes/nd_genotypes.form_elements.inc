@@ -26,11 +26,15 @@ function nd_genotypes_test_form($form, $form_state) {
     '#value' => 'Submit'
   );
 
+  dpm($form_state, 'form state');
+
+
   return $form;
 }
 
-function nd_genotypes_test_form_submit($form, $form_state) {
-  //dpm($form_state, 'form state');
+function nd_genotypes_test_form_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+  dpm($form_state, 'form state in submit');
 }
 
 /**
@@ -61,6 +65,7 @@ function nd_genotypes_element_info() {
      	'#input' => TRUE,
      	'#process' => array('expand_multiple_organism_stock'),
      	'#element_validate' => array('multiple_organism_stock_validate'),
+     	'#value_callback' => 'multiple_organism_stock_value_callback',
      	'#theme' => array('multiple_organism_stock'),
       '#theme_wrappers' => array('form_element'),
       '#tree' => TRUE,
@@ -134,23 +139,27 @@ function expand_organism_stock ($element) {
     }
   }
   $element['organism_id'] = array(
+    '#title' => (isset($element['#organism_title'])) ? $element['#organism_title'] : 'Organism',
     '#type' => 'select',
 		'#default_value' => $element['#value']['organism_id'],
-    '#prefix' => '<div class="container-inline">Organism:',
+    '#prefix' => '<div class="organism-stock-organism_id organism-stock-element">',
     '#suffix' => '</div>',
     '#options' => $organism_options,
     '#required' => $element['#required'],
+    '#weight' => (isset($element['#organism_weight'])) ? $element['#organism_weight'] : 0,
   );
 
 	$parents = $element['#parents'];
   $parents[] = 'stock_name';
   $element['stock_name'] = array(
+    '#title' => 'Stock Name',
     '#type' => 'textfield',
     '#default_value' => $element['#value']['stock_name'],
-    '#prefix' => '<div class="container-inline">Name:',
+    '#prefix' => '<div class="organism-stock-name organism-stock-element">',
     '#suffix' => '</div>',
     '#size' => 25,
-    '#required' => $element['#required']
+    '#required' => $element['#required'],
+    '#weight' => 0
   );
 
   return $element;
@@ -160,7 +169,7 @@ function expand_organism_stock ($element) {
  * Theme the custom form element
  */
 function theme_organism_stock ($element) {
-  	return theme('form_element', $element, '<div class="organism-stock-element">'. $element['#children'] .'</div>');
+  	return theme('form_element', $element, '<div class="organism-stock">'. $element['#children'] .'</div>');
 }
 
 /**
@@ -192,50 +201,76 @@ function expand_multiple_organism_stock ($element) {
 	$parents = $element['#parents'];
 	$element['#tree'] = TRUE;
 
+  // if there is a value then add it to the default value
+  if (isset($element['#value']['stock_id'])) {
+    $element['$default_value'] = $element['#value'];
+  }
+
 	if (isset($element['#default_value']) && is_array($element['#default_value'])) {
+
 		// Add name/remove fields for each default value
-		foreach ($element['#default_value'] as $k => $g) {
-			$element[$k]['prefix'] = array(
-				'#type' => 'markup',
-				'#markup' => '<span class="container-inline" id="multiple-organism-stock-row">'
-			);
+		if (!isset($element['#default_value']['existing'])) {
+		  $element['#default_value']['existing'] = array();
+		}
+		foreach ($element['#default_value']['existing'] as $k => $g) {
 
-			$element[$k]['name'] = array(
-				'#type' => 'item',
-				'#value' => $g['stock_name'],
-			);
+      if (!isset($g['stock_id'])) {
+        continue;
+      }
 
-			$element[$k]['stock_name'] = array(
-				'#type' => 'hidden',
-				'#value' => $g['stock_name'],
-			);
+		  $element['existing']['#type'] = 'fieldset';
+      $element['existing']['#title'] = 'Previously Added Stocks';
+      $element['existing']['#description'] = 'The following stocks have already been added:';
+      if (isset($element['#added_description'])) {
+        $element['existing']['#description'] = $element['#added_description'];
+      }
 
-			$element[$k]['stock_id'] = array(
-				'#type' => 'hidden',
-				'#value' => $g['stock_id'],
-			);
-
-			$element[$k]['organism_id'] = array(
-				'#type' => 'hidden',
-				'#value' => $g['organism_id'],
-			);
-
-			$element[$k]['remove'] = array(
-				'#type' => 'checkbox',
-				'#title' => 'Remove',
-			);
-
-			$element[$k]['suffix'] = array(
-				'#type' => 'markup',
-				'#markup' => '</span><br />'
+			$element['existing'][$k] = array(
+			  'prefix' => array(
+				  '#type' => 'markup',
+				  '#markup' => '<span class="container-inline" id="multiple-organism-stock-row">'
+			  ),
+        'name' => array(
+				  '#type' => 'item',
+				  '#markup' => $g['stock_name'],
+			  ),
+			  'stock_name' => array(
+				  '#type' => 'hidden',
+				  '#value' => $g['stock_name'],
+			  ),
+			  'stock_id' => array(
+				  '#type' => 'hidden',
+				  '#value' => $g['stock_id'],
+			  ),
+			  'organism_id' => array(
+				  '#type' => 'hidden',
+				  '#value' => $g['organism_id'],
+			  ),
+			  'remove' => array(
+				  '#type' => 'checkbox',
+				  '#title' => 'Remove',
+			  ),
+			  'suffix' => array(
+				  '#type' => 'markup',
+				  '#markup' => '</span><br />'
+				),
 			);
 		}
 	}
 
 	$element['add_stock'] = array(
 		'#type' => 'organism_stock',
-		'#title' => '<span id="multiple-add-organism-stock">Add</span>'
 	);
+
+	if (isset($element['#organism_title'])) {
+	  $element['add_stock']['#organism_title'] = $element['#organism_title'];
+	}
+  if (isset($element['#organism_weight'])) {
+	  $element['add_stock']['#organism_weight'] = $element['#organism_weight'];
+	}
+	if (isset($element['#organism_options'])) {
+	  $element['add_stock']['#organism_options'] = $element['#organism_options'];
+	}
 
   return $element;
 }
@@ -250,7 +285,39 @@ function theme_multiple_organism_stock ($element) {
 /**
  * Validate user-input for all multiple_organism_stock form elements
  */
-function multiple_organism_stock_validate ($element) {
+function multiple_organism_stock_validate (&$element) {
+
+  $input = $element['#value'];
+
+  if (!isset($input['add_stock'])) {
+    $input['add_stock'] = array(
+      'stock_name' => '',
+      'organism_id' => '<ANY>'
+    );
+  }
+
+  // If both the name/organism of a stock has been added
+  // then add it to 'existing' stocks
+  if (($input['add_stock']['organism_id'] != '<ANY>') AND !empty($input['add_stock']['stock_name'])) {
+
+    // First we need to get the stock referenced
+    $stock = tripal_get_stock(array(
+      'name' => $input['add_stock']['stock_name'],
+      'organism_id' => $input['add_stock']['organism_id']
+    ));
+    if (!$stock) {
+      form_set_error("add_stock']['stock_name", 'There is no stock with the entered name and organism combination');
+    }
+    else {
+      // This is not getting saved :(
+      $element['#value']['add_stock']['stock_id'] = $stock->stock_id;
+    }
+  }
+
+  return $element;
+}
+
+function multiple_organism_stock_value_callback($element, $input = FALSE, &$form_state) {
 
 }
 

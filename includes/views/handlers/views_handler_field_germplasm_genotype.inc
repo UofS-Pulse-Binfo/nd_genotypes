@@ -62,6 +62,7 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
       }
     }
 
+        //dpm($this, 'init: '.$this->aliases['genotypes']);
   }
 
   /**
@@ -176,6 +177,10 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
    */
   function query() {
 
+    if (!isset($this->original_stock_id)) {
+      return FALSE;
+    }
+
     //Set label to be stock_name
     if (!empty($this->original_stock_name)) {
       foreach ($this->view->display as $display) {
@@ -185,9 +190,13 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
     }
 
     // Add additional stocks which are selections of the current stock
-    $selections = tripal_core_chado_select('stock_relationship',array('subject_id'),array('object_id'=>$this->original_stock_id, 'type_id'=> array('name'=>'is_selection_of')));
+    $selections = chado_select_record(
+      'stock_relationship',
+      array('subject_id'),
+      array('object_id' => $this->original_stock_id, 'type_id' => array('name' => 'is_selection_of'))
+    );
 		foreach ($selections as $s) {
-			$stock = tripal_core_chado_select('stock',array('stock_id','organism_id','name'),array('stock_id'=>$s->subject_id));
+			$stock = chado_select_record('stock',array('stock_id','organism_id','name'),array('stock_id'=>$s->subject_id));
 			if ($stock[0]->organism_id) {
 				$this->stock_id[ $stock[0]->stock_id ] = $stock[0]->stock_id;
 				$this->stock_name[ $stock[0]->stock_id ] = $stock[0]->name;
@@ -243,7 +252,18 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
       $this->query->add_where($this->options['group'], $field, $this->stock_id, $operator);
 
 			$this->added_to_query = TRUE;
+
 		}
+
+		// Change the alias of the feature.name field if it's added to the current view
+		// in order to avoid ambiguous feature_name errors in the GroupBy
+		// (there's also a nd_genotype_experiment.feature_name)
+		$this->view->query->fields['feature_name']['alias'] = 'feature_feature_name';
+		$this->view->field['name']->field_alias = 'feature_feature_name';
+		foreach ($this->view->display as $display) {
+      $display->handler->options['fields']['name']['id'] = 'feature_feature_name';
+    }
+
   }
 
   /**
@@ -301,6 +321,11 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
         }
       }
 		}
+
+		//dpm($this, 'this: '.$this->options['id']);
+		//dpm($this->view->display['default'], 'default display: '.$this->options['id']);
+		//dpm($this->view->display['page'], 'page display: '.$this->options['id']);
+
   }
 
   /**
@@ -314,7 +339,12 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
    * should also be in this array.
    */
   function get_items($values) {
-    return $this->items[$values->feature_feature_id];
+    if (isset($this->items[$values->feature_feature_id])) {
+      return $this->items[$values->feature_feature_id];
+    }
+    else {
+      return array();
+    }
   }
 
   /**

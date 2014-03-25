@@ -6,9 +6,9 @@ core = 7.x
 
 files[] = includes/views/handlers/views_handler_field_germplasm_genotype.inc
 files[] = includes/views/handlers/views_handler_filter_germplasm_genotype_by_stock.inc
+files[] = includes/views/handlers/views_handler_filter_add_germplasm_genotype_by_stock_field_filter.inc
 
 ;files[] = views/handlers/views_handler_field_markedup_parent_residues.inc
-;files[] = views/handlers/views_handler_filter_add_germplasm_genotype_by_stock_field_filter.inc
 ;files[] = views/handlers/views_handler_filter_genotype_summary_stock_combo.inc
 ;files[] = views/handlers/views_handler_filter_germplasm_genotype_polymorphic.inc
 

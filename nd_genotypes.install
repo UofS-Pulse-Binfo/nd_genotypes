@@ -367,6 +367,19 @@ function nd_genotype_experiment_views_integration () {
         ),
         'joins' => array(),
       ),
+
+      // Calculated Field: genotype.description from nd_genotype_experiment.genotype_description
+      // Allows dynamic addition of multiple germplasm_genotype fields
+      'add_germplasm_genotype' => array(
+        'name' => 'add_germplasm_genotype',
+        'title' => 'Genotypes for Multiple Stocks',
+        'description' => 'Genotypes of a given stock for each marker; form allows specifying multiple stocks.',
+        'type' => 'text',
+        'handlers' => array(
+          'filter' => array('name' => 'views_handler_filter_add_germplasm_genotype_by_stock_field_filter'),
+        ),
+        'joins' => array(),
+      ),
     ),
   );
 }
