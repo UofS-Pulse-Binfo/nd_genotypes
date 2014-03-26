@@ -67,6 +67,41 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
 
   /**
    * {@inheritdoc}
+   */
+  function option_definition() {
+    $options = parent::option_definition();
+
+    $options['settings']['germplasm'] = array(
+      'export' => TRUE
+    );
+    $options['settings']['use_filter'] = array(
+      'default' => '<NONE>',
+      'export' => TRUE
+    );
+    $options['settings']['has_genotype'] = array(
+      'default' => 1,
+      'export' => TRUE
+    );
+    $options['settings']['get_selections'] = array(
+      'default' => 1,
+      'export' => TRUE
+    );
+
+    $options['render']['render_type'] = array(
+      'default' => 'both',
+      'export' => TRUE
+    );
+    $options['render']['color_bases'] = array(
+      'default' => TRUE,
+      'bool' => TRUE,
+      'export' => TRUE
+    );
+
+    return $options;
+  }
+
+  /**
+   * {@inheritdoc}
    *
    * Adds a number of fields to the option form (displayed to admin to configure field)
    */
