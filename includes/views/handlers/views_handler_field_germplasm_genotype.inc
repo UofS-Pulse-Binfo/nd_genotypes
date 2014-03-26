@@ -273,6 +273,8 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
    */
   function pre_render($values) {
 
+    if (!isset($this->added_to_query)) $this->added_to_query = FALSE;
+
     if ($this->added_to_query) {
       foreach ($values as $k => $v ) {
 

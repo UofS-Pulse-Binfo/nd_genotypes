@@ -355,8 +355,8 @@ function expand_pairwise_compare_germplasm ($element) {
   	}
 
   // Add <none> to options
-  $element['#options']['first']['<NONE>'] = '<None>';
-  $element['#options']['second']['<NONE>'] = '<None>';
+  $element['#options']['first']['<NONE>'] = '';
+  $element['#options']['second']['<NONE>'] = '';
 
 	$element['#tree'] = TRUE;
 
@@ -366,6 +366,8 @@ function expand_pairwise_compare_germplasm ($element) {
     '#type' => 'select',
 		'#default_value' => $element['#value']['first'],
     '#options' => $element['#options']['first'],
+    '#prefix' => 'Between ',
+    '#validated' => TRUE
   );
 
 	$parents[] = 'second';
@@ -373,8 +375,11 @@ function expand_pairwise_compare_germplasm ($element) {
     '#type' => 'select',
 		'#default_value' => $element['#value']['second'],
     '#options' => $element['#options']['second'],
-    '#prefix' => ' vs. '
+    '#prefix' => ' and ',
+    '#validated' => TRUE
   );
+
+  $element['#validated'] = TRUE;
 
   return $element;
 }
@@ -390,37 +395,5 @@ function theme_pairwise_compare_germplasm ($element) {
  * Validate user-input for all pairwise_compare_germplasm form elements
  */
 function pairwise_compare_germplasm_validate ($element) {
-
-  // Remove generic "An illegal choice has been detected. Please contact the site administrator." message.
-  // This is shown because the options array is not of the expected format
-  if (is_array($_SESSION['messages']['error'])) {
-    $key = array_search('An illegal choice has been detected. Please contact the site administrator.',$_SESSION['messages']['error']);
-    unset($_SESSION['messages']['error'][$key]);
-    if (empty($_SESSION['messages']['error'])) {
-      unset($_SESSION['messages']['error']);
-    }
-  }
-
-  // Furthermore, remove highlighting of error form elements
-  // -current form errors
-  $form = form_set_error();
-  // - remove one for this element
-  unset($form[ implode('][',$element['#parents']) ]);
-  // -reset form error cache
-  form_set_error(NULL,'',TRUE);
-  // -add all errors (except one for this element) back
-  foreach ($form as $name => $message) {
-    form_set_error($name, $message);
-  }
-
-
-  //Determine whether the submitted value is in the options array
-  // If not emit our own "An illegal choice has been detected..." message
-  if (!isset($element['#options']['first'][ $element['#value']['first'] ])) {
-    form_set_error( $element['#parents'][0].'][first', 'An illegal choice has been detected. Please contact the site administrator.');
-  }
-  if (!isset($element['#options']['second'][ $element['#value']['second'] ])) {
-    form_set_error( $element['#parents'][0].'][second', 'An illegal choice has been detected. Please contact the site administrator.');
-  }
 
 }

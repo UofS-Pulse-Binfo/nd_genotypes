@@ -59,9 +59,9 @@ class views_handler_filter_add_germplasm_genotype_by_stock_field_filter extends 
 
 			// Then check to see if any need to be removed
 			foreach($_GET['add_germplasm_genotype'] as $k => $spec) {
-				if ($spec['remove']) {
-					unset($_GET['add_germplasm_genotype'][$k]);
-				}
+				//if ($spec['remove']) {
+					//unset($_GET['add_germplasm_genotype'][$k]);
+				//}
 			}
 
 
@@ -82,6 +82,7 @@ class views_handler_filter_add_germplasm_genotype_by_stock_field_filter extends 
       if (!$this->value) { $this->value = array(); }
       $this->view->germplasm_genotype_fields_added = 0;
       if (!isset($this->value['existing'])) { $this->value['existing'] = array(); }
+      $this->view->germplasm_genotype_specs = $this->value['existing'];
       foreach ($this->value['existing'] as $i => $spec) {
 
         // Add Field //////////////////////
