@@ -73,3 +73,183 @@ function nd_genotypes_theme() {
   return array();
   //return nd_genotypes_form_element_theme();
 }
+
+/**
+ * Get the parent sequence and then mark-up any variants including the current one using
+ * a combination of IUPAC codes and [A/T] notation.
+ *
+ * @param $feature_id
+ *   The feature of interest (can be either the base contig, variant or marker)
+ * @param $feature_category
+ *   Either 'variant', 'marker' or 'sequence'. This is optional and will be determined
+ *   if not supplied.
+ * @param $info
+ *   An array of information you would like to supply rather than allow this function to
+ *   determine on it's own. All these keys are optional but if you already have the
+ *   information it is much faster to provide it in this manner.
+ *   Approved keys include:
+ *    - sequence: the full sequence you would like to display. For example, the entire
+ *        sequence of the contig a variant is located on or a subset of the sequence of a
+ *        chromosome.
+ *    - srcfeature_id: the parent feature_id
+ *
+ * @return
+ *  The parent sequence and then mark-up any variants including the current one using
+ *  a combination of IUPAC codes and [A/T] notation.
+ */
+function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = FALSE, $info = FALSE) {
+  $sequence = '';
+  $line_length = 50;
+  $self_fmin = FALSE;
+
+  // Get the Base Sequence
+  if (!isset($info['sequence'])) {
+    if ($feature_category == 'sequence') {
+      $info['sequence'] = chado_query('SELECT residues FROM {feature} WHERE feature_id=:feature_id', array(':feature_id' => $feature_id))->fetchField();
+    }
+  }
+  $sequence = str_split($info['sequence']);
+
+  // Get all variants for contig
+  if ($feature_category == 'sequence') {
+    $info['srcfeature_id'] = $feature_id;
+  }
+  if (isset($info['srcfeature_id'])) {
+    $options = array();
+    $options['include_fk'] = array('feature_id' => array('type_id' => TRUE));
+    $options['order_by'] = array('fmin' => 'ASC');
+    $featurelocs = chado_generate_var('featureloc', array('srcfeature_id' => $info['srcfeature_id']), $options);
+    $featurelocs = chado_expand_var($featurelocs, 'table','feature_genotype');
+    $loc_key = 'feature_id';
+  }
+
+  // First, wordwrap
+  /**
+  for($i=0; $i<sizeof($sequence); $i=$i+$line_length) {
+    if ($i==0) { continue; }
+    $sequence[$i] .= '<br />';
+  }
+  */
+
+  // Foreach, if its a variant keep it's position and nid
+  // for use in creating links below
+  $all_variants = array();
+  foreach ($featurelocs as $loc) {
+    // Check it's a variant
+    if ($loc->{$loc_key}->type_id->name == 'SNP') {
+      if (isset($loc->feature_id->nid)) {
+        $all_variants[$loc->fmin] = 'node/'.$loc->feature_id->nid;
+      }
+
+      if ($loc->feature_id->feature_id == $feature_id) {
+        $self_fmin = $loc->fmin;
+      }
+    }
+  }
+
+  // Foreach, if it's a marker then mark it up
+  // keep all the alleles so that if there is more than one marker per variant
+  // both get taken into account
+  $all_alleles = array();
+  foreach ($featurelocs as $loc) {
+    // Check it's a variant
+    if ($loc->{$loc_key}->type_id->name == 'marker') {
+
+      if ($loc->feature_id->feature_id == $feature_id) {
+        $self_fmin = $loc->fmin;
+      }
+
+      // Get the genotype
+      foreach ($loc->feature_id->feature_genotype->feature_id as $a) {
+        foreach(str_split($a->genotype_id->description) as $allele) {
+          $all_alleles[$loc->feature_id->feature_id][$allele] = $allele;
+        }
+      }
+
+      // Get the IUPAC Code
+      $genotype = implode('', $all_alleles[$loc->feature_id->feature_id]);
+      $code = nd_genotypes_get_IUPAC_code($genotype);
+      $genotype_type = 'IUPAC';
+
+      // If this SNP is for the feature passed in
+      // then don't use the IUPAC code
+      if ($self_fmin == $loc->fmin) {
+        $code = '[' . implode('/', $all_alleles[$loc->feature_id->feature_id]) . ']';
+        $genotype_type = 'expanded';
+      }
+
+      // Create a link if this feature is sync'd
+      $display = $code;
+      if (isset($all_variants[$loc->fmin])) {
+        $display = l($code, $all_variants[$loc->fmin]);
+      }
+
+      // Change the nucleotide
+      if((($loc->fmax - $loc->fmin) == 1) AND $code) {
+        $sequence[$loc->fmin] =
+          "<span class='variant variant-$genotype_type'>"
+            . $display
+        . "</span>";
+      }
+    }
+  }
+  return implode('',$sequence);
+}
+
+function nd_genotypes_get_IUPAC_code($alleles) {
+  $IUPAC = array(
+
+        'AG' => 'R',
+        'GA' => 'R',
+
+        'CT' => 'Y',
+        'TC' => 'Y',
+
+        'GC' => 'S',
+        'CG' => 'S',
+
+        'AT' => 'W',
+        'TA' => 'W',
+
+        'GT' => 'K',
+        'TG' => 'K',
+
+        'AC' => 'M',
+        'CA' => 'M',
+
+        'CGT' => 'B',
+        'CTG' => 'B',
+        'GCT' => 'B',
+        'GTC' => 'B',
+        'TGC' => 'B',
+        'TCG' => 'B',
+
+        'AGT' => 'D',
+        'ATG' => 'D',
+        'GAT' => 'D',
+        'GTA' => 'D',
+        'TGA' => 'D',
+        'TAG' => 'D',
+
+        'ACT' => 'H',
+        'ATC' => 'H',
+        'CAT' => 'H',
+        'CTA' => 'H',
+        'TCA' => 'H',
+        'TAC' => 'H',
+
+        'ACG' => 'V',
+        'AGC' => 'V',
+        'CAG' => 'V',
+        'CGA' => 'V',
+        'GAC' => 'V',
+        'GCA' => 'V',
+      );
+
+  if (isset($IUPAC[$alleles])) {
+    return $IUPAC[$alleles];
+  }
+  else {
+    return FALSE;
+  }
+}
