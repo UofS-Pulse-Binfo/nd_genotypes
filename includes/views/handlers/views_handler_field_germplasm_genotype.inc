@@ -61,8 +61,6 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
         drupal_set_message('There are no stocks with the name, "'.$this->stock_name.'", associated with that organism.', 'error');
       }
     }
-
-        //dpm($this, 'init: '.$this->aliases['genotypes']);
   }
 
   /**
@@ -358,11 +356,6 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
         }
       }
 		}
-
-		//dpm($this, 'this: '.$this->options['id']);
-		//dpm($this->view->display['default'], 'default display: '.$this->options['id']);
-		//dpm($this->view->display['page'], 'page display: '.$this->options['id']);
-
   }
 
   /**

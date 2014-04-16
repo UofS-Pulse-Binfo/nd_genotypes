@@ -70,6 +70,7 @@ function nd_genotypes_enable () {
     tripal_add_join_to_views_integration($table, 7, $join);
   }
 
+  nd_genotypes_add_project_count_mview();
 }
 
 function nd_genotypes_disable () {
@@ -92,6 +93,83 @@ function nd_genotypes_uninstall () {
 	   tripal_mviews_action('delete',$mview);
 	}
 */
+}
+
+/**
+ * Creates a materialized view that stores the type & number of features per organism
+ *
+ * @ingroup nd_genotypes
+ */
+function nd_genotypes_add_project_count_mview() {
+  $view_name = 'project_organism_feature_count';
+  $comment = 'Stores the type and number of features per organism per project';
+
+  $schema = array(
+    'description' => $comment,
+    'table' => $view_name,
+    'fields' => array(
+      'project_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => FALSE,
+      ),
+      'organism_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'organism_name' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'subtype' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => FALSE,
+      ),
+      'num_features' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+    ),
+    'indexes' => array(
+      'project_organism_feature_count_idx1' => array('project_id'),
+      'project_organism_feature_count_idx1' => array('organism_id'),
+      'project_organism_feature_count_idx2' => array('type'),
+      'project_organism_feature_count_idx3' => array('subtype'),
+    ),
+  );
+
+  $sql = "
+    SELECT
+      P.project_id,
+      P.name,
+      O.organism_id,
+      O.genus||' '||O.species as organism_name,
+      (CASE WHEN FT.name IN ('SNP','indel','MNP') THEN 'variant' WHEN FT.name='marker' THEN 'marker' ELSE 'sequence' END) as type,
+      (CASE WHEN FT.name='marker' THEN FP.value ELSE FT.name END) as subtype,
+      count(distinct(PF.feature_id)) as num_features
+    FROM project_feature PF
+      LEFT JOIN project P ON P.project_id=PF.project_id
+      LEFT JOIN feature F ON F.feature_id=PF.feature_id
+      LEFT JOIN organism O ON O.organism_id=F.organism_id
+      LEFT JOIN cvterm FT ON FT.cvterm_id=F.type_id
+      LEFT JOIN featureprop FP ON FP.feature_id=F.feature_id
+        AND FP.type_id IN (SELECT cvterm_id FROM cvterm WHERE name='marker_type')
+    GROUP BY P.project_id, O.organism_id, FT.name, FP.value
+    ORDER BY P.project_id, O.organism_id, type
+  ";
+
+  tripal_add_mview($view_name, 'nd_genotypes', $schema, $sql, $comment);
 }
 
 /**

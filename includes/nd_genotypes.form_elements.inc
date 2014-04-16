@@ -26,15 +26,11 @@ function nd_genotypes_test_form($form, $form_state) {
     '#value' => 'Submit'
   );
 
-  dpm($form_state, 'form state');
-
-
   return $form;
 }
 
 function nd_genotypes_test_form_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
-  dpm($form_state, 'form state in submit');
 }
 
 /**

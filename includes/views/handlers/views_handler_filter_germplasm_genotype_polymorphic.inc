@@ -20,9 +20,6 @@ class views_handler_filter_germplasm_genotype_polymorphic extends views_handler_
   function query () {
 
     // neither can be <NONE>
-    //dpm($this->value, 'value');
-    //dpm($this, 'this');
-
     if (!preg_match('/NONE/i',$this->value['first']) OR !preg_match('/NONE/i',$this->value['second'])) {
 
       // table giving genotype for first stock
@@ -51,7 +48,6 @@ class views_handler_filter_germplasm_genotype_polymorphic extends views_handler_
     $this->value_form['#options']['first'] = $this->field_options;
     $this->value_form['#options']['second'] = $this->field_options;
 
-    dpm($form, 'form');
   }
 
 
