@@ -123,14 +123,6 @@ function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = F
     $loc_key = 'feature_id';
   }
 
-  // First, wordwrap
-  /**
-  for($i=0; $i<sizeof($sequence); $i=$i+$line_length) {
-    if ($i==0) { continue; }
-    $sequence[$i] .= '<br />';
-  }
-  */
-
   // Foreach, if its a variant keep it's position and nid
   // for use in creating links below
   $all_variants = array();
@@ -152,33 +144,48 @@ function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = F
   // both get taken into account
   $all_alleles = array();
   foreach ($featurelocs as $loc) {
+
+    if ($loc->feature_id->feature_id == $feature_id) {
+      $self_fmin = $loc->fmin;
+    }
+
     // Check it's a variant
     if ($loc->{$loc_key}->type_id->name == 'marker') {
 
-      if ($loc->feature_id->feature_id == $feature_id) {
-        $self_fmin = $loc->fmin;
-      }
-
       // Get the genotype
-      foreach ($loc->feature_id->feature_genotype->feature_id as $a) {
-        foreach(str_split($a->genotype_id->description) as $allele) {
-          $all_alleles[$loc->feature_id->feature_id][$allele] = $allele;
+      if (isset($loc->feature_id->feature_genotype->feature_id)) {
+        foreach ($loc->feature_id->feature_genotype->feature_id as $a) {
+          foreach(str_split($a->genotype_id->description) as $allele) {
+            $all_alleles[$loc->feature_id->feature_id][$allele] = $allele;
+          }
+        }
+
+        // Get the IUPAC Code
+        $genotype = implode('', $all_alleles[$loc->feature_id->feature_id]);
+        $code = nd_genotypes_get_IUPAC_code($genotype);
+        $genotype_type = 'IUPAC';
+
+        // If this SNP is for the feature passed in
+        // then don't use the IUPAC code
+        if ($self_fmin == $loc->fmin) {
+          $code = '[' . implode('/', $all_alleles[$loc->feature_id->feature_id]) . ']';
+          $genotype_type = 'expanded';
         }
       }
-
-      // Get the IUPAC Code
-      $genotype = implode('', $all_alleles[$loc->feature_id->feature_id]);
-      $code = nd_genotypes_get_IUPAC_code($genotype);
-      $genotype_type = 'IUPAC';
-
-      // If this SNP is for the feature passed in
-      // then don't use the IUPAC code
-      if ($self_fmin == $loc->fmin) {
-        $code = '[' . implode('/', $all_alleles[$loc->feature_id->feature_id]) . ']';
-        $genotype_type = 'expanded';
+      else {
+        if ($self_fmin == $loc->fmin) {
+          $code = '[' . $sequence[$loc->fmin] . ']';
+          $genotype_type = 'expanded';
+        }
+        else {
+          $code = $sequence[$loc->fmin];
+          $genotype_type = 'IUPAC';
+        }
+        tripal_report_error('nd_genotypes',TRIPAL_WARNING, 'There are no genotypes set for %feature_id to determine how to markup the sequence',array('%feature_id' => $feature_id));
       }
 
       // Create a link if this feature is sync'd
+      $code = (!empty($code)) ? $code : '';
       $display = $code;
       if (isset($all_variants[$loc->fmin])) {
         $display = l($code, $all_variants[$loc->fmin]);
