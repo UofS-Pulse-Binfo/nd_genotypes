@@ -4,7 +4,7 @@ class views_handler_filter_germplasm_genotype_polymorphic extends views_handler_
 
   public $value_form;
 
-  function init(&$view, $options) {
+  function init(&$view, &$options) {
     parent::init($view, $options);
 
   	// Set admin added germplasm_genotype fields as options

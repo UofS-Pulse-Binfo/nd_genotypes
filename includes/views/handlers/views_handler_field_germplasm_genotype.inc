@@ -12,7 +12,7 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
   /**
    * {@inheritdoc}
    */
-  function init(&$view, $options) {
+  function init(&$view, &$options) {
     parent::init($view, $options);
 
     $this->aliases['feature_id'] = 'feature_id';
@@ -191,7 +191,7 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
    *
    * Actually save the options set in option_form()
    */
-  function options_submit($form, $form_state) {
+  function options_submit(&$form, &$form_state) {
 
     $this->options['settings']['germplasm'] = $form_state['values']['options']['settings']['germplasm'];
     $this->options['settings']['use_filter'] = $form_state['values']['options']['settings']['use_filter'];
@@ -304,7 +304,7 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
    *
    * Add genotypes to $view->result (results of the query) and $this->items (used in rendering)
    */
-  function pre_render($values) {
+  function pre_render(&$values) {
 
     if (!isset($this->added_to_query)) $this->added_to_query = FALSE;
 

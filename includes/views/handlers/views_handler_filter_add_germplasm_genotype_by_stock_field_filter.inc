@@ -17,7 +17,7 @@
  */
 class views_handler_filter_add_germplasm_genotype_by_stock_field_filter extends views_handler_filter_germplasm_genotype_by_stock {
 
-  function init (&$view, $options) {
+  function init (&$view, &$options) {
     parent::init($view, $options);
 
     if (isset($_GET['add_germplasm_genotype']['add_stock']) && $_GET['add_germplasm_genotype']['add_stock']['stock_name']) {
@@ -168,7 +168,7 @@ class views_handler_filter_add_germplasm_genotype_by_stock_field_filter extends 
   /**
    * So that the value form is not inherited
    */
-  function value_form (&$form, $form_state) {
+  function value_form (&$form, &$form_state) {
 
     $form_element_name = $this->options['id'];
 
