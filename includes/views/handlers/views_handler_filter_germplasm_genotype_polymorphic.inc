@@ -58,6 +58,9 @@ class views_handler_filter_germplasm_genotype_polymorphic extends views_handler_
 		//$options = $this->field_options;
 		$options = array();
 		if (isset($_GET['add_germplasm_genotype']) && is_array($_GET['add_germplasm_genotype'])) {
+      if (!isset($_GET['add_germplasm_genotype']['existing'])) {
+        $_GET['add_germplasm_genotype']['existing'] = array();
+      }
 			foreach ($_GET['add_germplasm_genotype']['existing'] as $g) {
 				$options[ $g['stock_id'] ] = $g['stock_name'];
 			}
