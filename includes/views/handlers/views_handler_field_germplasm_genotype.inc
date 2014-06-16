@@ -258,6 +258,15 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
       // Now we need to remove the original join added via the relationship
       // otherwise we end up with repetitive rows
       if (isset($this->query->table_queue['nd_genotype_experiment_feature'])) {
+        // but only remove this if there are no filters/fields using it
+        // thus we need to check all conditions on this query for the nd_genotype_experiment_feature prefix
+        foreach ($this->query->where as $group_id => $group_details) {
+          foreach($group_details['conditions'] as $index => $condition) {
+            if (preg_match('/^nd_genotype_experiment_feature\.(\w+)/', $condition['field'], $matches)) {
+              $this->query->where[$group_id]['conditions'][$index]['field'] = $table_alias . '.' . $matches[1];
+            }
+          }
+        }
         unset(
           $this->query->table_queue['nd_genotype_experiment_feature'],
           $this->query->tables['feature']['nd_genotype_experiment_feature'],
