@@ -42,15 +42,29 @@ class views_handler_filter_add_germplasm_genotype_by_stock_field_filter extends 
 			$stock = tripal_get_stock(array('name' => $add_stock['stock_name'], 'organism_id' => $add_stock['organism_id']));
 
 			if (is_object($stock)) {
-				$values = $_GET['add_germplasm_genotype'];
-				$values['existing'][] = array(
-				  'stock_name' => $add_stock['stock_name'],
-				  'organism_id' => $add_stock['organism_id'],
-				  'stock_id' => $stock->stock_id,
-				);
-				unset($values['add_stock']);
+        if (tripal_germplasm_has_nd_genotypes($stock->stock_id)) {
+          $values = $_GET['add_germplasm_genotype'];
+          $values['existing'][] = array(
+            'stock_name' => $add_stock['stock_name'],
+            'organism_id' => $add_stock['organism_id'],
+            'stock_id' => $stock->stock_id,
+          );
+          unset($values['add_stock']);
 
-				$_GET['add_germplasm_genotype'] = $values;
+          $_GET['add_germplasm_genotype'] = $values;
+        }
+        else {
+          $msg = 'That stock does not have any genotypes associated with it. Keep in mind that
+            you currently have to enter the full name of the DNA stock that was assayed. For example,
+            "964a-46 LAM Plate1 Extraction" instead of just "964a-46". For a list of stocks assayed
+            click on the "Germplasm Genotyped" Link in the menu under the genotype search.';
+          drupal_set_message($msg,'error');
+          tripal_report_error(
+            'nd_genotype',
+            TRIPAL_WARNING,
+            $msg
+          );
+        }
 			}
 
 		} elseif (isset($_GET['add_germplasm_genotype'])) {

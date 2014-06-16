@@ -1,5 +1,9 @@
 <?php
 
+// API
+require_once 'api/nd_genotypes.api.inc';
+
+// Includes
 require_once 'includes/nd_genotypes.admin.inc';
 require_once 'includes/nd_genotypes.form_elements.inc';
 
