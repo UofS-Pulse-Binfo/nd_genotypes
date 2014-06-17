@@ -80,10 +80,14 @@ class views_handler_filter_add_germplasm_genotype_by_stock_field_filter extends 
         unset($_GET['add_germplasm_genotype']['add_stock']);
 
         // Then check to see if any need to be removed
-        foreach($_GET['add_germplasm_genotype'] as $k => $spec) {
-          //if ($spec['remove']) {
-            //unset($_GET['add_germplasm_genotype'][$k]);
-          //}
+        if (isset($_GET['add_germplasm_genotype']['existing'])) {
+          foreach($_GET['add_germplasm_genotype']['existing'] as $k => $spec) {
+            if (isset($spec['remove'])) {
+              if ($spec['remove']) {
+                unset($_GET['add_germplasm_genotype']['existing'][$k]);
+              }
+            }
+          }
         }
 
 
