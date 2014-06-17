@@ -20,66 +20,75 @@ class views_handler_filter_add_germplasm_genotype_by_stock_field_filter extends 
   function init (&$view, &$options) {
     parent::init($view, $options);
 
-    if (isset($_GET['add_germplasm_genotype']['add_stock']) && $_GET['add_germplasm_genotype']['add_stock']['stock_name']) {
-			$add_stock = $_GET['add_germplasm_genotype']['add_stock'];
-
-			$max_key = 'N';
-			foreach ($_GET['add_germplasm_genotype'] as $k => $v) {
-				if (preg_match('/^\d+$/',$k)) {
-					if ($max_key == 'N') {
-						$max_key = $k;
-					} elseif ($max_key < $k) {
-						$max_key = $k;
-					}
-				}
-			}
-			if ($max_key === 'N') {
-				$i = 0;
-			} else {
-				$i = intval($max_key) + 1;
-			}
-
-			$stock = tripal_get_stock(array('name' => $add_stock['stock_name'], 'organism_id' => $add_stock['organism_id']));
-
-			if (is_object($stock)) {
-        if (tripal_germplasm_has_nd_genotypes($stock->stock_id)) {
-          $values = $_GET['add_germplasm_genotype'];
-          $values['existing'][] = array(
-            'stock_name' => $add_stock['stock_name'],
-            'organism_id' => $add_stock['organism_id'],
-            'stock_id' => $stock->stock_id,
-          );
-          unset($values['add_stock']);
-
-          $_GET['add_germplasm_genotype'] = $values;
+    if (isset($_GET['add_germplasm_genotype']['add_stock'])) {
+      if (!empty($_GET['add_germplasm_genotype']['add_stock']['stock_name']) AND !empty($_GET['add_germplasm_genotype']['add_stock']['organism_id'])) {
+        $add_stock = $_GET['add_germplasm_genotype']['add_stock'];
+  
+        // Find the maximum key
+        $max_key = 'N';
+        foreach ($_GET['add_germplasm_genotype'] as $k => $v) {
+          if (preg_match('/^\d+$/',$k)) {
+            if ($max_key == 'N') {
+              $max_key = $k;
+            } elseif ($max_key < $k) {
+              $max_key = $k;
+            }
+          }
         }
-        else {
-          $msg = 'That stock does not have any genotypes associated with it. Keep in mind that
-            you currently have to enter the full name of the DNA stock that was assayed. For example,
-            "964a-46 LAM Plate1 Extraction" instead of just "964a-46". For a list of stocks assayed
-            click on the "Germplasm Genotyped" Link in the menu under the genotype search.';
-          drupal_set_message($msg,'error');
-          tripal_report_error(
-            'nd_genotype',
-            TRIPAL_WARNING,
-            $msg
-          );
+        if ($max_key === 'N') {
+          $i = 0;
+        } else {
+          $i = intval($max_key) + 1;
         }
-			}
+  
+        $stock = tripal_get_stock(array('name' => $add_stock['stock_name'], 'organism_id' => $add_stock['organism_id']));
+  
+        if (is_object($stock)) {
+          if (tripal_germplasm_has_nd_genotypes($stock->stock_id)) {
+            $values = $_GET['add_germplasm_genotype'];
+            $values['existing'][] = array(
+              'stock_name' => $add_stock['stock_name'],
+              'organism_id' => $add_stock['organism_id'],
+              'stock_id' => $stock->stock_id,
+            );
+            unset($values['add_stock']);
+  
+            $_GET['add_germplasm_genotype'] = $values;
+          }
+          else {
+            $msg = 'That stock does not have any genotypes associated with it. Keep in mind that
+              you currently have to enter the full name of the DNA stock that was assayed. For example,
+              "964a-46 LAM Plate1 Extraction" instead of just "964a-46". For a list of stocks assayed
+              click on the "Germplasm Genotyped" Link in the menu under the genotype search.';
+            drupal_set_message($msg,'error');
+            tripal_report_error(
+              'nd_genotype',
+              TRIPAL_WARNING,
+              $msg
+            );
+          }
+        }
 
-		} elseif (isset($_GET['add_germplasm_genotype'])) {
-			// remove empty add_stock
-			unset($_GET['add_germplasm_genotype']['add_stock']);
+      }
+      // If they entered a stock name but no organism then iform them this is So Not Okay ;)
+      elseif (!empty($_GET['add_germplasm_genotype']['add_stock']['stock_name'])) {
+        drupal_set_message('You must enter the source species when adding genotypes.', 'error');
+      }
+      // If they didn't supply either stock name or organism_id then maybe they just want to remove things
+      else {
+        // remove empty add_stock
+        unset($_GET['add_germplasm_genotype']['add_stock']);
 
-			// Then check to see if any need to be removed
-			foreach($_GET['add_germplasm_genotype'] as $k => $spec) {
-				//if ($spec['remove']) {
-					//unset($_GET['add_germplasm_genotype'][$k]);
-				//}
-			}
+        // Then check to see if any need to be removed
+        foreach($_GET['add_germplasm_genotype'] as $k => $spec) {
+          //if ($spec['remove']) {
+            //unset($_GET['add_germplasm_genotype'][$k]);
+          //}
+        }
 
 
-		}
+      }
+    } //end of if add_germplasm_genotype is set
 
     if (isset($_GET['add_germplasm_genotype'])) {
   		$this->value = $_GET['add_germplasm_genotype'];
@@ -200,7 +209,7 @@ class views_handler_filter_add_germplasm_genotype_by_stock_field_filter extends 
         ));
         $organism = chado_select_record('organism',array('organism_id', 'genus', 'species'),$org_values,$options);
         if (is_array($organism)) {
-          $organism_options['<ANY>'] = '<Any>';
+          $organism_options[0] = ' ';
           foreach ($organism as $o) {
             $organism_options[$o->organism_id] = $o->genus .' '. $o->species;
           }

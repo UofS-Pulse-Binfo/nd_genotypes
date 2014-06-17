@@ -108,7 +108,7 @@ function expand_organism_stock ($element) {
 	// Assigning default values to element. You can override these values by passing your own values using "#default_value".
 	if (empty($element['#default_value'])) {
     $element['#value'] = array(
-        'organism_id' => '<ANY>',
+        'organism_id' => 0,
         'stock_name' => '',
     );
   }
@@ -129,7 +129,7 @@ function expand_organism_stock ($element) {
 	}
 	else {
     $organisms = chado_select_record('organism',array('genus','species','organism_id'), array(), array('order_by'=>array('genus' => 'ASC', 'species' => 'ASC')));
-    $organism_options['<ANY>'] = '<Any>';
+    $organism_options[0] = ' ';
     foreach ($organisms as $o) {
       $organism_options[$o->organism_id] = $o->genus .' '. $o->species;
     }
@@ -288,13 +288,13 @@ function multiple_organism_stock_validate (&$element) {
   if (!isset($input['add_stock'])) {
     $input['add_stock'] = array(
       'stock_name' => '',
-      'organism_id' => '<ANY>'
+      'organism_id' => 0
     );
   }
 
   // If both the name/organism of a stock has been added
   // then add it to 'existing' stocks
-  if (($input['add_stock']['organism_id'] != '<ANY>') AND !empty($input['add_stock']['stock_name'])) {
+  if (($input['add_stock']['organism_id'] != 0) AND !empty($input['add_stock']['stock_name'])) {
 
     // First we need to get the stock referenced
     $stock = tripal_get_stock(array(
