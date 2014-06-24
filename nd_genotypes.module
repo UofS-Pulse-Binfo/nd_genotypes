@@ -96,6 +96,19 @@ function nd_genotypes_theme() {
  *        sequence of the contig a variant is located on or a subset of the sequence of a
  *        chromosome.
  *    - srcfeature_id: the parent feature_id
+ *   Sometimes the parent sequence is too long to be displayed in full. In these cases,
+ *   you might want to specify the region to be shown. This can be done by providing the
+ *   sequence using the above option but in order to ensure you only pull genotypes for that
+ *   region or to allow this function to handle getting the substring, you should specify
+ *   either the flanking sequence length or the start and end coordinates using the
+ *   following options:
+ *    - flanking_sequence_length: the number of bases on either side of the feature indicated
+ *      by the $feature_id
+ *    - parent_sequence_start: the start coordinate on the parent sequence of the substring
+ *      you would like displayed
+ *    - parent_sequence_end: the end coordinate on the parent sequence of the substring
+ *      you would like displayed
+ *
  *
  * @return
  *  The parent sequence and then mark-up any variants including the current one using
@@ -123,7 +136,7 @@ function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = F
     $options['include_fk'] = array('feature_id' => array('type_id' => TRUE));
     $options['order_by'] = array('fmin' => 'ASC');
     $featurelocs = chado_generate_var('featureloc', array('srcfeature_id' => $info['srcfeature_id']), $options);
-    $featurelocs = chado_expand_var($featurelocs, 'table','feature_genotype');
+    $featurelocs = chado_expand_var($featurelocs, 'table','feature_genotype', array('return_array' => TRUE));
     $loc_key = 'feature_id';
   }
 
@@ -158,6 +171,9 @@ function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = F
 
       // Get the genotype
       if (isset($loc->feature_id->feature_genotype->feature_id)) {
+        if (is_object($loc->feature_id->feature_genotype->feature_id)) {
+          $loc->feature_id->feature_genotype->feature_id = array($loc->feature_id->feature_genotype->feature_id);
+        }
         foreach ($loc->feature_id->feature_genotype->feature_id as $a) {
           foreach(str_split($a->genotype_id->description) as $allele) {
             $all_alleles[$loc->feature_id->feature_id][$allele] = $allele;
@@ -209,6 +225,11 @@ function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = F
 
 function nd_genotypes_get_IUPAC_code($alleles) {
   $IUPAC = array(
+
+        'A' => 'A',
+        'T' => 'T',
+        'C' => 'C',
+        'G' => 'G',
 
         'AG' => 'R',
         'GA' => 'R',
