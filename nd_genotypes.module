@@ -92,7 +92,7 @@ function nd_genotypes_theme() {
  *   determine on it's own. All these keys are optional but if you already have the
  *   information it is much faster to provide it in this manner.
  *   Approved keys include:
- *    - sequence: the full sequence you would like to display. For example, the entire
+ *    - * sequence: the full sequence you would like to display. For example, the entire
  *        sequence of the contig a variant is located on or a subset of the sequence of a
  *        chromosome.
  *    - srcfeature_id: the parent feature_id
@@ -102,6 +102,7 @@ function nd_genotypes_theme() {
  *   region or to allow this function to handle getting the substring, you should specify
  *   either the flanking sequence length or the start and end coordinates using the
  *   following options:
+ *    - maximum_sequence_length: the maximum length of sequence you would like returned. Default = 600
  *    - flanking_sequence_length: the number of bases on either side of the feature indicated
  *      by the $feature_id
  *    - parent_sequence_start: the start coordinate on the parent sequence of the substring
@@ -114,18 +115,15 @@ function nd_genotypes_theme() {
  *  The parent sequence and then mark-up any variants including the current one using
  *  a combination of IUPAC codes and [A/T] notation.
  */
-function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = FALSE, $info = FALSE) {
+function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = FALSE, $info) {
   $sequence = '';
   $line_length = 50;
   $self_fmin = FALSE;
+  $info['maximum_sequence_length'] = (isset($info['maximum_sequence_length'])) ? $info['maximum_sequence_length'] : 1000;
+  $variant_types = array('SNP', 'MNP','indel');
 
-  // Get the Base Sequence
-  if (!isset($info['sequence'])) {
-    if ($feature_category == 'sequence') {
-      $info['sequence'] = chado_query('SELECT residues FROM {feature} WHERE feature_id=:feature_id', array(':feature_id' => $feature_id))->fetchField();
-    }
-  }
-  $sequence = str_split($info['sequence']);
+  // Store return array
+  $marked_up_seq_details = array();
 
   // Get all variants for contig
   if ($feature_category == 'sequence') {
@@ -135,6 +133,7 @@ function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = F
     $options = array();
     $options['include_fk'] = array('feature_id' => array('type_id' => TRUE));
     $options['order_by'] = array('fmin' => 'ASC');
+    $options['return_array'] = TRUE;
     $featurelocs = chado_generate_var('featureloc', array('srcfeature_id' => $info['srcfeature_id']), $options);
     $featurelocs = chado_expand_var($featurelocs, 'table','feature_genotype', array('return_array' => TRUE));
     $loc_key = 'feature_id';
@@ -145,7 +144,7 @@ function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = F
   $all_variants = array();
   foreach ($featurelocs as $loc) {
     // Check it's a variant
-    if ($loc->{$loc_key}->type_id->name == 'SNP') {
+    if (in_array($loc->{$loc_key}->type_id->name, $variant_types)) {
       if (isset($loc->feature_id->nid)) {
         $all_variants[$loc->fmin] = 'node/'.$loc->feature_id->nid;
       }
@@ -154,20 +153,48 @@ function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = F
         $self_fmin = $loc->fmin;
       }
     }
+    else {
+      if ($loc->feature_id->feature_id == $feature_id) {
+        $self_fmin = $loc->fmin;
+      }
+    }
   }
+
+  // Determine if we are dealing with a really long base sequence, in which case we need
+  // to substring what is returned to make it more managable
+  // Needs to be done here b/c before this point we don't have the location of the current feature
+  if (strlen($info['sequence']) > $info['maximum_sequence_length']) {
+    if ($self_fmin) {
+      $half_point = $info['maximum_sequence_length'] / 2;
+      $start = (($self_fmin - $half_point) >= 0) ? $self_fmin - $half_point : 0;
+      $sequence = substr($info['sequence'], $start, $info['maximum_sequence_length']);
+    }
+    else {
+      $start = 0;
+      $sequence = substr($info['sequence'], 0, $info['maximum_sequence_length']);
+    }
+    $end = $start + $info['maximum_sequence_length'];
+  }
+  else {
+    $start = 0;
+    $end = $start + $info['maximum_sequence_length'];
+    $sequence = $info['sequence'];
+  }
+  $marked_up_seq_details['shortened_sequence'] = $sequence;
+  $sequence = str_split($sequence);
 
   // Foreach, if it's a marker then mark it up
   // keep all the alleles so that if there is more than one marker per variant
   // both get taken into account
   $all_alleles = array();
   foreach ($featurelocs as $loc) {
+    // Use the position to take into account that the sequence might be substringed
+    $position = $loc->fmin - $start;
+    $original_position = $loc->fmin;
 
-    if ($loc->feature_id->feature_id == $feature_id) {
-      $self_fmin = $loc->fmin;
-    }
-
+    // Ensure that the current location is still on the substring
     // Check it's a variant
-    if ($loc->{$loc_key}->type_id->name == 'marker') {
+    if ($loc->{$loc_key}->type_id->name == 'marker' AND $original_position <= $end) {
 
       // Get the genotype
       if (isset($loc->feature_id->feature_genotype->feature_id)) {
@@ -187,18 +214,18 @@ function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = F
 
         // If this SNP is for the feature passed in
         // then don't use the IUPAC code
-        if ($self_fmin == $loc->fmin) {
+        if ($self_fmin == $original_position) {
           $code = '[' . implode('/', $all_alleles[$loc->feature_id->feature_id]) . ']';
           $genotype_type = 'expanded';
         }
       }
       else {
-        if ($self_fmin == $loc->fmin) {
-          $code = '[' . $sequence[$loc->fmin] . ']';
+        if ($self_fmin == $original_position) {
+          $code = '[' . $sequence[$position] . ']';
           $genotype_type = 'expanded';
         }
         else {
-          $code = $sequence[$loc->fmin];
+          $code = $sequence[$position];
           $genotype_type = 'IUPAC';
         }
         tripal_report_error('nd_genotypes',TRIPAL_WARNING, 'There are no genotypes set for %feature_id to determine how to markup the sequence',array('%feature_id' => $feature_id));
@@ -207,20 +234,24 @@ function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = F
       // Create a link if this feature is sync'd
       $code = (!empty($code)) ? $code : '';
       $display = $code;
-      if (isset($all_variants[$loc->fmin])) {
-        $display = l($code, $all_variants[$loc->fmin]);
+      if (isset($all_variants[$original_position])) {
+        $display = l($code, $all_variants[$original_position]);
       }
 
       // Change the nucleotide
       if((($loc->fmax - $loc->fmin) == 1) AND $code) {
-        $sequence[$loc->fmin] =
+        $sequence[$position] =
           "<span class='variant variant-$genotype_type'>"
             . $display
         . "</span>";
       }
     }
   }
-  return implode('',$sequence);
+  $marked_up_seq_details['start'] = $start;
+  $marked_up_seq_details['end'] = $end;
+  $marked_up_seq_details['marked_up_sequence'] = implode('',$sequence);
+
+  return $marked_up_seq_details;
 }
 
 function nd_genotypes_get_IUPAC_code($alleles) {
