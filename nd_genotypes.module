@@ -96,6 +96,7 @@ function nd_genotypes_theme() {
  *        sequence of the contig a variant is located on or a subset of the sequence of a
  *        chromosome.
  *    - srcfeature_id: the parent feature_id
+ *    - feature_position: the fmin of the SNP/marker, FALSE if sequence feature
  *   Sometimes the parent sequence is too long to be displayed in full. In these cases,
  *   you might want to specify the region to be shown. This can be done by providing the
  *   sequence using the above option but in order to ensure you only pull genotypes for that
@@ -105,11 +106,6 @@ function nd_genotypes_theme() {
  *    - maximum_sequence_length: the maximum length of sequence you would like returned. Default = 600
  *    - flanking_sequence_length: the number of bases on either side of the feature indicated
  *      by the $feature_id
- *    - parent_sequence_start: the start coordinate on the parent sequence of the substring
- *      you would like displayed
- *    - parent_sequence_end: the end coordinate on the parent sequence of the substring
- *      you would like displayed
- *
  *
  * @return
  *  The parent sequence and then mark-up any variants including the current one using
@@ -118,7 +114,7 @@ function nd_genotypes_theme() {
 function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = FALSE, $info) {
   $sequence = '';
   $line_length = 50;
-  $self_fmin = FALSE;
+  $self_fmin = (isset($info['feature_position'])) ? $info['feature_position'] : FALSE;
   $info['maximum_sequence_length'] = (isset($info['maximum_sequence_length'])) ? $info['maximum_sequence_length'] : 1000;
   $variant_types = array('SNP', 'MNP','indel');
 
@@ -134,6 +130,8 @@ function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = F
     $options['include_fk'] = array('feature_id' => array('type_id' => TRUE));
     $options['order_by'] = array('fmin' => 'ASC');
     $options['return_array'] = TRUE;
+    // @TODO: only grab the featurelocs in the shortened sequence range.
+    // Currently chado_generate_var() doesn't support > < operators.
     $featurelocs = chado_generate_var('featureloc', array('srcfeature_id' => $info['srcfeature_id']), $options);
     $featurelocs = chado_expand_var($featurelocs, 'table','feature_genotype', array('return_array' => TRUE));
     $loc_key = 'feature_id';
@@ -177,7 +175,7 @@ function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = F
   }
   else {
     $start = 0;
-    $end = $start + $info['maximum_sequence_length'];
+    $end = $start + strlen($info['sequence']);
     $sequence = $info['sequence'];
   }
   $marked_up_seq_details['shortened_sequence'] = $sequence;
@@ -194,7 +192,7 @@ function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = F
 
     // Ensure that the current location is still on the substring
     // Check it's a variant
-    if ($loc->{$loc_key}->type_id->name == 'marker' AND $original_position <= $end) {
+    if ($loc->{$loc_key}->type_id->name == 'marker' AND $original_position <= $end AND $original_position >= $start) {
 
       // Get the genotype
       if (isset($loc->feature_id->feature_genotype->feature_id)) {
