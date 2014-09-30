@@ -130,9 +130,17 @@ function nd_genotypes_markup_variant_sequence($feature_id, $feature_category = F
     $options['include_fk'] = array('feature_id' => array('type_id' => TRUE));
     $options['order_by'] = array('fmin' => 'ASC');
     $options['return_array'] = TRUE;
-    // @TODO: only grab the featurelocs in the shortened sequence range.
-    // Currently chado_generate_var() doesn't support > < operators.
-    $featurelocs = chado_generate_var('featureloc', array('srcfeature_id' => $info['srcfeature_id']), $options);
+    $values = array( 'srcfeature_id' => $info['srcfeature_id'] );
+
+    if ($self_fmin) {
+      $half_point = $info['maximum_sequence_length'] / 2;
+      $start = (($self_fmin - $half_point) >= 0) ? $self_fmin - $half_point : 0;
+      $end = $start + $info['maximum_sequence_length'];
+
+      $values['fmin'] = array('op' => '>', 'data' => $start);
+      $values['fmax'] = array('op' => '<', 'data' => $end);
+    }
+    $featurelocs = chado_generate_var('featureloc', $values, $options);
     $featurelocs = chado_expand_var($featurelocs, 'table','feature_genotype', array('return_array' => TRUE));
     $loc_key = 'feature_id';
   }
