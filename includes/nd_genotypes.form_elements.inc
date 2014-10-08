@@ -143,6 +143,7 @@ function expand_organism_stock ($element) {
     '#options' => $organism_options,
     '#required' => $element['#required'],
     '#weight' => (isset($element['#organism_weight'])) ? $element['#organism_weight'] : 0,
+    '#attributes' => array('class' => array('container-inline')),
   );
 
 	$parents = $element['#parents'];
@@ -155,7 +156,8 @@ function expand_organism_stock ($element) {
     '#suffix' => '</div>',
     '#size' => 25,
     '#required' => $element['#required'],
-    '#weight' => 0
+    '#weight' => 0,
+    '#attributes' => array('class' => array('container-inline')),
   );
 
   return $element;

@@ -30,12 +30,18 @@
  *   - nd_geolocation_description: description of the geolocation where this experiment was performed
  *   - project_id: the unique key of the project this genotype experiment is associated with
  *   - project_name: the name of the project this genotype experiment is associated with
+ *   - polymorphic_with: a postgreSQL array containing the stock_ids of germplasm
+ *       with different genotypes than the current one for the same marker
  *   - nd_genotype_experiment_id: unique key for this table
  */
 function nd_genotypes_register_nd_genotype_experiment_mview() {
+  global $user;
 
   $name = "nd_genotype_experiment";
-  $comment = 'A materialized view consolidating the various components of a natural diversity genotype experiment. All ND Genotype module functionality uses this view. ONLY UPDATE THROUGH '.l('ND Genotypes Administration.', 'admin/tripal/extension/nd_genotypes/mviews');
+  $comment = 'A materialized view consolidating the various components of a
+  natural diversity genotype experiment. All ND Genotype module functionality
+  uses this view. MAKE SURE TO UPDATE POLYMORPHISM INFORMATION SEPARATELY
+  (Administration > Tripal > Extension Modules > Natural Diverity Genotypes)';
 
   $schema = array(
     'description' => $comment,
@@ -150,12 +156,20 @@ function nd_genotypes_register_nd_genotype_experiment_mview() {
     $mview_id = tripal_mviews_get_mview_id($name);
   }
 
-  // Then use our custom function to update/populate it
-  global $user;
+  // Then Populate it.
   tripal_add_job(
-    "Update nd_genotype_experiment Materialized View",
+    "Populate the nd_genotype_experiment materialized view.",
     'nd_genotypes',
-    'nd_genotypes_update_nd_genotype_experiment_mview',
+    'tripal_populate_mview',
+    array($mview_id),
+    $user->uid
+  );
+
+  // And add polymorphism information.
+  tripal_add_job(
+    "Update polymorphism information for ND Genotypes.",
+    'nd_genotypes',
+    'nd_genotypes_update_polymorphism_info',
     array($mview_id),
     $user->uid
   );
@@ -169,10 +183,7 @@ function nd_genotypes_register_nd_genotype_experiment_mview() {
  * column needs to be updated separately since it relies on other content in the same
  * view.
  */
-function nd_genotypes_update_nd_genotype_experiment_mview($mview_id) {
-
-    //Populate
-    tripal_populate_mview($mview_id);
+function nd_genotypes_update_polymorphism_info($mview_id) {
 
     // Update polymorphic_with column
     $update_sql = "UPDATE chado.nd_genotype_experiment SET polymorphic_with=subq.polymorphic_with
