@@ -425,7 +425,7 @@ function nd_genotypes_genotype_matrix_defaultview() {
 
   /* Display: Page */
   $handler = $view->new_display('page', 'Page', 'page');
-  $handler->display->display_options['path'] = 'search/genotypes/%';
+  $handler->display->display_options['path'] = 'chado/genotype/%';
 
   return $view;
 }
@@ -560,7 +560,7 @@ function nd_genotypes_genotype_matrix_germplasm_list_defaultview() {
 
   /* Display: Page */
   $handler = $view->new_display('page', 'Page', 'page');
-  $handler->display->display_options['path'] = 'search/genotypes/%/germplasm';
+  $handler->display->display_options['path'] = 'chado/genotype/%/germplasm';
 
   return $view;
 }
@@ -573,9 +573,9 @@ function nd_genotypes_genotype_admin_defaultview() {
   $view = new view();
   $view->name = 'nd_genotype_experiments_admin';
   $view->description = '';
-  $view->tag = 'default';
+  $view->tag = 'ND Genotypes';
   $view->base_table = 'nd_genotype_experiment';
-  $view->human_name = 'Genotype Experiments';
+  $view->human_name = 'Genotype Experiments Admin';
   $view->core = 7;
   $view->api_version = '3.0';
   $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
@@ -591,6 +591,28 @@ function nd_genotypes_genotype_admin_defaultview() {
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = '50';
   $handler->display->display_options['style_plugin'] = 'table';
+  /* Header: Global: Action Links */
+  $handler->display->display_options['header']['action_links_area']['id'] = 'action_links_area';
+  $handler->display->display_options['header']['action_links_area']['table'] = 'views';
+  $handler->display->display_options['header']['action_links_area']['field'] = 'action_links_area';
+  $handler->display->display_options['header']['action_links_area']['label'] = 'Action Links';
+  $handler->display->display_options['header']['action_links_area']['empty'] = TRUE;
+  $handler->display->display_options['header']['action_links_area']['link-1'] = array(
+    'label-1' => 'Import via Bulk Loader',
+    'path-1' => 'node/add/tripal-bulk-loader',
+  );
+  /* No results behavior: Global: Text area */
+  $handler->display->display_options['empty']['area']['id'] = 'area';
+  $handler->display->display_options['empty']['area']['table'] = 'views';
+  $handler->display->display_options['empty']['area']['field'] = 'area';
+  $handler->display->display_options['empty']['area']['label'] = 'No Genotypes';
+  $handler->display->display_options['empty']['area']['empty'] = TRUE;
+  $handler->display->display_options['empty']['area']['content'] = 'There are no genotypes currently sync\'d through the ND Genotypes module. To get data to appear here and be available to the ND Genotype module you need to
+  <ol>
+  <li>Load genotypic data such that this module can decipher it. The easiest way to do this is to use the Tripal Bulk Loading template, "ND Genotype: Generic Genotype Experiments", provided with this module. See the Sync tab to re-add the template if you don\'t have it or need to revert any changes.</li>
+  <li>Sync that data by populating the nd_genotype_experiment materialized view. This should be done through the Sync tab above.</li>
+  </ol>';
+  $handler->display->display_options['empty']['area']['format'] = 'full_html';
   /* Field: Natural Diversity Genotype Experiments: ND Experiment ID */
   $handler->display->display_options['fields']['nd_experiment_id']['id'] = 'nd_experiment_id';
   $handler->display->display_options['fields']['nd_experiment_id']['table'] = 'nd_genotype_experiment';
@@ -676,6 +698,18 @@ function nd_genotypes_genotype_admin_defaultview() {
     3 => 0,
     6 => 0,
   );
+  /* Sort criterion: Natural Diversity Genotype Experiments: Feature Name */
+  $handler->display->display_options['sorts']['feature_name']['id'] = 'feature_name';
+  $handler->display->display_options['sorts']['feature_name']['table'] = 'nd_genotype_experiment';
+  $handler->display->display_options['sorts']['feature_name']['field'] = 'feature_name';
+  /* Sort criterion: Natural Diversity Genotype Experiments: Stock Name */
+  $handler->display->display_options['sorts']['stock_name']['id'] = 'stock_name';
+  $handler->display->display_options['sorts']['stock_name']['table'] = 'nd_genotype_experiment';
+  $handler->display->display_options['sorts']['stock_name']['field'] = 'stock_name';
+  /* Sort criterion: Natural Diversity Genotype Experiments: Genotype Allele */
+  $handler->display->display_options['sorts']['genotype_description']['id'] = 'genotype_description';
+  $handler->display->display_options['sorts']['genotype_description']['table'] = 'nd_genotype_experiment';
+  $handler->display->display_options['sorts']['genotype_description']['field'] = 'genotype_description';
 
   /* Display: Page */
   $handler = $view->new_display('page', 'Page', 'page');

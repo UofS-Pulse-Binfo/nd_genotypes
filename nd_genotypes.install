@@ -19,8 +19,9 @@ function nd_genotypes_install () {
   nd_genotypes_register_nd_genotype_experiment_mview();
 
   // Add Generic Bulk Loader
-	nd_genotypes_add_generic_experiment_bulk_loader();
-
+  if (module_exists('tripal_bulk_loader')) {
+ 	  nd_genotypes_add_generic_experiment_bulk_loader();
+  }
 }
 
 /**

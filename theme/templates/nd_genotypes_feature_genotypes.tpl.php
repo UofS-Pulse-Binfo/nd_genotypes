@@ -34,7 +34,7 @@ $is_marker = FALSE;
 /////////////////////////////
 // CASE #1: Markers
 
-if ($feature->type_id->name == 'marker') {
+if ($feature->type_id->name == 'genetic_marker') {
 
   $is_marker = TRUE;
 

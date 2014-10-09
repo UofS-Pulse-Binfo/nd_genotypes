@@ -53,7 +53,7 @@ function nd_genotypes_menu () {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('nd_genotypes_admin_sync_mviews'),
     'access arguments' => array('administer tripal'),
-    'weight' => -2
+    'weight' => 2
   );
 
   $items['admin/tripal/extension/nd_genotypes/help'] = array(
@@ -62,7 +62,34 @@ function nd_genotypes_menu () {
     'page callback' => 'theme',
     'page arguments' => array('nd_genotypes__help'),
     'access arguments' => array('administer tripal'),
+    'weight' => 4
   );
+
+  // Add Marker x Germplasm Matrix links (1/organism synced)
+/**
+  $items['chado/genotype_matrix'] = array(
+    'title' => 'Genotype Matrix',
+    'description' => 'Marker by Germplasm Genotypes Search.',
+    'access arguments' => array('access content'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $sql = "
+    SELECT *
+    FROM public.chado_organism CO
+      INNER JOIN {organism} O ON O.organism_id = CO.organism_id
+    ORDER BY O.genus, O.species
+  ";
+  $orgs = chado_query($sql);
+  foreach ($orgs as $organism) {
+    $items['chado/genotype_matrix/' . $organism->genus] = array(
+      'title' => $organism->genus . ' Genotypes',
+      'description' => 'Marker by Germplasm Genotypes Search for ' . $organism->genus . ' species.',
+      'access arguments' => array('access content'),
+      'type' => MENU_NORMAL_ITEM,
+    );
+  }
+*/
 
 	return $items;
 }
