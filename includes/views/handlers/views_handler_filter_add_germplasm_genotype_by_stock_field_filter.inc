@@ -23,7 +23,7 @@ class views_handler_filter_add_germplasm_genotype_by_stock_field_filter extends 
     if (isset($_GET['add_germplasm_genotype']['add_stock'])) {
       if (!empty($_GET['add_germplasm_genotype']['add_stock']['stock_name']) AND !empty($_GET['add_germplasm_genotype']['add_stock']['organism_id'])) {
         $add_stock = $_GET['add_germplasm_genotype']['add_stock'];
-  
+
         // Find the maximum key
         $max_key = 'N';
         foreach ($_GET['add_germplasm_genotype'] as $k => $v) {
@@ -40,9 +40,9 @@ class views_handler_filter_add_germplasm_genotype_by_stock_field_filter extends 
         } else {
           $i = intval($max_key) + 1;
         }
-  
+
         $stock = tripal_get_stock(array('name' => $add_stock['stock_name'], 'organism_id' => $add_stock['organism_id']));
-  
+
         if (is_object($stock)) {
           if (tripal_germplasm_has_nd_genotypes($stock->stock_id)) {
             $values = $_GET['add_germplasm_genotype'];
@@ -52,7 +52,7 @@ class views_handler_filter_add_germplasm_genotype_by_stock_field_filter extends 
               'stock_id' => $stock->stock_id,
             );
             unset($values['add_stock']);
-  
+
             $_GET['add_germplasm_genotype'] = $values;
           }
           else {
@@ -215,6 +215,7 @@ class views_handler_filter_add_germplasm_genotype_by_stock_field_filter extends 
         if (is_array($organism)) {
           $organism_options[0] = ' ';
           foreach ($organism as $o) {
+            $organism_genus = $o->genus;
             $organism_options[$o->organism_id] = $o->genus .' '. $o->species;
           }
         }
@@ -226,10 +227,13 @@ class views_handler_filter_add_germplasm_genotype_by_stock_field_filter extends 
       '#organism_title' => 'Source Species',
       '#default_value' => $this->value,
       '#organism_weight' => 10,
-      '#added_description' => 'The following stocks have already had their genotypes added to the listing below:'
+      '#added_description' => 'The following stocks have already had their genotypes added to the listing below:',
 		);
 		if (isset($organism_options) AND sizeof($organism_options) > 1) {
       $form['value']['#organism_options'] = $organism_options;
+    }
+    if (isset($organism_genus)) {
+      $form['value']['#autocomplete_path'] = 'tripal_ajax/nd_genotypes/genotyped_germplasm/name_to_id/' . $organism_genus . '/only';
     }
   }
 

@@ -159,6 +159,9 @@ function expand_organism_stock ($element) {
     '#weight' => 0,
     '#attributes' => array('class' => array('container-inline')),
   );
+  if (isset($element['#autocomplete_path'])) {
+    $element['stock_name']['#autocomplete_path'] = $element['#autocomplete_path'];
+  }
 
   return $element;
 }
@@ -268,6 +271,9 @@ function expand_multiple_organism_stock ($element) {
 	}
 	if (isset($element['#organism_options'])) {
 	  $element['add_stock']['#organism_options'] = $element['#organism_options'];
+	}
+	if (isset($element['#autocomplete_path'])) {
+	  $element['add_stock']['#autocomplete_path'] = $element['#autocomplete_path'];
 	}
 
   return $element;

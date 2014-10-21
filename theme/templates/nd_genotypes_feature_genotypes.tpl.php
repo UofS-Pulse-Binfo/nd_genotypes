@@ -34,7 +34,8 @@ $is_marker = FALSE;
 /////////////////////////////
 // CASE #1: Markers
 
-if ($feature->type_id->name == 'genetic_marker') {
+$marker_types = unserialize(variable_get('nd_genotypes_marker_types', 'a:0:{}'));
+if (in_array($feature->type_id->name, $marker_types)) {
 
   $is_marker = TRUE;
 
@@ -110,10 +111,12 @@ if ($feature->type_id->name == 'genetic_marker') {
   }
 }
 
+
 /////////////////////////////
 // CASE #2: Variants
 
-if (in_array($feature->type_id->name, array('SNP'))) {
+$variant_types = unserialize(variable_get('nd_genotypes_variant_types', 'a:0:{}'));
+if (in_array($feature->type_id->name, $variant_types)) {
 
   $is_variant = TRUE;
   $variant_charts = array();

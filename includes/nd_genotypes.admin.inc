@@ -137,3 +137,89 @@ function nd_genotypes_admin_sync_mviews_submit($form, $form_state) {
   }
 
 }
+
+/**
+ * Settings for ND Genotypes
+ */
+function nd_genotypes_admin_settings($form, $form_state) {
+
+  $form['types'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Types',
+    '#description' => 'Allows you to configure which controlled vocabulary terms
+      you would like to fall into each category of features (variants and markers)
+      handled by this module.'
+  );
+
+  // Get vocab terms for feature types.
+  $default_cv = tripal_get_default_cv('feature', 'type_id');
+  if (!empty($default_cv)) {
+    $feature_types = tripal_get_cvterm_select_options($default_cv->cv_id);
+  }
+  else {
+    tripal_set_message(
+      'There is not a default vocabulary set for Feature Types. Please set one
+      using the <a href="@url">vocabulary defaults configuration page</a>.',
+      TRIPAL_WARNING,
+      array('@url' => url('admin/tripal/chado/tripal_cv/defaults'))
+    );
+    $feature_types = array();
+  }
+
+  $form['types']['descrip'] = array(
+    '#type' => 'item',
+    '#markup' => 'This module assumes the following set-up of data: Sequence
+    Backbone > Variants > Markers where variants are the location/range shown
+    to vary betweeen germplasm and markers are the actual assays detecting that
+    variation. Note that genotypes are only attached to markers (ensures researches
+    know the method used) and that both variants & markers have feature locations on
+    your sequence backbone (ie: contigs, chromosomes; features with sequence
+    information).',
+  );
+
+  // Set variant types.
+  $form['types']['variants'] = array(
+    '#type' => 'select',
+    '#title' => 'Variants',
+    '#description' => 'Variants are the location/range shown to vary betweeen
+      germplasm. They should not have genotypes attached directly to them but
+      instead act as a way to see all the markers assaying a particular position.',
+    '#multiple' => TRUE,
+    '#options' => $feature_types,
+    '#default_value' => unserialize(variable_get('nd_genotypes_variant_types', 'a:0:{}'))
+  );
+
+  // Set marker types.
+  $form['types']['markers'] = array(
+    '#type' => 'select',
+    '#title' => 'Markers',
+    '#description' => 'Markers are the actual assays detecting variation and
+      the genotypes detected by each assay would be attached to it.',
+    '#multiple' => TRUE,
+    '#options' => $feature_types,
+    '#default_value' => unserialize(variable_get('nd_genotypes_marker_types', 'a:0:{}'))
+  );
+
+  $form['types']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Set Types',
+    '#validate' => array('nd_genotypes_admin_settings_types_validate'),
+    '#submit' => array('nd_genotypes_admin_settings_types_submit'),
+  );
+
+  return $form;
+}
+
+/**
+ * Config -Types: Validation
+ */
+function nd_genotypes_admin_settings_types_validate($form, $form_state) {}
+
+/**
+ * Config -Types: Submit
+ */
+function nd_genotypes_admin_settings_types_submit($form, $form_state) {
+
+  variable_set('nd_genotypes_variant_types', serialize($form_state['values']['variants']));
+  variable_set('nd_genotypes_marker_types', serialize($form_state['values']['markers']));
+}

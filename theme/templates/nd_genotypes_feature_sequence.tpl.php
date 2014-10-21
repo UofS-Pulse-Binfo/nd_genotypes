@@ -40,8 +40,12 @@ $feature = $variables['node']->feature;
 $type = 'other';
 $info = array();
 $info['sequence'] = NULL; // Needed for the check later
-$variant_types = array('SNP', 'MNP','indel');
-if ($feature->type_id->name == 'marker') {
+
+// Types
+$variant_types = unserialize(variable_get('nd_genotypes_variant_types', 'a:0:{}'));
+$marker_types = unserialize(variable_get('nd_genotypes_marker_types', 'a:0:{}'));
+
+if (in_array($feature->type_id->name, $marker_types)) {
   $type = 'marker';
 
   $feature_loc = chado_generate_var(

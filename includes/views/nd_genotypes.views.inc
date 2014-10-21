@@ -32,7 +32,10 @@ function nd_genotypes_views_handlers() {
       'views_handler_filter_germplasm_genotype_by_stock' => array(
         'parent' => 'views_handler_filter_string',
       ),
-
+      // TESTING
+      'views_handler_filter_germplasm_genotyped_name' => array(
+        'parent' => 'views_handler_filter_string',
+      ),
       // This filter allows users to add new germplasm genotype field/filters
       // ie: it exposes a form that looks like a germplasm genotype filter
       // and uses those values to create a new filter/field combo with those as defaults

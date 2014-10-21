@@ -56,6 +56,15 @@ function nd_genotypes_menu () {
     'weight' => 2
   );
 
+  $items['admin/tripal/extension/nd_genotypes/settings'] = array(
+    'title' => 'Settings',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('nd_genotypes_admin_settings'),
+    'access arguments' => array('administer tripal'),
+    'weight' => 3
+  );
+
   $items['admin/tripal/extension/nd_genotypes/help'] = array(
     'title' => 'Help',
     'type' => MENU_LOCAL_TASK,
@@ -63,6 +72,22 @@ function nd_genotypes_menu () {
     'page arguments' => array('nd_genotypes__help'),
     'access arguments' => array('administer tripal'),
     'weight' => 4
+  );
+
+  // Name autocomplete (display only the preferred organism -in path).
+  $items['tripal_ajax/nd_genotypes/genotyped_germplasm/name_to_id/%/only'] = array(
+    'page callback' => 'nd_genotypes_germplasm_name_to_id_callback',
+    'page arguments' => array(4, FALSE),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK
+  );
+
+  // Name autocomplete (display all organisms).
+  $items['tripal_ajax/nd_genotypes/genotyped_germplasm/name_to_id/%/all'] = array(
+    'page callback' => 'nd_genotypes_germplasm_name_to_id_callback',
+    'page arguments' => array(4, TRUE),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK
   );
 
   // Add Marker x Germplasm Matrix links (1/organism synced)
