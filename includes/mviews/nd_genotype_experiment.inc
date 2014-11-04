@@ -19,6 +19,8 @@
  *   - stock_experiment_relationship_type_id: role stock played in this experiment
  *   - stock_experiment_relationship_type_name: role stock played in this experiment
  *   - genotype_id: unique key of genotype resulting from experiment
+ *   - genotype_type_id: unique key of the type of genotype
+ *   - genotype_type_name: the human-readable type of genotype
  *   - genotype_uniquename: unique name of genotype resulting from experiment
  *   - genotype_description: genotype resulting from experiment
  *   - feature_genotype_relationship_type_id: how genotype is connected to feature
@@ -63,6 +65,13 @@ function nd_genotypes_register_nd_genotype_experiment_mview() {
       ),
       'genotype_id' => array(
         'type' => 'int'
+      ),
+      'genotype_type_id' => array(
+        'type' => 'int'
+      ),
+      'genotype_type_name' => array(
+        'type' => 'varchar',
+        'length' => '255'
       ),
       'genotype_uniquename' => array(
         'type' => 'text'
@@ -123,6 +132,8 @@ function nd_genotypes_register_nd_genotype_experiment_mview() {
 						ndes.type_id as stock_experiment_relationship_type_id,
 						ndes_cvt.name as stock_experiment_relationship_type_name,
 						g.genotype_id as genotype_id,
+						g.type_id as genotype_type_id,
+						g_cvt.name as genotype_type_name,
 						g.uniquename as genotype_uniquename,
 						g.description as genotype_description,
 						fg.cvterm_id as feature_genotype_relationship_type_id,
@@ -143,6 +154,7 @@ function nd_genotypes_register_nd_genotype_experiment_mview() {
 					LEFT JOIN cvterm ndes_cvt ON ndes_cvt.cvterm_id=ndes.type_id
 					LEFT JOIN nd_experiment_genotype ndeg ON ndeg.nd_experiment_id=nde.nd_experiment_id
 					LEFT JOIN genotype g ON g.genotype_id=ndeg.genotype_id
+					LEFT JOIN cvterm g_cvt ON g_cvt.cvterm_id=g.type_id
 					LEFT JOIN feature_genotype fg ON fg.genotype_id=g.genotype_id
 					LEFT JOIN cvterm fg_cvt ON fg_cvt.cvterm_id=fg.cvterm_id
 					LEFT JOIN feature f ON f.feature_id=fg.feature_id";

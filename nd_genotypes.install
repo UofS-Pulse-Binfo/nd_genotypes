@@ -22,6 +22,11 @@ function nd_genotypes_install () {
   if (module_exists('tripal_bulk_loader')) {
  	  nd_genotypes_add_generic_experiment_bulk_loader();
   }
+
+    db_update('system')
+    ->fields(array('weight' => 2))
+    ->condition('name', 'nd_genotypes', '=')
+    ->execute();
 }
 
 /**
