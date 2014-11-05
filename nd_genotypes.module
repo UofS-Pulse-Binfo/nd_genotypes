@@ -8,6 +8,7 @@ require_once 'includes/nd_genotypes.admin.inc';
 require_once 'includes/nd_genotypes.form_elements.inc';
 require_once 'includes/nd_genotypes.bulk_loader_template.inc';
 require_once 'includes/mviews/nd_genotype_experiment.inc';
+require_once 'includes/mviews/nd_genotype_germplasm.inc';
 
 // Theme
 require_once 'theme/nd_genotypes.theme.inc';
@@ -91,14 +92,6 @@ function nd_genotypes_menu () {
   );
 
   // Add Marker x Germplasm Matrix links (1/organism synced)
-/**
-  $items['chado/genotype_matrix'] = array(
-    'title' => 'Genotype Matrix',
-    'description' => 'Marker by Germplasm Genotypes Search.',
-    'access arguments' => array('access content'),
-    'type' => MENU_NORMAL_ITEM,
-  );
-
   $sql = "
     SELECT *
     FROM public.chado_organism CO
@@ -107,14 +100,15 @@ function nd_genotypes_menu () {
   ";
   $orgs = chado_query($sql);
   foreach ($orgs as $organism) {
-    $items['chado/genotype_matrix/' . $organism->genus] = array(
+    $items['chado/genotype/' . $organism->genus] = array(
       'title' => $organism->genus . ' Genotypes',
       'description' => 'Marker by Germplasm Genotypes Search for ' . $organism->genus . ' species.',
+      'page callback' => 'views_page',
+      'page arguments' => array('nd_genotypes_genotype_matrix', 'page', $organism->genus),
       'access arguments' => array('access content'),
       'type' => MENU_NORMAL_ITEM,
     );
   }
-*/
 
 	return $items;
 }

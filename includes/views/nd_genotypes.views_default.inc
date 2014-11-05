@@ -337,9 +337,6 @@ function nd_genotypes_genotype_matrix_defaultview() {
   $handler->display->display_options['filters']['species']['table'] = 'organism';
   $handler->display->display_options['filters']['species']['field'] = 'species';
   $handler->display->display_options['filters']['species']['ui_name'] = 'Organism Species';
-  $handler->display->display_options['filters']['species']['value'] = array(
-    'All' => 'All',
-  );
   $handler->display->display_options['filters']['species']['group'] = 1;
   $handler->display->display_options['filters']['species']['exposed'] = TRUE;
   $handler->display->display_options['filters']['species']['expose']['operator_id'] = 'species_op';
@@ -362,9 +359,6 @@ function nd_genotypes_genotype_matrix_defaultview() {
   $handler->display->display_options['filters']['value']['field'] = 'value';
   $handler->display->display_options['filters']['value']['relationship'] = 'feature_id_to_featureprop';
   $handler->display->display_options['filters']['value']['ui_name'] = 'Property Value';
-  $handler->display->display_options['filters']['value']['value'] = array(
-    'All' => 'All',
-  );
   $handler->display->display_options['filters']['value']['group'] = 1;
   $handler->display->display_options['filters']['value']['exposed'] = TRUE;
   $handler->display->display_options['filters']['value']['expose']['operator_id'] = 'value_op';
@@ -386,7 +380,6 @@ function nd_genotypes_genotype_matrix_defaultview() {
   $handler->display->display_options['filters']['project_id']['table'] = 'nd_genotype_experiment';
   $handler->display->display_options['filters']['project_id']['field'] = 'project_id';
   $handler->display->display_options['filters']['project_id']['relationship'] = 'feature_id_to_nd_genotype_experiment';
-  $handler->display->display_options['filters']['project_id']['value'] = 'All';
   $handler->display->display_options['filters']['project_id']['exposed'] = TRUE;
   $handler->display->display_options['filters']['project_id']['expose']['operator_id'] = 'project_id_op';
   $handler->display->display_options['filters']['project_id']['expose']['label'] = 'Project';
@@ -425,7 +418,7 @@ function nd_genotypes_genotype_matrix_defaultview() {
 
   /* Display: Page */
   $handler = $view->new_display('page', 'Page', 'page');
-  $handler->display->display_options['path'] = 'chado/genotype/%';
+  $handler->display->display_options['path'] = 'genotype_matrix/%';
 
   return $view;
 }
@@ -560,7 +553,7 @@ function nd_genotypes_genotype_matrix_germplasm_list_defaultview() {
 
   /* Display: Page */
   $handler = $view->new_display('page', 'Page', 'page');
-  $handler->display->display_options['path'] = 'chado/genotype/%/germplasm';
+  $handler->display->display_options['path'] = 'genotype_matrix/%/germplasm';
 
   return $view;
 }
