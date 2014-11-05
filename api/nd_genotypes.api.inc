@@ -188,10 +188,6 @@ function nd_genotypes_get_alleles_for_marker($marker_id) {
 /**
  * Get the parent sequence of a marker/variant.
  *
- * @TODO: handle multiple markers attached to the same variant. Currently,
- *   if the feature category is variant then the "first" marker attached to it
- *   will be returned and any additional marker information is lost...
- *
  * @param $feature
  *   The marker/variant feature object.
  * @param $feature_category
@@ -216,14 +212,22 @@ function nd_genotypes_get_alleles_for_marker($marker_id) {
 function nd_genotypes_get_variant_sequence($feature, $feature_category, $sequence_details = array()) {
   $new_sequence_details = $sequence_details;
 
-  $sql = 'SELECT loc.srcfeature_id, pf.residues, pf.seqlen, pf.name
+  $sql = 'SELECT loc.srcfeature_id, loc.fmin, loc.fmax, pf.residues, pf.seqlen, pf.name
             FROM {featureloc} loc
             LEFT JOIN {feature} pf ON loc.srcfeature_id=pf.feature_id
             WHERE loc.feature_id=:feature_id';
   $record = chado_query($sql, array(':feature_id' => $feature->feature_id))->fetchObject();
 
+  // If the length is provided then return a stubstring.
   if (isset($sequence_details['length'])) {
-    $sequence_details['start'] = (isset($sequence_details['start'])) ? $sequence_details['start'] : 1;
+
+    // If a start is not provided then center the range on the variant/marker.
+    if (!isset($sequence_details['start'])) {
+      $middle = round($sequence_details['length'] / 2);
+      $sequence_details['start'] = $record->fmin - $middle;
+      if ($sequence_details['start'] <= 0) { $sequence_details['start'] = 1; }
+    }
+
     $new_sequence_details = array(
       'feature_id' => $record->srcfeature_id,
       'feature_name' => $record->name,
@@ -258,7 +262,16 @@ function nd_genotypes_get_variant_sequence($feature, $feature_category, $sequenc
     $new_sequence_details['variant_id'] = nd_genotypes_get_variant($feature->feature_id, TRUE);
   }
   else {
-    // @TODO: should we warn the user they are using an unsupported feature category?
+    tripal_report_error(
+      'nd_genotypes',
+      TRIPAL_WARNING,
+      'Unsupported feature category (:category) when retrieving the variant seuqence for :name (:id).',
+      array(
+        ':category' => $feature_category,
+        ':name' => $feature->name,
+        ':id' => $feature->feature_id
+      )
+    );
   }
 
   return $new_sequence_details;
@@ -266,6 +279,8 @@ function nd_genotypes_get_variant_sequence($feature, $feature_category, $sequenc
 
 /**
  * Mark-up the current sequence feature with any known variants using IUPAC codes.
+ *
+ * Known Limitation: Cannot support markers with a length greater than 1.
  *
  * @param $feature
  *   The feature object of the current sequence/variant/marker.
@@ -302,12 +317,30 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
       $sequence = str_split($retrieved_sequence_details['sequence']);
     }
     else {
-      // @TODO: report some sort of error that we couldn't retrieve the sequence.
+      tripal_report_error(
+        'nd_genotypes',
+        TRIPAL_WARNING,
+        'Unable to determine the sequence for the :category :name (:id)',
+        array(
+          ':category' => $feature_category,
+          ':name' => $variables['node']->feature->name,
+          ':id' => $variables['node']->feature->feature_id
+        )
+      );
       return '';
     }
   }
   else {
-    // @TODO: report some sort of error that we couldn't retrieve the sequence.
+    tripal_report_error(
+      'nd_genotypes',
+      TRIPAL_WARNING,
+      'Unable to determine the sequence for the :category :name (:id)',
+      array(
+        ':category' => $feature_category,
+        ':name' => $variables['node']->feature->name,
+        ':id' => $variables['node']->feature->feature_id
+      )
+    );
     return '';
   }
 
@@ -322,7 +355,6 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
       // Currently we only support single nucleotide alleles due to the added
       // difficulties of replacing multi-nucleotide positions as well as dealing
       // with multiple alleles per marker call (ie: AA in Golden Gate assays).
-      // @TODO: Support bi-allelic and MNPs
       if (abs($marker['end'] - $marker['start']) == 1) {
 
         // Determine the 0-indexed location of the marker depending on whether
@@ -415,13 +447,18 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
           }
         }
       }
-      else {
-        // @TODO: Maybe we should warn admin that we don't support bi-allelic and MNPs
-      }
     }
   }
   else {
-    // Report an error since we need this information.
+      tripal_report_error(
+        'nd_genotypes',
+        TRIPAL_WARNING,
+        'The start and end coordinates must be provided in order to mark-up :name (:feature_id) sequence.',
+        array(
+          ':name' => $feature->name,
+          ':id' => $feature->feature_id
+        )
+      );
   }
 
   return implode('', $sequence);

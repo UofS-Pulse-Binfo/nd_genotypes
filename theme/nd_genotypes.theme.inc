@@ -136,26 +136,44 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
     }
   }
   else {
-    if ($variables['node']->feature->seqlen > 0) {
-      // @TODO: Handle substringing of the sequence at the database level.
-    }
-    elseif ($variables['type'] == 'variant' OR $variables['type'] == 'marker') {
 
-      $middle = round($max_sequence_length / 2);
+    if ($variables['type'] == 'variant' OR $variables['type'] == 'marker') {
+
       $variables['sequence_range'] = nd_genotypes_get_variant_sequence(
         $variables['node']->feature,
         $variables['type'],
-        // @TODO: Actually determine what these coordinates should be based
-        // on the location of the marker/variant.
         array(
-          'start' => 50,
           'length' => $max_sequence_length
         )
       );
       $variables['sequence'] = $variables['sequence_range']['sequence'];
+
+    }
+    elseif ($variables['node']->feature->seqlen > 0) {
+      // @TODO: Handle substringing of the sequence at the database level.
+      tripal_report_error(
+        'nd_genotypes',
+        TRIPAL_WARNING,
+        'Unable to determine the sequence for the :category :name (:id).',
+        array(
+          ':category' => $feature_category,
+          ':name' => $variables['node']->feature->name,
+          ':id' => $variables['node']->feature->feature_id
+        )
+      );
     }
     else {
-      // @TODO: Handle the case where we can't get the sequence?
+      tripal_report_error(
+        'nd_genotypes',
+        TRIPAL_WARNING,
+        'Unable to determine the sequence for the :category :name (:id)',
+        array(
+          ':category' => $feature_category,
+          ':name' => $variables['node']->feature->name,
+          ':id' => $variables['node']->feature->feature_id
+        )
+      );
+      return '';
     }
   }
 
