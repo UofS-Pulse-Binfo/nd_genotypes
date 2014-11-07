@@ -108,6 +108,15 @@ function nd_genotypes_menu () {
       'access arguments' => array('access content'),
       'type' => MENU_NORMAL_ITEM,
     );
+
+    $items['chado/genotype/' . $organism->genus . '/germplasm'] = array(
+      'title' => 'Stocks Genotyped',
+      'description' => 'A list of ' . $organism->genus . ' stocks that have been genotyped.',
+      'page callback' => 'views_page',
+      'page arguments' => array('nd_genotypes_genotype_matrix_germplasm_list', 'page', $organism->genus),
+      'access arguments' => array('access content'),
+      'type' => MENU_NORMAL_ITEM,
+    );
   }
 
 	return $items;
