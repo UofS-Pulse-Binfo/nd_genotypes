@@ -7,77 +7,6 @@
  */
 
 /**
- * Implements hook_views_handlers()
- *
- * Purpose: Register all custom handlers with views
- *   where a handler describes either "the type of field",
- *   "how a field should be filtered", "how a field should be sorted"
- *
- * @return array
- *   An array of handler definitions
- */
-function nd_genotypes_views_handlers() {
-  $handlers = array(
-    'info' => array(
-      'path' => drupal_get_path('module', 'nd_genotypes') . '/includes/views/handlers',
-    ),
-    'handlers' => array(
-
-      // These two handlers go hand-in-hand
-      // The first renders the field
-      // based on the germplasm provided by the second
-      'views_handler_field_germplasm_genotype' => array(
-        'parent' => 'views_handler_field_prerender_list',
-      ),
-      'views_handler_filter_germplasm_genotype_by_stock' => array(
-        'parent' => 'views_handler_filter_string',
-      ),
-      // TESTING
-      'views_handler_filter_germplasm_genotyped_name' => array(
-        'parent' => 'views_handler_filter_string',
-      ),
-      // This filter allows users to add new germplasm genotype field/filters
-      // ie: it exposes a form that looks like a germplasm genotype filter
-      // and uses those values to create a new filter/field combo with those as defaults
-      /**
-      'views_handler_filter_add_germplasm_genotype_by_stock_field_filter' => array(
-        'parent' => 'views_handler_filter_germplasm_genotype_by_stock'
-      ),
-      */
-
-      // Allows users to only display polymorphic markers
-      // ie: you select 2 germplasm genotype fields and if they
-      // have different genotypes for a marker then it's polymorphic
-      /**
-      'views_handler_filter_germplasm_genotype_polymorphic' => array(
-      	'parent' => 'views_handler_filter_string',
-      ),
-      */
-
-      // Returns the residues of a marker/locus parent feature with the
-      // position of the marker/locus highlighted by square brackets and
-      // the alleles associated with the current marker/locus listed
-      // ie: AATTGGTGACACCGT[A/T]GTGGCACGTGCA
-      /**
-      'views_handler_field_markedup_parent_residues' => array(
-        'parent' => 'views_handler_field',
-      ),
-      */
-    ),
-  );
-
-  // Join Handler (postgresql array <=> single)
-  /**
-    $handler['views_handler_join_chado_aggregator'] = array(
-     'parent' => 'views_join',
-    );
-    include_once('views/handlers/views_handler_join_chado_aggregator.inc');
-  */
-
-  return $handlers;
-}
-
-/**
  * Implements hook_views_data(): Describe chado/tripal tables & fields to views
  *
  * @return array
@@ -465,7 +394,7 @@ function nd_genotype_experiment_views_integration () {
         'description' => 'Genotypes of a given stock for each marker; form allows specifying multiple stocks.',
         'type' => 'text',
         'handlers' => array(
-          'filter' => array('name' => 'views_handler_filter_add_germplasm_genotype_by_stock_field_filter'),
+          'filter' => array('name' => 'nd_genotypes_handler_filter_genotype_by_stock_multiple'),
         ),
         'joins' => array(),
       ),

@@ -15,51 +15,9 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
   function init(&$view, &$options) {
     parent::init($view, $options);
 
-    $this->aliases['feature_id'] = 'feature_id';
-    $this->field_alias = $this->aliases['feature_id'];
-
-    // Set aliases
-    $this->aliases['genotypes'] = $this->options['id'];
-    $this->aliases['feature_id'] = 'feature_id';
-    $this->field_alias = $this->aliases['feature_id'];
-
-    $this->added_to_query = FALSE;
-
-    // Determine stock name and organism_id and stock_id
-    if ($this->options['settings']['use_filter'] != '<NONE>') {
-      $filter_identifier = $this->view->display['default']->display_options['filters'][ $this->options['settings']['use_filter'] ]['expose']['identifier'];
-      if (isset($_GET[ $filter_identifier ])) {
-        $filter_value = $_GET[ $filter_identifier ];
-        $this->stock_name = $filter_value['stock_name'];
-        $this->organism_id = $filter_value['organism_id'];
-      }
-      elseif (!empty($this->options['settings']['germplasm']['stock_name'])) {
-        $this->stock_name = $this->options['settings']['germplasm']['stock_name'];
-        $this->organism_id = $this->options['settings']['germplasm']['organism_id'];
-      }
-    }
-    elseif (!empty($this->options['settings']['germplasm']['stock_name'])) {
-      $this->stock_name = $this->options['settings']['germplasm']['stock_name'];
-      $this->organism_id = $this->options['settings']['germplasm']['organism_id'];
-    }
-
-    if (isset($this->stock_name)) {
-      $stock = tripal_get_stock(array('name' => $this->stock_name, 'organism_id' => $this->organism_id));
-      if ($stock) {
-        if (is_object($stock)) {
-          $this->stock_id[$stock->stock_id] = $stock->stock_id;
-          $this->stock_name[$stock->stock_id] = $stock->name;
-          $this->organism_id[$stock->stock_id] = $stock->organism_id;
-          $this->original_stock_id = $stock->stock_id;
-          $this->original_stock_name = $stock->name;
-        }
-        else {
-
-        }
-      }
-      else {
-        drupal_set_message('There are no stocks with the name, "'.$this->stock_name.'", associated with that organism.', 'error');
-      }
+    // Expose the field if needed.
+    if (isset($this->original_stock_id)) {
+      $this->options['exclude'] == 0;
     }
   }
 
@@ -123,7 +81,7 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
     $options['<NONE>'] = 'None';
     if (isset($this->view->display['default']->display_options['filters'])) {
       foreach ($this->view->display['default']->display_options['filters'] as $name => $filter) {
-        if ($filter['field'] == 'germplasm_genotype') {
+        if ($filter['field'] == 'germplasm_genotype' OR $filter['field'] == 'add_germplasm_genotype') {
           if (isset($filter['expose'])) {
             $options[$name] = $filter['expose']['label'];
           } else {
@@ -209,7 +167,18 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
    * Set the label and ensure the genotypes exist (if that option is checked)
    */
   function query() {
+    $this->aliases['feature_id'] = 'feature_id';
+    $this->field_alias = $this->aliases['feature_id'];
 
+    // Set aliases
+    $this->aliases['genotypes'] = $this->options['id'];
+    $this->aliases['feature_id'] = 'feature_id';
+    $this->field_alias = $this->aliases['feature_id'];
+
+    // Determine stock name and organism_id and stock_id
+    $this->set_stock_details();
+
+    // Then if we don't have a stock, don't add anything to the query.
     if (!isset($this->original_stock_id)) {
       return FALSE;
     }
@@ -228,32 +197,34 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
       array('subject_id'),
       array('object_id' => $this->original_stock_id, 'type_id' => array('name' => 'is_selection_of'))
     );
-		foreach ($selections as $s) {
-			$stock = chado_select_record('stock',array('stock_id','organism_id','name'),array('stock_id'=>$s->subject_id));
-			if ($stock[0]->organism_id) {
-				$this->stock_id[ $stock[0]->stock_id ] = $stock[0]->stock_id;
-				$this->stock_name[ $stock[0]->stock_id ] = $stock[0]->name;
-				$this->organism_id[ $stock[0]->stock_id ] = $stock[0]->organism_id;
-			}
-		}
+    foreach ($selections as $s) {
+      $stock = chado_select_record('stock',array('stock_id','organism_id','name'),array('stock_id'=>$s->subject_id));
+      if ($stock[0]->organism_id) {
+        $this->stock_id[ $stock[0]->stock_id ] = $stock[0]->stock_id;
+        $this->stock_name[ $stock[0]->stock_id ] = $stock[0]->name;
+        $this->organism_id[ $stock[0]->stock_id ] = $stock[0]->organism_id;
+      }
+    }
 
-		// Add to query
-		if (sizeof($this->stock_id) > 0) {
-			// Make our own join
-			// (don't just ensure_my_table b/c this way we can limit to only showing genotype_description)
-			$table_alias = 'nd_genotype_experiment_stock_'.$this->original_stock_id;
-			$def = array();
-			$def['table'] = 'nd_genotype_experiment';
-			$def['field'] = 'feature_id';
-			$def['left_table'] = 'feature';
-			$def['left_field'] = 'feature_id';
+    // Add to query
+    $this->added_to_query = FALSE;
+    if (sizeof($this->stock_id) > 0) {
 
-			$join = new views_join();
-			$join->definition = $def;
-			$join->construct();
-			$join->adjusted = TRUE;
+      // Make our own join
+      // (don't just ensure_my_table b/c this way we can limit to only showing genotype_description)
+      $table_alias = 'nd_genotype_experiment_stock_'.$this->original_stock_id;
+      $def = array();
+      $def['table'] = 'nd_genotype_experiment';
+      $def['field'] = 'feature_id';
+      $def['left_table'] = 'feature';
+      $def['left_field'] = 'feature_id';
 
-			$this->query->add_relationship($table_alias, $join, $def['table']);
+      $join = new views_join();
+      $join->definition = $def;
+      $join->construct();
+      $join->adjusted = TRUE;
+
+      $this->query->add_relationship($table_alias, $join, $def['table']);
 
       // Now we need to remove the original join added via the relationship
       // otherwise we end up with repetitive rows
@@ -274,38 +245,42 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
         );
       }
 
-			// The above join needs to be restricted to the stock set
-			$this->options['group'] = (isset($this->options['group'])) ? $this->options['group'] : 0;
-			$field = $table_alias . '.stock_id';
-			$operator = (sizeof($this->stock_id) == 1) ? '=' : 'IN';
+      // The above join needs to be restricted to the stock set
+      $this->options['group'] = (isset($this->options['group'])) ? $this->options['group'] : 0;
+      $field = $table_alias . '.stock_id';
+      $operator = (sizeof($this->stock_id) == 1) ? '=' : 'IN';
 
-			// genotype_description field
-			//$field = $table_alias . '.genotype_description';
-			$this->genotype_allele_field_alias = $this->query->add_field($table_alias, 'genotype_description', 'stock'.$this->original_stock_id.'_allele', array('function' => 'array_agg'));
+      // genotype_description field
+      //$field = $table_alias . '.genotype_description';
+      $this->genotype_allele_field_alias = $this->query->add_field(
+        $table_alias,
+        'genotype_description',
+        'stock'.$this->original_stock_id.'_allele',
+        array('function' => 'array_agg')
+      );
       $this->field_alias = $this->genotype_allele_field_alias;
 
-			// genotype_id field
-			$field = $table_alias . '.genotype_id';
-			$this->genotype_id_field_alias = $this->query->add_field($table_alias, 'genotype_id', 'stock'.$this->original_stock_id.'_genotype_id', array('function' => 'array_agg'));
+      // genotype_id field
+      $field = $table_alias . '.genotype_id';
+      $this->genotype_id_field_alias = $this->query->add_field($table_alias, 'genotype_id', 'stock'.$this->original_stock_id.'_genotype_id', array('function' => 'array_agg'));
 
       // stock_id field
-			$field = $table_alias . '.stock_id';
-			$this->stock_id_field_alias = $this->query->add_field($table_alias, 'stock_id', 'stock'.$this->original_stock_id.'_stock_id', array('function' => 'array_agg'));
-      $this->query->add_where($this->options['group'], $field, $this->stock_id, $operator);
+      $field = $table_alias . '.stock_id';
+      $this->stock_id_field_alias = $this->query->add_field($table_alias, 'stock_id', 'stock'.$this->original_stock_id.'_stock_id', array('function' => 'array_agg'));
+      $this->query->add_where($this->options['group'], $field, $this->original_stock_id, $operator);
 
-			$this->added_to_query = TRUE;
+      $this->added_to_query = TRUE;
 
-		}
-
-		// Change the alias of the feature.name field if it's added to the current view
-		// in order to avoid ambiguous feature_name errors in the GroupBy
-		// (there's also a nd_genotype_experiment.feature_name)
-		$this->view->query->fields['feature_name']['alias'] = 'feature_feature_name';
-		$this->view->field['name']->field_alias = 'feature_feature_name';
-		foreach ($this->view->display as $display) {
-      $display->handler->options['fields']['name']['id'] = 'feature_feature_name';
     }
 
+    // Change the alias of the feature.name field if it's added to the current view
+    // in order to avoid ambiguous feature_name errors in the GroupBy
+    // (there's also a nd_genotype_experiment.feature_name)
+    $this->view->query->fields['feature_name']['alias'] = 'feature_feature_name';
+    $this->view->field['name']->field_alias = 'feature_feature_name';
+    foreach ($this->view->display as $display) {
+      $display->handler->options['fields']['name']['id'] = 'feature_feature_name';
+    }
   }
 
   /**
@@ -314,6 +289,13 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
    * Add genotypes to $view->result (results of the query) and $this->items (used in rendering)
    */
   function pre_render(&$values) {
+
+    // Expose the field if needed.
+    if (isset($this->original_stock_id)) {
+      $this->options['exclude'] = 0;
+    }
+
+    //dpq($this->view->build_info['query']);
 
     if (!isset($this->added_to_query)) $this->added_to_query = FALSE;
 
@@ -344,7 +326,7 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
         // If there is 2+ genotype for this marker
         elseif (is_array($values[$k]->{$this->genotype_allele_field_alias})) {
 
-          $num_genotypes = sizeof($values[$k]->{$this->genotype_allele_field_alias});
+          $num_genotypes = sizeof(array_unique($values[$k]->{$this->genotype_allele_field_alias}));
 
           foreach ($values[$k]->{$this->genotype_allele_field_alias} as $sk => $allele) {
             $genotype_id = $values[$k]->{$this->genotype_id_field_alias}[$sk];
@@ -352,6 +334,8 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
             $this->items[$v->feature_feature_id][$genotype_id]['feature_id'] = $v->feature_feature_id;
             $this->items[$v->feature_feature_id][$genotype_id]['genotype_id'] = $genotype_id;
             $this->items[$v->feature_feature_id][$genotype_id]['genotype'] = $allele;
+            // This metric doesn't take into account that the same allele
+            // might be called multiple times...
             $this->items[$v->feature_feature_id][$genotype_id]['percent_per_genotype_per_stock'] = 1 / $num_genotypes * 100;
 
 
@@ -481,6 +465,81 @@ class views_handler_field_germplasm_genotype extends views_handler_field_prerend
     }
 
     return $output;
+  }
+
+  /**
+   * Sets the stock details based on the exposed filters or defaults.
+   */
+  function set_stock_details() {
+
+    if ($this->options['settings']['use_filter'] != '<NONE>') {
+      $filter = $this->view->display['default']->display_options['filters'][ $this->options['settings']['use_filter'] ];
+      $filter_identifier = $filter['expose']['identifier'];
+
+      // If it has a value in the path.
+      if (isset($_GET[ $filter_identifier ])) {
+        // Extract the stock information based on the filter type.
+        if ($filter['field'] == 'germplasm_genotype') {
+          $filter_value = $_GET[ $filter_identifier ];
+          $this->stock_name = $filter_value['stock_name'];
+          $this->organism_id = $filter_value['organism_id'];
+        }
+        elseif ($filter['field'] == 'add_germplasm_genotype') {
+          $filter_value = $_GET[ $filter_identifier ];
+
+          // Determine which germplasm genotype field this is.
+          if(preg_match('/germplasm_genotype_(\d+)/', $this->options['id'], $match)) {
+            $index = $match[1];
+          }
+          elseif ($this->options['id'] == 'germplasm_genotype') {
+            $index = 0;
+          }
+
+          if (isset($filter_value['existing'][$index])) {
+            $this->stock_name = $filter_value['existing'][$index]['stock_name'];
+            $this->organism_id = $filter_value['existing'][$index]['organism_id'];
+            $this->stock_id = $filter_value['existing'][$index]['stock_id'];
+          }
+        }
+      }
+      elseif (!empty($this->options['settings']['germplasm']['stock_name'])) {
+        $this->stock_name = $this->options['settings']['germplasm']['stock_name'];
+        $this->organism_id = $this->options['settings']['germplasm']['organism_id'];
+      }
+    }
+    elseif (!empty($this->options['settings']['germplasm']['stock_name'])) {
+      $this->stock_name = $this->options['settings']['germplasm']['stock_name'];
+      $this->organism_id = $this->options['settings']['germplasm']['organism_id'];
+    }
+
+    if (isset($this->stock_name)) {
+      if (isset($this->stock_id)) {
+        $stock_id = $this->stock_id;
+        $this->original_stock_id = $stock_id;
+        $this->original_stock_name = $this->stock_name;
+        $this->stock_id = array($stock_id => $stock_id);
+        $this->stock_name = array($stock_id => $this->stock_name);
+        $this->organism_id = array($stock_id => $this->organism_id);
+      }
+      else {
+        $stock = tripal_get_stock(array('name' => $this->stock_name, 'organism_id' => $this->organism_id));
+        if ($stock) {
+          if (is_object($stock)) {
+            $this->stock_id[$stock->stock_id] = $stock->stock_id;
+            $this->stock_name[$stock->stock_id] = $stock->name;
+            $this->organism_id[$stock->stock_id] = $stock->organism_id;
+            $this->original_stock_id = $stock->stock_id;
+            $this->original_stock_name = $stock->name;
+          }
+          else {
+
+          }
+        }
+        else {
+          drupal_set_message('There are no stocks with the name, "'.$this->stock_name.'", associated with that organism.', 'error');
+        }
+      }
+    }
   }
 
 }
