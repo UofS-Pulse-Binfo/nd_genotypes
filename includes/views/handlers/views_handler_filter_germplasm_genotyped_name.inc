@@ -25,6 +25,5 @@ class views_handler_filter_germplasm_genotyped_name extends views_handler_filter
 
   function exposed_form(&$form, &$form_state) {
     parent::exposed_form($form, $form_state);
-    dpm($form, 'exposed form');
   }
 }

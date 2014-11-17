@@ -80,7 +80,6 @@ function nd_genotypes_views_data()  {
       'field' => 'stock_id',
       'handler' => 'views_join'
     );
-    dpm($defn_array, 'germplasm genotyped defn array');
 
     // And finally save the changes to the integration
     tripal_update_views_integration($setup_id, $defn_array);

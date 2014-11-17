@@ -240,6 +240,8 @@ function nd_genotypes_genotype_matrix_defaultview() {
   $handler->display->display_options['fields']['germplasm_genotype_1']['ui_name'] = 'Genotypes for Stock';
   $handler->display->display_options['fields']['germplasm_genotype_1']['label'] = 'Stock2';
   $handler->display->display_options['fields']['germplasm_genotype_1']['exclude'] = TRUE;
+  $handler->display->display_options['fields']['germplasm_genotype_1']['element_class'] = 'views-germplasm-genotype genotype-[germplasm_genotype_1] short-column';
+  $handler->display->display_options['fields']['germplasm_genotype_1']['element_label_class'] = 'short-column';
   $handler->display->display_options['fields']['germplasm_genotype_1']['settings'] = array(
     'germplasm' => array(
       'stock_name' => '',
@@ -261,6 +263,8 @@ function nd_genotypes_genotype_matrix_defaultview() {
   $handler->display->display_options['fields']['germplasm_genotype_2']['ui_name'] = 'Genotypes for Stock';
   $handler->display->display_options['fields']['germplasm_genotype_2']['label'] = 'Stock3';
   $handler->display->display_options['fields']['germplasm_genotype_2']['exclude'] = TRUE;
+  $handler->display->display_options['fields']['germplasm_genotype_2']['element_class'] = 'views-germplasm-genotype genotype-[germplasm_genotype_2] short-column';
+  $handler->display->display_options['fields']['germplasm_genotype_2']['element_label_class'] = 'short-column';
   $handler->display->display_options['fields']['germplasm_genotype_2']['settings'] = array(
     'germplasm' => array(
       'stock_name' => '',
@@ -282,6 +286,8 @@ function nd_genotypes_genotype_matrix_defaultview() {
   $handler->display->display_options['fields']['germplasm_genotype_3']['ui_name'] = 'Genotypes for Stock';
   $handler->display->display_options['fields']['germplasm_genotype_3']['label'] = 'Stock4';
   $handler->display->display_options['fields']['germplasm_genotype_3']['exclude'] = TRUE;
+  $handler->display->display_options['fields']['germplasm_genotype_3']['element_class'] = 'views-germplasm-genotype genotype-[germplasm_genotype_3] short-column';
+  $handler->display->display_options['fields']['germplasm_genotype_3']['element_label_class'] = 'short-column';
   $handler->display->display_options['fields']['germplasm_genotype_3']['settings'] = array(
     'germplasm' => array(
       'stock_name' => '',
@@ -303,6 +309,8 @@ function nd_genotypes_genotype_matrix_defaultview() {
   $handler->display->display_options['fields']['germplasm_genotype_4']['ui_name'] = 'Genotypes for Stock';
   $handler->display->display_options['fields']['germplasm_genotype_4']['label'] = 'Stock5';
   $handler->display->display_options['fields']['germplasm_genotype_4']['exclude'] = TRUE;
+  $handler->display->display_options['fields']['germplasm_genotype_4']['element_class'] = 'views-germplasm-genotype genotype-[germplasm_genotype_4] short-column';
+  $handler->display->display_options['fields']['germplasm_genotype_4']['element_label_class'] = 'short-column';
   $handler->display->display_options['fields']['germplasm_genotype_4']['settings'] = array(
     'germplasm' => array(
       'stock_name' => '',
@@ -324,6 +332,8 @@ function nd_genotypes_genotype_matrix_defaultview() {
   $handler->display->display_options['fields']['germplasm_genotype_5']['ui_name'] = 'Genotypes for Stock';
   $handler->display->display_options['fields']['germplasm_genotype_5']['label'] = 'Stock6';
   $handler->display->display_options['fields']['germplasm_genotype_5']['exclude'] = TRUE;
+  $handler->display->display_options['fields']['germplasm_genotype_5']['element_class'] = 'views-germplasm-genotype genotype-[germplasm_genotype_5] short-column';
+  $handler->display->display_options['fields']['germplasm_genotype_5']['element_label_class'] = 'short-column';
   $handler->display->display_options['fields']['germplasm_genotype_5']['settings'] = array(
     'germplasm' => array(
       'stock_name' => '',
@@ -334,6 +344,98 @@ function nd_genotypes_genotype_matrix_defaultview() {
     'get_selections' => 1,
   );
   $handler->display->display_options['fields']['germplasm_genotype_5']['render'] = array(
+    'render_type' => 'both',
+    'color_bases' => 1,
+  );
+  /* Field: Genotypes for Stock */
+  $handler->display->display_options['fields']['germplasm_genotype_6']['id'] = 'germplasm_genotype_6';
+  $handler->display->display_options['fields']['germplasm_genotype_6']['table'] = 'nd_genotype_experiment';
+  $handler->display->display_options['fields']['germplasm_genotype_6']['field'] = 'germplasm_genotype';
+  $handler->display->display_options['fields']['germplasm_genotype_6']['relationship'] = 'feature_id_to_nd_genotype_experiment';
+  $handler->display->display_options['fields']['germplasm_genotype_6']['ui_name'] = 'Genotypes for Stock';
+  $handler->display->display_options['fields']['germplasm_genotype_6']['label'] = 'Stock7';
+  $handler->display->display_options['fields']['germplasm_genotype_6']['exclude'] = TRUE;
+  $handler->display->display_options['fields']['germplasm_genotype_6']['element_class'] = 'views-germplasm-genotype genotype-[germplasm_genotype_6] short-column';
+  $handler->display->display_options['fields']['germplasm_genotype_6']['element_label_class'] = 'short-column';
+  $handler->display->display_options['fields']['germplasm_genotype_6']['settings'] = array(
+    'germplasm' => array(
+      'stock_name' => '',
+      'organism_id' => '0',
+    ),
+    'use_filter' => 'add_germplasm_genotype',
+    'has_genotype' => 1,
+    'get_selections' => 1,
+  );
+  $handler->display->display_options['fields']['germplasm_genotype_6']['render'] = array(
+    'render_type' => 'both',
+    'color_bases' => 1,
+  );
+  /* Field: Genotypes for Stock */
+  $handler->display->display_options['fields']['germplasm_genotype_7']['id'] = 'germplasm_genotype_7';
+  $handler->display->display_options['fields']['germplasm_genotype_7']['table'] = 'nd_genotype_experiment';
+  $handler->display->display_options['fields']['germplasm_genotype_7']['field'] = 'germplasm_genotype';
+  $handler->display->display_options['fields']['germplasm_genotype_7']['relationship'] = 'feature_id_to_nd_genotype_experiment';
+  $handler->display->display_options['fields']['germplasm_genotype_7']['ui_name'] = 'Genotypes for Stock';
+  $handler->display->display_options['fields']['germplasm_genotype_7']['label'] = 'Stock8';
+  $handler->display->display_options['fields']['germplasm_genotype_7']['exclude'] = TRUE;
+  $handler->display->display_options['fields']['germplasm_genotype_7']['element_class'] = 'views-germplasm-genotype genotype-[germplasm_genotype_7] short-column';
+  $handler->display->display_options['fields']['germplasm_genotype_7']['element_label_class'] = 'short-column';
+  $handler->display->display_options['fields']['germplasm_genotype_7']['settings'] = array(
+    'germplasm' => array(
+      'stock_name' => '',
+      'organism_id' => '0',
+    ),
+    'use_filter' => 'add_germplasm_genotype',
+    'has_genotype' => 1,
+    'get_selections' => 1,
+  );
+  $handler->display->display_options['fields']['germplasm_genotype_7']['render'] = array(
+    'render_type' => 'both',
+    'color_bases' => 1,
+  );
+  /* Field: Genotypes for Stock */
+  $handler->display->display_options['fields']['germplasm_genotype_8']['id'] = 'germplasm_genotype_8';
+  $handler->display->display_options['fields']['germplasm_genotype_8']['table'] = 'nd_genotype_experiment';
+  $handler->display->display_options['fields']['germplasm_genotype_8']['field'] = 'germplasm_genotype';
+  $handler->display->display_options['fields']['germplasm_genotype_8']['relationship'] = 'feature_id_to_nd_genotype_experiment';
+  $handler->display->display_options['fields']['germplasm_genotype_8']['ui_name'] = 'Genotypes for Stock';
+  $handler->display->display_options['fields']['germplasm_genotype_8']['label'] = 'Stock9';
+  $handler->display->display_options['fields']['germplasm_genotype_8']['exclude'] = TRUE;
+  $handler->display->display_options['fields']['germplasm_genotype_8']['element_class'] = 'views-germplasm-genotype genotype-[germplasm_genotype_8] short-column';
+  $handler->display->display_options['fields']['germplasm_genotype_8']['element_label_class'] = 'short-column';
+  $handler->display->display_options['fields']['germplasm_genotype_8']['settings'] = array(
+    'germplasm' => array(
+      'stock_name' => '',
+      'organism_id' => '0',
+    ),
+    'use_filter' => 'add_germplasm_genotype',
+    'has_genotype' => 1,
+    'get_selections' => 1,
+  );
+  $handler->display->display_options['fields']['germplasm_genotype_8']['render'] = array(
+    'render_type' => 'both',
+    'color_bases' => 1,
+  );
+  /* Field: Genotypes for Stock */
+  $handler->display->display_options['fields']['germplasm_genotype_9']['id'] = 'germplasm_genotype_9';
+  $handler->display->display_options['fields']['germplasm_genotype_9']['table'] = 'nd_genotype_experiment';
+  $handler->display->display_options['fields']['germplasm_genotype_9']['field'] = 'germplasm_genotype';
+  $handler->display->display_options['fields']['germplasm_genotype_9']['relationship'] = 'feature_id_to_nd_genotype_experiment';
+  $handler->display->display_options['fields']['germplasm_genotype_9']['ui_name'] = 'Genotypes for Stock';
+  $handler->display->display_options['fields']['germplasm_genotype_9']['label'] = 'Stock10';
+  $handler->display->display_options['fields']['germplasm_genotype_9']['exclude'] = TRUE;
+  $handler->display->display_options['fields']['germplasm_genotype_9']['element_class'] = 'views-germplasm-genotype genotype-[germplasm_genotype_9] short-column';
+  $handler->display->display_options['fields']['germplasm_genotype_9']['element_label_class'] = 'short-column';
+  $handler->display->display_options['fields']['germplasm_genotype_9']['settings'] = array(
+    'germplasm' => array(
+      'stock_name' => '',
+      'organism_id' => '0',
+    ),
+    'use_filter' => 'add_germplasm_genotype',
+    'has_genotype' => 1,
+    'get_selections' => 1,
+  );
+  $handler->display->display_options['fields']['germplasm_genotype_9']['render'] = array(
     'render_type' => 'both',
     'color_bases' => 1,
   );
