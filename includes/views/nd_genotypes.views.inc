@@ -7,6 +7,46 @@
  */
 
 /**
+ * Implementation of hook_views_plugins().
+ */
+function nd_genotypes_views_plugins() {
+  $path = drupal_get_path('module', 'nd_genotypes');
+
+  $style_defaults = array(
+    'path' => $path . '/includes/views_data_export',
+    'parent' => 'views_data_export',
+    'theme' => 'views_data_export',
+    'theme path' => $path . '/theme/views_data_export',
+    'theme file' => 'views_data_export_nd_genotypes.theme.inc',
+    'uses row plugin' => FALSE,
+    'uses fields' => TRUE,
+    'uses options' => TRUE,
+    'type' => 'data_export',
+  );
+
+  return array(
+    'style' => array(
+      'nd_genotypes_table' => array(
+        'title' => t('ND Genotypes table'),
+        'help' => t('Display the view as a delimited file.'),
+        'handler' => 'views_data_export_plugin_style_export_genotype_table',
+        'export headers' => array('Content-type' => 'text/csv; charset=utf-8'),
+        'export feed type' => 'csv',
+        'export feed text' => 'CSV',
+        'export feed file' => '%view.csv',
+        'export feed icon' => drupal_get_path('module', 'views_data_export') . '/images/csv.png',
+        'additional themes' => array(
+          'views_data_export_genotype_table_header' => 'style',
+          'views_data_export_genotype_table_body' => 'style',
+          'views_data_export_genotype_table_footer' => 'style',
+        ),
+        'additional themes base' => 'views_data_export_genotype_table',
+      ) + $style_defaults,
+    ),
+  );
+}
+
+/**
  * Implements hook_views_data(): Describe chado/tripal tables & fields to views
  *
  * @return array
