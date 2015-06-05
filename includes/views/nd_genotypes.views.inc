@@ -97,7 +97,6 @@ function nd_genotypes_views_data()  {
   // and set it as a base table.
   $table_name = 'nd_genotype_germplasm';
   $priority = 9;
-  dpm(tripal_is_table_integrated($table_name, $priority), 'integrated?');
   if (!tripal_is_table_integrated($table_name, $priority)) {
 
     $lightest_priority = tripal_get_lightest_views_integration_priority($table_name);
@@ -124,8 +123,7 @@ function nd_genotypes_views_data()  {
     );
 
     // And finally save the changes to the integration
-    $success = tripal_update_views_integration($setup_id, $defn_array);
-    dpm($success, 're-integrated?');
+    tripal_update_views_integration($setup_id, $defn_array);
   }
 
   return $data;
