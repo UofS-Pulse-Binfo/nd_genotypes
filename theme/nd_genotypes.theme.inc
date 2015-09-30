@@ -146,7 +146,7 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
           'length' => $max_sequence_length
         )
       );
-      $variables['sequence'] = $variables['sequence_range']['sequence'];
+      $variables['sequence'] = (isset($variables['sequence_range']['sequence'])) ? $variables['sequence_range']['sequence'] : '';
 
     }
     elseif ($variables['node']->feature->seqlen > 0) {
@@ -187,7 +187,7 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
       $variables['sequence_range']
     );
   }
-  else {
+  elseif ($variables['sequence']) {
     $variables['fasta_header'] = '>' . $variables['sequence_range']['feature_name'] . ':' . $variables['sequence_range']['start'] . '-' . $variables['sequence_range']['end'] . ' (' . $variables['node']->feature->uniquename . ': ' . $variables['node']->feature->type_id->name . ')';
 
     // Add the marked-up sequence

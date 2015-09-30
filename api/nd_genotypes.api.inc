@@ -211,69 +211,86 @@ function nd_genotypes_get_alleles_for_marker($marker_id) {
  */
 function nd_genotypes_get_variant_sequence($feature, $feature_category, $sequence_details = array()) {
   $new_sequence_details = $sequence_details;
-
+  
   $sql = 'SELECT loc.srcfeature_id, loc.fmin, loc.fmax, pf.residues, pf.seqlen, pf.name
             FROM {featureloc} loc
             LEFT JOIN {feature} pf ON loc.srcfeature_id=pf.feature_id
             WHERE loc.feature_id=:feature_id';
   $record = chado_query($sql, array(':feature_id' => $feature->feature_id))->fetchObject();
+ 
+  // If our variant isn't located directly on a sequence then we can't really do anything
+  // here so just warn the admin and return the details passed into us.
+  // If the variant is located on a sequence containing feature then move forward :-).
+  if ($record) {
 
-  // If the length is provided then return a stubstring.
-  if (isset($sequence_details['length'])) {
+    // If the length is provided then return a stubstring.
+    if (isset($sequence_details['length'])) {
 
-    // If a start is not provided then center the range on the variant/marker.
-    if (!isset($sequence_details['start'])) {
-      $middle = round($sequence_details['length'] / 2);
-      $sequence_details['start'] = $record->fmin - $middle;
-      if ($sequence_details['start'] <= 0) { $sequence_details['start'] = 1; }
+      // If a start is not provided then center the range on the variant/marker.
+      if (!isset($sequence_details['start'])) {
+        $middle = round($sequence_details['length'] / 2);
+        $sequence_details['start'] = $record->fmin - $middle;
+        if ($sequence_details['start'] <= 0) { $sequence_details['start'] = 1; }
+      }
+
+      $new_sequence_details = array(
+        'feature_id' => $record->srcfeature_id,
+        'feature_name' => $record->name,
+        'sequence' => substr($record->residues, $sequence_details['start'], $sequence_details['length']),
+        'start' => $sequence_details['start'],
+        'end' => $sequence_details['start'] + $sequence_details['length'],
+        'length' => $sequence_details['length'],
+        'full_sequence' => TRUE
+      );
+    }
+    else {
+      $new_sequence_details = array(
+        'feature_id' => $record->srcfeature_id,
+        'feature_name' => $record->name,
+        'sequence' => $record->residues,
+        'start' => 1,
+        'end' => $record->seqlen,
+        'length' => $record->seqlen,
+        'full_sequence' => TRUE
+      );
     }
 
-    $new_sequence_details = array(
-      'feature_id' => $record->srcfeature_id,
-      'feature_name' => $record->name,
-      'sequence' => substr($record->residues, $sequence_details['start'], $sequence_details['length']),
-      'start' => $sequence_details['start'],
-      'end' => $sequence_details['start'] + $sequence_details['length'],
-      'length' => $sequence_details['length'],
-      'full_sequence' => TRUE
-    );
-  }
-  else {
-    $new_sequence_details = array(
-      'feature_id' => $record->srcfeature_id,
-      'feature_name' => $record->name,
-      'sequence' => $record->residues,
-      'start' => 1,
-      'end' => $record->seqlen,
-      'length' => $record->seqlen,
-      'full_sequence' => TRUE
-    );
-  }
-
-  // We also want to add the marker_id & variant_id into the sequence details
-  // but we only have one of those currently so use the feature category to
-  // determine which one we have and which we need to look up.
-  if ($feature_category == 'variant') {
-    $new_sequence_details['variant_id'] = $feature->feature_id;
-    $new_sequence_details['marker_id'] = nd_genotypes_get_marker($feature->feature_id, TRUE);
-  }
-  elseif ($feature_category == 'marker') {
-    $new_sequence_details['marker_id'] = $feature->feature_id;
-    $new_sequence_details['variant_id'] = nd_genotypes_get_variant($feature->feature_id, TRUE);
+    // We also want to add the marker_id & variant_id into the sequence details
+    // but we only have one of those currently so use the feature category to
+    // determine which one we have and which we need to look up.
+    if ($feature_category == 'variant') {
+      $new_sequence_details['variant_id'] = $feature->feature_id;
+      $new_sequence_details['marker_id'] = nd_genotypes_get_marker($feature->feature_id, TRUE);
+    }
+    elseif ($feature_category == 'marker') {
+      $new_sequence_details['marker_id'] = $feature->feature_id;
+      $new_sequence_details['variant_id'] = nd_genotypes_get_variant($feature->feature_id, TRUE);
+    }
+    else {
+      tripal_report_error(
+        'nd_genotypes',
+        TRIPAL_WARNING,
+        'Unsupported feature category (:category) when retrieving the variant seuqence for :name (:id).',
+        array(
+          ':category' => $feature_category,
+          ':name' => $feature->name,
+          ':id' => $feature->feature_id
+        )
+      );
+    }
   }
   else {
     tripal_report_error(
       'nd_genotypes',
       TRIPAL_WARNING,
-      'Unsupported feature category (:category) when retrieving the variant seuqence for :name (:id).',
+      'Unable to retrieve the variant sequence for :name (:id). Make sure the variant/marker is located/aligned directly to a feature with sequence via the chado.featureloc table.',
       array(
-        ':category' => $feature_category,
         ':name' => $feature->name,
         ':id' => $feature->feature_id
       )
     );
   }
-
+  
   return $new_sequence_details;
 }
 
