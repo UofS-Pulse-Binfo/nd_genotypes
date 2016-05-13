@@ -88,7 +88,7 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
      strcmp($variables['node']->feature->type_id->name,'chromosome') !=0 and
      strcmp($variables['node']->feature->type_id->name,'supercontig') !=0 and
      strcmp($variables['node']->feature->type_id->name,'pseudomolecule') !=0) {
-    $variables['node']->feature = tripal_core_expand_chado_vars($variables['node']->feature,'field','feature.residues');
+    $variables['node']->feature = chado_expand_var($variables['node']->feature,'field','feature.residues');
   }
 
   // Defaults.
