@@ -6,21 +6,9 @@ core = 7.x
 
 stylesheets[all][] = theme/nd_genotypes.css
 
+dependencies[] = tripal_feature
 dependencies[] = tripal_project
 dependencies[] = tripal_genetic
 dependencies[] = tripal_stock
 dependencies[] = tripal_natural_diversity
 
-dependencies[] = views_list_aggregation
-
-; Views Handlers
-files[] = includes/views/handlers/views_handler_field_germplasm_genotype.inc
-files[] = includes/views/handlers/views_handler_filter_germplasm_genotype_by_stock.inc
-files[] = includes/views/handlers/nd_genotypes_handler_filter_genotype_by_stock_multiple.inc
-files[] = includes/views/handlers/views_handler_filter_germplasm_genotype_polymorphic.inc
-files[] = includes/views/handlers/views_handler_filter_germplasm_genotyped_name.inc
-;files[] = includes/views/handlers/views_handler_field_markedup_parent_residues.inc
-;files[] = includes/views/handlers/views_handler_filter_genotype_summary_stock_combo.inc
-
-; Views Data Export Plugins
-files[] = includes/views_data_export/views_data_export_plugin_style_export_genotype_table.inc
