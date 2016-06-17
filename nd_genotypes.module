@@ -1,6 +1,58 @@
 <?php
-
 /**
  * @file
  * Contains general functionality for this module.
  */
+
+require_once('includes/nd_genotypes.mview.inc');
+
+/**
+ * Implements hook_menu().
+ */
+function nd_genotypes_menu() {
+
+  // Administration.
+  $items['admin/tripal/extension/nd_genotypes'] = array(
+    'title' => 'Natural Diversity Genotypes',
+    'description' => 'Provides an interface for genotypes and the experiments that generate them.',
+    'access arguments' => array('administer tripal'),
+    'page callback' => 'nd_genotypes_admin_landing_page',
+    'file' => 'includes/nd_genotypes.admin.inc'
+  );
+
+  $items['admin/tripal/extension/nd_genotypes/sync'] = array(
+    'title' => 'Sync',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('nd_genotypes_admin_sync_mviews'),
+    'access arguments' => array('administer tripal'),
+    'weight' => 2,
+    'file' => 'includes/nd_genotypes.admin.inc'
+  );
+
+  $items['admin/tripal/extension/nd_genotypes/help'] = array(
+    'title' => 'Help',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'theme',
+    'page arguments' => array('nd_genotypes__help'),
+    'access arguments' => array('administer tripal'),
+    'weight' => 4
+  );
+
+  return $items;
+}
+
+/**
+ * Register any theme functions/templates for this module.
+ */
+function nd_genotypes_theme($existing, $type, $theme, $path) {
+  $items = array();
+
+  // Help Page
+  $items['nd_genotypes__help'] = array(
+    'template' => 'nd_genotypes--help',
+    'path' => "$path/theme/templates",
+  );
+
+  return $items;
+}
