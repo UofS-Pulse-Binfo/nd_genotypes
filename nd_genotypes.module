@@ -20,6 +20,16 @@ function nd_genotypes_menu() {
     'file' => 'includes/nd_genotypes.admin.inc'
   );
 
+  $items['admin/tripal/extension/nd_genotypes/settings'] = array(
+    'title' => 'Settings',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('nd_genotypes_admin_settings'),
+    'access arguments' => array('administer tripal'),
+    'weight' => 0,
+    'file' => 'includes/nd_genotypes.admin.inc'
+  );
+
   $items['admin/tripal/extension/nd_genotypes/sync'] = array(
     'title' => 'Sync',
     'type' => MENU_LOCAL_TASK,

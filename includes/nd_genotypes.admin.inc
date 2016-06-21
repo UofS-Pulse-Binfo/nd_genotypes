@@ -14,6 +14,43 @@ function nd_genotypes_admin_landing_page() {
 }
 
 /**
+ *
+ */
+function nd_genotypes_admin_settings($form, $form_state) {
+
+  $form['storage_method'] = array(
+    '#type' => 'select',
+    '#title' => 'Storage Method',
+    '#description' => 'This is the method you are using to store your genotypic data. You can find more information about the supported storage methods on the ' . l('project wiki.', 'https://github.com/UofS-Pulse-Binfo/nd_genotypes/wiki/How-to-Store-your-Data', array('attributes' => array('target' => '_blank'))),
+    '#options' => array(
+      'nd_exp' => 'Natural Diversity Experiment',
+      'genotype_call' => 'Genotype Call Custom Table',
+      'stock_genotype' => 'Genotype Stock table',
+      'custom' => 'Custom',
+    ),
+    '#default_value' => variable_get('nd_genotype_storage_method', 'nd_exp'),
+  );
+
+  $form['save'] = array(
+    '#type' => 'submit',
+    '#name' => 'save',
+    '#value' => 'Save'
+  );
+
+  return $form;
+}
+
+/**
+ *
+ */
+function nd_genotypes_admin_settings_submit($form, $form_state) {
+
+  // Save the storage method for use later.
+  variable_set('nd_genotype_storage_method', $form_state['values']['storage_method']);
+
+}
+
+/**
  * Update ND Genotype data (ie: Materialized Views)
  */
 function nd_genotypes_admin_sync_mviews($form, $form_state) {
@@ -31,7 +68,7 @@ function nd_genotypes_admin_sync_mviews($form, $form_state) {
   $form['mviews']['storage_method'] = array(
     '#type' => 'select',
     '#title' => 'Storage Method',
-    '#description' => 'This is the method you are using to store your genotypic data. You can find more information about the supported storage methods on the ' . l('project wiki.', 'https://github.com/UofS-Pulse-Binfo/nd_genotypes/wiki/How-to-Store-your-Data', array('attributes' => array('target' => '_blank'))),
+    '#description' => 'This is the method you are using to store your genotypic data. You can change it on the "Settings" tab.',
     '#options' => array(
       'nd_exp' => 'Natural Diversity Experiment',
       'genotype_call' => 'Genotype Call Custom Table',
@@ -39,6 +76,7 @@ function nd_genotypes_admin_sync_mviews($form, $form_state) {
       'custom' => 'Custom',
     ),
     '#default_value' => variable_get('nd_genotype_storage_method', 'nd_exp'),
+    '#disabled' => TRUE,
   );
 
   $form['mviews']['populate_mviews'] = array(
@@ -89,9 +127,6 @@ function nd_genotypes_admin_sync_mviews($form, $form_state) {
 function nd_genotypes_admin_sync_mviews_submit($form, $form_state) {
 
   if ($form_state['triggering_element']['#name'] == 'sync_mviews') {
-
-    // Save the storage method for use later.
-    variable_set('nd_genotype_storage_method', $form_state['values']['storage_method']);
 
     // If they chose a custom way to store their data then we can't help them :-(.
     if ($form_state['values']['storage_method'] == 'custom') {
