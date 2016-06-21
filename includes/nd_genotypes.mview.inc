@@ -32,26 +32,34 @@ function nd_genotypes_update_mview_for_nd_exp($job_id) {
       s.name as germplasm_name,
       array_agg(g.description) as alleles,
       mode() WITHIN GROUP (ORDER BY g.description) as consensus_allele
-    FROM chado.nd_experiment nde
-    LEFT JOIN nd_experiment_project ndep ON ndep.nd_experiment_id=nde.nd_experiment_id
-    LEFT JOIN nd_geolocation ndg ON ndg.nd_geolocation_id=nde.nd_geolocation_id
-    LEFT JOIN project p ON p.project_id=ndep.project_id
-    LEFT JOIN nd_experiment_stock ndes ON ndes.nd_experiment_id=nde.nd_experiment_id
-    LEFT JOIN stock s ON s.stock_id=ndes.stock_id
-    LEFT JOIN nd_experiment_genotype ndeg ON ndeg.nd_experiment_id=nde.nd_experiment_id
-    LEFT JOIN genotype g ON g.genotype_id=ndeg.genotype_id
-    LEFT JOIN feature_genotype fg ON fg.genotype_id=g.genotype_id
-    LEFT JOIN feature m ON m.feature_id=fg.feature_id
-    LEFT JOIN feature_relationship fr ON m.feature_id=fr.subject_id AND fr.type_id=2531
-    LEFT JOIN feature v ON v.feature_id=fr.object_id
-    LEFT JOIN featureloc loc ON loc.feature_id=v.feature_id
-    LEFT JOIN feature b ON b.feature_id=loc.srcfeature_id
+    FROM {nd_experiment} nde
+    LEFT JOIN {nd_experiment_project} ndep ON ndep.nd_experiment_id=nde.nd_experiment_id
+    LEFT JOIN {nd_geolocation} ndg ON ndg.nd_geolocation_id=nde.nd_geolocation_id
+    LEFT JOIN {project} p ON p.project_id=ndep.project_id
+    LEFT JOIN {nd_experiment_stock} ndes ON ndes.nd_experiment_id=nde.nd_experiment_id
+    LEFT JOIN {stock} s ON s.stock_id=ndes.stock_id
+    LEFT JOIN {nd_experiment_genotype} ndeg ON ndeg.nd_experiment_id=nde.nd_experiment_id
+    LEFT JOIN {genotype} g ON g.genotype_id=ndeg.genotype_id
+    LEFT JOIN {feature_genotype} fg ON fg.genotype_id=g.genotype_id
+    LEFT JOIN {feature} m ON m.feature_id=fg.feature_id
+    LEFT JOIN {feature_relationship} fr ON m.feature_id=fr.subject_id AND fr.type_id=2531
+    LEFT JOIN {feature v} ON v.feature_id=fr.object_id
+    LEFT JOIN (
+        SELECT *
+        FROM ( SELECT *, row_number() OVER (partition by feature_id order by locgroup desc, rank asc) as row_num FROM {featureloc} ) as ordered_locs
+        WHERE ordered_locs.row_num = 1
+      ) as loc ON loc.feature_id=v.feature_id
+    LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
     GROUP BY v.feature_id, v.name, s.stock_id, s.name, loc.srcfeature_id, b.name, loc.fmin, loc.fmax";
 
     chado_query("
       INSERT INTO {$table_name}
         (variant_id, variant_name, srcfeature_id, srcfeature_name, fmin, fmax, stock_id, stock_name, germplasm_id, germplasm_name, alleles, consensus_allele)
       " . $query);
+
+  // Then report how many were inserted.
+  $count = chado_query("SELECT count(*) FROM {$table_name}")->fetchField();
+  drupal_set_message("Sucessfully updated Genotype materialized view with $count records");
 }
 
 /**
@@ -77,10 +85,16 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
 
   $table_name = 'genotype_mview';
 
-  // Create the table if it doesn't already exist.
+  // Create the mview if it doesn't already exist.
   chado_create_custom_table(
     $table_name,
     nd_genotypes_genotype_mview_schema_template()
+  );
+
+  // Create the custom genotype_call table if it doesn't exist.
+  chado_create_custom_table(
+    'genotype_call',
+    nd_genotypes_genotype_call_schema_template()
   );
 
   $query = "SELECT
@@ -117,6 +131,11 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
         (variant_id, variant_name, srcfeature_id, srcfeature_name, fmin, fmax, stock_id, stock_name, germplasm_id, germplasm_name, alleles, consensus_allele)
       " . $query);
 
+  // Then report how many were inserted.
+  /*
+  $count = chado_query("SELECT count(*) FROM {$table_name}")->fetchField();
+  drupal_set_message("Sucessfully updated Genotype materialized view with $count records");
+*/
 }
 
 /**
@@ -132,6 +151,9 @@ function nd_genotypes_update_mview_for_genotype_stock($job_id) {
     nd_genotypes_genotype_mview_schema_template()
   );
 
+  // Then report how many were inserted.
+  $count = chado_query("SELECT count(*) FROM {$table_name}")->fetchField();
+  drupal_set_message("Sucessfully updated Genotype materialized view with $count records");
 }
 
 /**
@@ -248,6 +270,84 @@ function nd_genotypes_genotype_mview_schema_template() {
       'idx2' => array('srcfeature_id'),
       'idx3' => array('stock_id'),
       'idx4' => array('germplasm_id'),
+    ),
+  );
+}
+
+/**
+ * The schema for the custom genotype_call table.
+ */
+function nd_genotypes_genotype_call_schema_template() {
+
+  return array(
+    'description' => 'A more compact way to store genotype calls.',
+    'fields' => array(
+      'genotype_call_id' => array(
+        'type' => 'serial',
+      ),
+      'variant_id' => array(
+        'description' => 'Links to the feature describing the loci with variation.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'marker_id' => array(
+        'description' => 'Links to the feature describing the marker.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'genotype_id' => array(
+        'description' => 'Links to the allele call.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'project_id' => array(
+        'description' => 'Links to the project grouping calls from a single analysis.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'stock_id' => array(
+        'description' => 'Links to the DNA stock assayed by the marker.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'marker_data' => array(
+        'pgsql_type' => 'jsonb',
+      ),
+    ),
+    'primary key' => array('genotype_call_id'),
+    'unique keys' => array(),
+    'foreign keys' => array(
+      'feature' => array(
+        'table' => 'feature',
+        'columns' => array(
+          'variant_id' => 'feature_id',
+          'marker_id' => 'feature_id'
+        ),
+      ),
+      'genotype' => array(
+        'table' => 'genotype',
+        'columns' => array(
+          'genotype_id' => 'genotype_id'
+        ),
+      ),
+      'project' => array(
+        'table' => 'project',
+        'columns' => array(
+          'project_id' => 'project_id'
+        ),
+      ),
+      'stock' => array(
+        'table' => 'stock',
+        'columns' => array(
+          'stock_id' => 'stock_id'
+        ),
+      ),
+    ),
+    'indexes' => array(
+      'idx1' => array('variant_id'),
+      'idx2' => array('marker_id'),
+      'idx3' => array('project_id'),
+      'idx4' => array('stock_id'),
     ),
   );
 }
