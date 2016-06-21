@@ -35,7 +35,7 @@ function nd_genotypes_admin_sync_mviews($form, $form_state) {
     '#options' => array(
       'nd_exp' => 'Natural Diversity Experiment',
       'genotype_call' => 'Genotype Call Custom Table',
-      'genotype_stock' => 'Genotype Stock table',
+      'stock_genotype' => 'Genotype Stock table',
       'custom' => 'Custom',
     ),
     '#default_value' => variable_get('nd_genotype_storage_method', 'nd_exp'),
@@ -111,9 +111,9 @@ function nd_genotypes_admin_sync_mviews_submit($form, $form_state) {
           $name = "Update ND Materialized View. Method: Genotype Call Custom table";
           $function = 'nd_genotypes_update_mview_for_genotype_call';
           break;
-        case 'genotype_call':
+        case 'stock_genotype':
           $name = "Update ND Materialized View. Method: Genotype Stock table";
-          $function = 'nd_genotypes_update_mview_for_genotype_stock';
+          $function = 'nd_genotypes_update_mview_for_stock_genotype';
           break;
       }
       global $user;
