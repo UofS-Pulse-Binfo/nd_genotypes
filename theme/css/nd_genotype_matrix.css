@@ -1,0 +1,37 @@
+
+/* Size of columns */
+th.position.backbone, td.position.backbone {
+  width: 150px;
+}
+th.position, td.position {
+  width: 50px;
+}
+th.germplasm, td.germplasm {
+  width: 100px;
+}
+
+td.germplasm {
+  text-align: center;
+}
+
+/* Colour coding of alleles */
+td.genotype.A, td.genotype.AA {
+  border-color: #9BC456;
+  background-color: #9BC456;
+  font-weight: bold;
+}
+td.genotype.T, td.genotype.TT {
+  border-color: #106050;
+  background-color: #106050;
+  color: #E6E6E6;
+}
+td.genotype.G, td.genotype.GG {
+  border-color: #6C2EAA;
+  background-color: #6C2EAA;
+  color: #E6E6E6;
+}
+td.genotype.C, td.genotype.CC {
+  border-color: #409EB5;
+  background-color: #409EB5;
+  font-weight: bold;
+}
