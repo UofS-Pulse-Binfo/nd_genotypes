@@ -1,0 +1,117 @@
+.form-type-multiple-organism-stock select {
+  height: 26px;
+  position: relative;
+  top: -1px;
+  margin-left: 2px;
+  margin-right: 1px;
+}
+
+.form-type-multiple-organism-stock .container-inline > * {
+    vertical-align: middle;
+    line-height: normal;
+}
+
+/**
+ * Minimal image buttons
+ */
+/* NOTE: Button symbol provided by the image attached to the image_button */
+/* Default: navy-button */
+span.image-button input {
+  /* Remove competing formatting */
+  padding: 4px;
+  padding-top: 5px;
+  margin: 0;
+  margin-left: 2px;
+  border: 0;
+  outline: 0;
+  /* Background shading */
+  background-color: #4C525C;
+  background-image: -webkit-gradient(linear, left top, left bottom, from(#4C525C), to(#C8CACF));
+  background-image: -webkit-linear-gradient(top, #4C525C, #C8CACF);
+  background-image: -moz-linear-gradient(top, #4C525C, #C8CACF);
+  background-image: -ms-linear-gradient(top, #4C525C, #C8CACF);
+  background-image: -o-linear-gradient(top, #4C525C, #C8CACF);
+  /* Button sizing */
+  width: 14px;
+  height: 14px;
+  /* Make the button round */
+  border-radius: 50%;
+  /* Shadow to make it look like a button :) */
+  box-shadow: 0px 1px 4px #343840;
+}
+span.image-button input.form-submit:hover,
+  span.image-button input.form-submit:focus {
+  background: #4C525C;
+}
+/* Note: Form the "Well" the button sits in */
+/* Default: white-well */
+span.image-button {
+  display: inline-block;
+  background: #FFF;
+  /* Well sizing */
+  padding: 5px;
+  width: 24px;
+  height: 24px;
+  /* Well positioning */
+  z-index: -5;
+  /* Make the well round */
+  border-radius: 50%;
+  /* Make the well 3D */
+  box-shadow: inset 0px 1px 4px 2px #F4F4F4, inset 0px 1px 4px 4px #F8F8F8;
+}
+span.image-button input.form-submit:active {
+  box-shadow: none;
+  border: solid 1px #B0B3B7;
+}
+
+span.image-button.green-button input {
+  /* Background */
+  background-color: #4E9537;
+  background-image: -webkit-gradient(linear, left top, left bottom, from(#4E9537), to(#6BB751));
+  background-image: -webkit-linear-gradient(top, #4E9537, #6BB751);
+  background-image: -moz-linear-gradient(top, #4E9537, #6BB751);
+  background-image: -ms-linear-gradient(top, #4E9537, #6BB751);
+  background-image: -o-linear-gradient(top, #4E9537, #6BB751);
+  /* Shadow */
+  box-shadow: 0px 1px 4px #374A2B, inset 0px 1px 3px #72C159;
+}
+span.image-button.green-button input.form-submit:hover,
+  span.image-button input.form-submit:focus {
+  background: #69CB4A;
+}
+
+span.image-button.dark-well {
+  background: #C1C3C6;
+  box-shadow: inset 0px 1px 4px 2px #B0B3B7, inset 0px 1px 4px 4px #D2D4D9;
+}
+span.image-button.dark-well input.form-submit:active {
+  box-shadow: none;
+  border: solid 1px #B0B3B7;
+}
+span.image-button.odd-table-well {
+  background: #F4F4F4;
+  box-shadow: inset 0px 1px 4px 2px #DFDFDF, inset 0px 1px 4px 4px #DFDFDF;
+}
+span.image-button.odd-table-well input.form-submit:active {
+  box-shadow: none;
+  border: solid 1px #DFDFDF;
+}
+
+span.no-button input {
+  display: inline-block;
+  width: 17px;
+  height: 17px;
+  border: 0;
+  padding: 4px;
+  padding-top: 5px;
+  margin: 0px 6px;
+background:none; -webkit-box-shadow:none;  -moz-box-shadow:none;  box-shadow:none;
+    vertical-align: middle;
+    line-height: normal;
+}
+
+span.no-button input:hover{
+  box-shadow: 0px 1px 4px #F9726B, inset 0px 1px 3px #F9726B;
+  background-color: #FFF;
+  z-index: 3;
+}

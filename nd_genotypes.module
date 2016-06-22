@@ -5,6 +5,7 @@
  */
 
 require_once('includes/nd_genotypes.mview.inc');
+require_once('includes/nd_genotypes.form_elements.inc');
 
 /**
  * Implements hook_menu().
@@ -49,6 +50,26 @@ function nd_genotypes_menu() {
     'weight' => 4
   );
 
+  // Add Marker x Germplasm Matrix links (1/organism synced)
+  $sql = "
+    SELECT *
+    FROM [chado_organism] CO
+      INNER JOIN {organism} O ON O.organism_id = CO.organism_id
+    ORDER BY O.genus, O.species
+  ";
+  $orgs = chado_query($sql);
+  foreach ($orgs as $organism) {
+    $items['chado/genotype/' . $organism->genus] = array(
+      'title' => $organism->genus . ' Genotypes',
+      'description' => 'Marker by Germplasm Genotypes Search for ' . $organism->genus . ' species.',
+      'page callback' => 'nd_genotypes_matrix_page',
+      'page arguments' => array($organism->genus),
+      'access arguments' => array('access content'),
+      'type' => MENU_NORMAL_ITEM,
+      'file' => 'includes/nd_genotypes.genotype_matrix.inc',
+    );
+  }
+
   return $items;
 }
 
@@ -62,6 +83,10 @@ function nd_genotypes_theme($existing, $type, $theme, $path) {
   $items['nd_genotypes__help'] = array(
     'template' => 'nd_genotypes--help',
     'path' => "$path/theme/templates",
+  );
+
+  $items['multiple_organism_stock'] = array(
+    'render element' => 'element',
   );
 
   return $items;
