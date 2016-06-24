@@ -89,5 +89,9 @@ function nd_genotypes_theme($existing, $type, $theme, $path) {
     'render element' => 'element',
   );
 
+  $items['genotype_matrix_pager'] = array(
+    'arguments' => array('first' => NULL, 'prev' => NULL, 'next' => NULL, 'label' => NULL),
+  );
+
   return $items;
 }

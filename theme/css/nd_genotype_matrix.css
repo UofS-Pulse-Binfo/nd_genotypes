@@ -35,3 +35,10 @@ td.genotype.C, td.genotype.CC {
   background-color: #409EB5;
   font-weight: bold;
 }
+
+/* Style the go to first page link */
+.gotofirst {
+  font-style: italic;
+  position: relative;
+  top: -36px;
+}
