@@ -56,7 +56,8 @@ function nd_genotypes_update_mview_for_nd_exp($job_id) {
     LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
     WHERE sr.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='is_extracted_from')
       AND fr.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='is_marker_of')
-    GROUP BY v.feature_id, v.name, s.stock_id, s.name, germ.stock_id, germ.name, loc.srcfeature_id, b.name, loc.fmin, loc.fmax";
+    GROUP BY v.feature_id, v.name, s.stock_id, s.name, germ.stock_id, germ.name, loc.srcfeature_id, b.name, loc.fmin, loc.fmax
+    ORDER BY b.name ASC, loc.fmin ASC";
 
     chado_query("
       INSERT INTO {$table_name}
@@ -311,10 +312,10 @@ function nd_genotypes_genotype_mview_schema_template() {
       ),
     ),
     'indexes' => array(
-      'idx1' => array('variant_id'),
-      'idx2' => array('srcfeature_id'),
-      'idx3' => array('stock_id'),
-      'idx4' => array('germplasm_id'),
+      'variant_idx' => array('variant_id'),
+      'loc_idx' => array('srcfeature_name', 'fmin'),
+      'stock_idx' => array('stock_id'),
+      'germ_idx' => array('germplasm_id'),
     ),
   );
 }

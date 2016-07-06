@@ -77,8 +77,8 @@ function nd_genotypes_matrix_page($genus) {
             consensus_allele
           FROM {genotype_mview}
           WHERE (" . implode(' OR ', $stock_where) . ") " . $pager_where
-        ."ORDER BY srcfeature_name ASC, fmin ASC
-          LIMIT " . $limit;
+        ."ORDER BY srcfeature_name ASC, fmin ASC "
+        ."LIMIT " . $limit;
   $resource = chado_query($sql, $args);
 
   // Set the non-germplasm specific header.
@@ -185,7 +185,7 @@ function nd_genotypes_matrix_page($genus) {
   // determine the previous page in the rare case that users use the previous button.
   // In most cases when the user wants to go back they'll jump back to the first page
   // which doesn't cause a performance hit.
-  else {
+  elseif (!isset($query_param['pager_loc']['previous']) OR $query_param['pager_loc']['current'] == $query_param['pager_loc']['previous']) {
     $tmp = explode(':', $first_loc);
     $prev_loc = chado_query("
       SELECT srcfeature_name||':'||fmin
