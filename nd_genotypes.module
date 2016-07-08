@@ -62,8 +62,8 @@ function nd_genotypes_menu() {
     $items['chado/genotype/' . $organism->genus] = array(
       'title' => $organism->genus . ' Genotypes',
       'description' => 'Marker by Germplasm Genotypes Search for ' . $organism->genus . ' species.',
-      'page callback' => 'nd_genotypes_matrix_page',
-      'page arguments' => array($organism->genus),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('nd_genotypes_matrix_filter_form', $organism->genus),
       'access arguments' => array('access content'),
       'type' => MENU_NORMAL_ITEM,
       'file' => 'includes/nd_genotypes.genotype_matrix.inc',
@@ -90,7 +90,7 @@ function nd_genotypes_theme($existing, $type, $theme, $path) {
   );
 
   $items['genotype_matrix_pager'] = array(
-    'arguments' => array('first' => NULL, 'prev' => NULL, 'next' => NULL, 'label' => NULL),
+    'render element' => 'element',
   );
 
   return $items;

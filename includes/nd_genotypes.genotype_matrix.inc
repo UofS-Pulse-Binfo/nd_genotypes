@@ -5,129 +5,34 @@
  */
 
 /**
- * Render the genotype matrix page.
+ * The Genotype Matrix is generated as a form. This includes both the filter criteria
+ * and the matrix itself. You can alter the matrix using hook_form_alter().
  *
- * This page will have a filter form embedded in it as well as displaying the
- * genotype matrix table.
+ * NOTE: When altering this form, keep in mind that the submit function will pick up
+ *   any new fields and add their values (if not empty) to the URL. The query is done
+ *   based on the values in the URL in order to ensure the genotype matrix is bookmarkable
+ *   and thus sharable.
  *
- * @param $genus
- *   The genus of the organism germplasm should belong to.
+ * @param $form
+ *   The initialized form array.
+ * @param $form_state
+ *   An array containing build information such as the organism genus.
+ * @return
+ *   The completed form array.
  */
-function nd_genotypes_matrix_page($genus) {
-  $output = '';
+function nd_genotypes_matrix_filter_form($form, $form_state) {
+  $genus = $form_state['build_info']['args'][0];
   $total_num_rows = 100;
 
   if (!$genus) { drupal_set_message('The link/URL must contain the genus of the organism you would like genotypes for.','error'); return ''; }
 
-  // Set the title & perhaps the breadcrumb accordingly.
-  drupal_set_title(ucfirst($genus) . ' Genotypes');
-
-  // Add CSS.
-  drupal_add_css(drupal_get_path('module','nd_genotypes').'/theme/css/nd_genotype_matrix.css');
-
-  // Filter Form.
-  $form = drupal_get_form('nd_genotypes_matrix_filter_form', $genus);
-  $output .= drupal_render($form);
-
-  // Determine the query & execute it.
-  $args = array();
-  $sql = nd_genotypes_genotype_matrix_get_query($args, $_GET, array('total_num_rows' => $total_num_rows));
-  $resource = chado_query($sql, $args);
-
-  // Set the non-germplasm specific header.
-  $header = array(
-    'variant_name' => array('data' => 'Variant Name', 'class' => array('variant_name')),
-    'srcfeature_name' => array('data' => 'Backbone', 'class' => array('position','backbone')),
-    'fmin' => array('data' => 'Start', 'class' => array('position', 'start')),
-    'fmax' => array('data' => 'End', 'class' => array('position','end')),
+  // Add CSS for this form.
+  $form['#attached']['css'] = array(
+    drupal_get_path('module', 'nd_genotypes') . '/theme/css/nd_genotype_matrix.css',
   );
-  $germplasm = array();
 
-  // Generate the table rows.
-  // Keep in mind that we retrieve the data as a long listing rather than a table
-  // and join it ourself based on variant_id.
-  $rows = array();
-  $last_loc = NULL;
-  $first_loc = NULL;
-  foreach($resource as $r) {
-
-    // Save the first location for use with the pager.
-    if (!isset($first_loc)) {
-      $first_loc = $r->srcfeature_name . ':' .$r->fmin;
-    }
-
-    // Initialize the variant if this is the first time we have come across it.
-    if (!isset($rows[$r->variant_id])) {
-      $rows[$r->variant_id]['variant_name'] = array('data' => $r->variant_name, 'class' => array('variant_name'));
-      $rows[$r->variant_id]['srcfeature_name'] = array('data' => $r->srcfeature_name, 'class' => array('position','backbone'));
-      $rows[$r->variant_id]['fmin'] = array('data' => $r->fmin, 'class' => array('position', 'start'));
-      $rows[$r->variant_id]['fmax'] = array('data' => $r->fmax, 'class' => array('position','end'));
-
-      $rows[$r->variant_id][$r->germplasm_id] = array();
-    }
-
-    // Add Germplasm name to the header.
-    $germplasm[$r->germplasm_id] = strtolower(drupal_clean_css_identifier($r->germplasm_name));
-    $header[$r->germplasm_id] = array('data' => $r->germplasm_name, 'class' => array('germplasm', $germplasm[$r->germplasm_id]));
-
-    // Determine whether we are still within our row limit.
-    $num_rows = sizeof($rows);
-    if ($num_rows > $total_num_rows) {
-      unset($rows[$r->variant_id]);
-      break;
-    }
-
-    // Save the last location for use with the pager.
-    $last_loc = $r->srcfeature_name . ':' . $r->fmin;
-
-    // Save the call.
-    $rows[$r->variant_id][$r->germplasm_id] = $r->consensus_allele;
-
-  }
-
-  // If there are no results then we should tell the user that...
-  if (empty($rows)) {
-    $output .= 'No variants matching the above filter criteria had genotypes for the given germplasm.';
-    return $output;
-  }
-
-  // Sanitize the table to ensure there is a  cell for each germplasm.
-  foreach ($rows as $k => $row) {
-    foreach (array_keys($header) as $h) {
-      if (isset($germplasm[$h])) {
-        if (!isset($rows[$k][$h])) {
-          $rows[$k][$h] = array('data' => '', 'class' => array('genotype', $germplasm[$h]));
-        }
-        elseif (!is_array($rows[$k][$h])) {
-          $rows[$k][$h] = array('data' => $rows[$k][$h], 'class' => array('germplasm', $germplasm[$h], 'genotype', $rows[$k][$h]));
-        }
-      }
-    }
-  }
-
-  if (sizeof($germplasm) != sizeof($_GET['germplasm'])) {
-    drupal_set_message('At least one of the germplasm indicated do not have any genotype calls under the specified criteria.','warning');
-  }
-
-  // Render the table.
-  $table = array(
-    'header' => $header,
-    'rows' => $rows,
-  );
-  $output .= theme('table', $table);
-
-  // Render the pager.
-  $output .= theme('genotype_matrix_pager', nd_genotypes_genotype_matrix_get_pager($first_loc, $last_loc, $total_num_rows));
-
-  return $output;
-}
-
-/**
- * The Filter form for the genotype matrix page.
- */
-function nd_genotypes_matrix_filter_form($form, $form_state) {
-  $genus = $form_state['build_info']['args'][0];
-
+  // Form select list options.
+  //-------------------------
   // Determine the select box for species.
   $options = array('order_by' => array(
     'organism_id' => 'ASC'
@@ -143,6 +48,8 @@ function nd_genotypes_matrix_filter_form($form, $form_state) {
   // Determine the select list for sequence backbone.
   $seq_chr = unserialize(variable_get('nd_genotypes_seq_backbones', NULL));
 
+  // Defaults.
+  //-------------------------
   // Grab defaults for germplasm from path if form_state is not set.
   $germ_defaults = (isset($form_state['values']['multiple_stocks'])) ? $form_state['values']['multiple_stocks'] : array();
   if (!$germ_defaults AND isset($_GET['germplasm'])) {
@@ -153,6 +60,7 @@ function nd_genotypes_matrix_filter_form($form, $form_state) {
       $s = chado_query('SELECT name, organism_id FROM {stock} WHERE stock_id=:id',
         array(':id' => $v))->fetchObject();
       if ($s) {
+        $germ_defaults['existing'][$i]['stock_id'] = $v;
         $germ_defaults['existing'][$i]['stock_name'] = $s->name;
         $germ_defaults['existing'][$i]['organism_id'] = $s->organism_id;
       }
@@ -172,6 +80,8 @@ function nd_genotypes_matrix_filter_form($form, $form_state) {
     }
   }
 
+  // Filter Form.
+  //-------------------------
   $form['multiple_stocks'] = array(
       '#type' => 'multiple_organism_stock',
       '#title' => 'Genotypes',
@@ -200,7 +110,7 @@ function nd_genotypes_matrix_filter_form($form, $form_state) {
   $form['seq_range']['start']['backbone'] = array(
     '#type' => 'select',
     '#title' => 'From',
-    '#empty_option' => '- ' . t('Genome') . ' -',
+    '#empty_option' => '- ' . t('Sequence') . ' -',
     '#options' => $seq_chr,
     '#default_value' => (isset($_GET['seq_range']['start']['backbone'])) ? $_GET['seq_range']['start']['backbone'] : NULL,
   );
@@ -220,7 +130,7 @@ function nd_genotypes_matrix_filter_form($form, $form_state) {
   $form['seq_range']['end']['backbone'] = array(
     '#type' => 'select',
     '#title' => 'to',
-    '#empty_option' => '- ' . t('Genome') . ' -',
+    '#empty_option' => '- ' . t('Sequence') . ' -',
     '#options' => $seq_chr,
     '#default_value' => (isset($_GET['seq_range']['end']['backbone'])) ? $_GET['seq_range']['end']['backbone'] : NULL,
   );
@@ -270,6 +180,129 @@ function nd_genotypes_matrix_filter_form($form, $form_state) {
     '#value' => 'Search',
   );
 
+  // If there are no germplasm selected then we should not try to render a matrix ;-).
+  if (!isset($germ_defaults['existing'])) {
+    $form['info'] = array(
+      '#type' => 'markup',
+      '#markup' => 'Please enter the germplasm you would like to see the genotype of.',
+      '#prefix' => '<div class="instructions">',
+      '#suffix' => '</div>',
+    );
+    return $form;
+  }
+
+  // The Matrix.
+  //-------------------------
+  $germplasm = array();
+
+  // The non-germplasm specific header. This will be added to as we process the data.
+  $header = array(
+    'variant_name' => array('data' => 'Variant Name', 'class' => array('variant_name')),
+    'srcfeature_name' => array('data' => 'Backbone', 'class' => array('position','backbone')),
+    'fmin' => array('data' => 'Start', 'class' => array('position', 'start')),
+    'fmax' => array('data' => 'End', 'class' => array('position','end')),
+  );
+
+  // Create a template of what each row will look like. This allows us to initialize
+  // an empty row when we first come across a variant and ensure that missing data is handled.
+  $template_array = array('variant_name' => '', 'srcfeature_name' => '', 'fmin' => '', 'fmax' => '');
+
+  // Process the germplasm adding them to both the header and the template.
+  foreach ($germ_defaults['existing'] as $d) {
+    $germplasm[ $d['stock_id'] ] = strtolower(drupal_clean_css_identifier( $d['stock_name'] ));
+    $header[ $d['stock_id'] ] = array('data' => $d['stock_name'], 'class' => array('germplasm', $germplasm[ $d['stock_id'] ]));
+    $template_array[ $d['stock_id'] ] = '';
+
+    // Assume all germplasm have no calls until we find out otherwise when processin the data.
+    $germplasm_no_calls[ $d['stock_id'] ] = $d['stock_name'];
+  }
+
+  $form['matrix'] = array(
+    '#prefix' => '<div id="genotype-matrix">',
+    '#suffix' => '</div>',
+    '#tree' => TRUE,
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => array(),
+  );
+
+
+  // Determine the query & execute it.
+  $args = array();
+  $sql = nd_genotypes_genotype_matrix_get_query($args, $_GET, array('total_num_rows' => $total_num_rows));
+  $resource = chado_query($sql, $args);
+
+
+  // Generate the table rows.
+  // Keep in mind that we retrieve the data as a long listing rather than a table
+  // and join it ourself based on variant_id.
+  $last_loc = NULL;
+  $first_loc = NULL;
+  foreach($resource as $r) {
+
+    // Save the first location for use with the pager.
+    if (!isset($first_loc)) {
+      $first_loc = $r->srcfeature_name . ':' .$r->fmin;
+    }
+
+    // Initialize the variant if this is the first time we have come across it.
+    if (!isset($form['matrix']['#rows'][$r->variant_id])) {
+      // First initialize the row with empty values.
+      $form['matrix']['#rows'][$r->variant_id] = $template_array;
+
+      // Then fill in the core information.
+      $form['matrix']['#rows'][$r->variant_id]['variant_name'] = array('data' => $r->variant_name, 'class' => array('variant_name'));
+      $form['matrix']['#rows'][$r->variant_id]['srcfeature_name'] = array('data' => $r->srcfeature_name, 'class' => array('position','backbone'));
+      $form['matrix']['#rows'][$r->variant_id]['fmin'] = array('data' => $r->fmin, 'class' => array('position', 'start'));
+      $form['matrix']['#rows'][$r->variant_id]['fmax'] = array('data' => $r->fmax, 'class' => array('position','end'));
+
+    }
+
+    // Since we have data for this germplasm,
+    // remove it from the no data list if it's still there.
+    if (isset($germplasm_no_calls[$r->germplasm_id])) unset($germplasm_no_calls[$r->germplasm_id]);
+
+    // Determine whether we are still within our row limit.
+    $num_rows = sizeof($form['matrix']['#rows']);
+    if ($num_rows > $total_num_rows) {
+      unset($form['matrix']['#rows'][$r->variant_id]);
+      break;
+    }
+
+    // Save the last location for use with the pager.
+    $last_loc = $r->srcfeature_name . ':' . $r->fmin;
+
+    // Save the call.
+    $form['matrix']['#rows'][$r->variant_id][$r->germplasm_id] = array(
+      'data' => $r->consensus_allele,
+      'class' => array('germplasm', $germplasm[ $r->germplasm_id ], 'genotype', $r->consensus_allele)
+    );
+  }
+
+  // If there are no results then we should tell the user that...
+  if (empty($form['matrix']['#rows'])) {
+    unset($form['matrix']);
+    $form['no_data'] = array(
+      '#type' => 'markup',
+      '#markup' => 'No variants matching the above filter criteria had genotypes for the given germplasm.',
+      '#prefix' => '<div class="no-results">',
+      '#suffix' => '</div>'
+    );
+    //return $form;
+  }
+
+  if (!empty($germplasm_no_calls)) {
+    $msg = 'The following ' . sizeof($germplasm_no_calls) . ' germplasm did not have a call under the specified filter criteria: '.implode(', ',$germplasm_no_calls) . '.';
+    drupal_set_message($msg, 'warning');
+  }
+
+  // Pager.
+  //-------------------------
+  $form['pager'] = array(
+    '#theme' => 'genotype_matrix_pager',
+    '#vars' => nd_genotypes_genotype_matrix_get_pager($first_loc, $last_loc, $total_num_rows),
+  );
+
   return $form;
 }
 
@@ -310,7 +343,7 @@ function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
           unset($query['seq_range'][$k1][$k2]);
         }
       }
-    } 
+    }
     unset($values['seq_range']);
   }
 
@@ -347,6 +380,19 @@ function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
 
 /**
  * Determine the query needed to retrieve data for the genotype matrix.
+ *
+ * @param $args
+ *    An array of arguements (most likely empty) to use when executing the query. This is
+ *    here as a means to return two parameters to the calling function.
+ * @param $get
+ *    This should be the parameters in the URL.
+ * @param $vars
+ *   This includes any additional variables available in the calling function that may be
+ *   needed in this one. Includes:
+ *    - total_num_rows: the total number of rows we would like in the completed matrix.
+ * @return
+ *   The SQL query including placeholders mapping to the now updated $args variable.
+ *   Expected to be executed using chado_query().
  */
 function nd_genotypes_genotype_matrix_get_query(&$args, $get, $vars) {
 
@@ -406,7 +452,7 @@ function nd_genotypes_genotype_matrix_get_query(&$args, $get, $vars) {
       else {
         $adtl_where[] = '(srcfeature_name < :ebackbone OR srcfeature_name = :ebackbone)';
         $adtl_args[':ebackbone'] = $get['seq_range']['end']['backbone'];
-      } 
+      }
     }
   }
   // -- variant name.
@@ -474,7 +520,19 @@ function nd_genotypes_genotype_matrix_get_query(&$args, $get, $vars) {
 }
 
 /**
- * Determines the query pager.
+ * A helper function that determines the link URLs for the pager based on the first
+ * and last location in the current matrix.
+ *
+ * @param $first_loc
+ *   The first location shown in the matrix in the form backbone:start (e.g. Chr1:168)
+ * @param $last_loc
+ *   The last location shown in the matrix in the form backbone:start (e.g. Chr1:832)
+ * @param $total_num_rows
+ *   The total number of rows in the current matrix.
+ *
+ * @return
+ *   An array of URLs. For more information see theme_genotype_matrix_pager() as the
+ *   results of this function are expected to be passed directly to that one.
  */
 function nd_genotypes_genotype_matrix_get_pager($first_loc, $last_loc, $total_num_rows) {
 
@@ -560,6 +618,8 @@ function nd_genotypes_genotype_matrix_get_pager($first_loc, $last_loc, $total_nu
  * Theme the pager.
  */
 function theme_genotype_matrix_pager($vars) {
+  $element = $vars['element'];
+  $vars = $element['#vars'];
   $output = '';
 
   $output .= '<div class="item-list">

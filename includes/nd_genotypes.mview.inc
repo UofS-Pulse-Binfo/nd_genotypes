@@ -414,10 +414,11 @@ function nd_genotypes_genotype_mview_schema_template() {
       ),
     ),
     'indexes' => array(
-      'variant_idx' => array('variant_id'),
-      'loc_idx' => array('srcfeature_name', 'fmin'),
-      'stock_idx' => array('stock_id'),
-      'germ_idx' => array('germplasm_id'),
+      'variant_id' => array('variant_id'),
+      'variant_name' => array('variant_name'),
+      'loc' => array('srcfeature_name', 'fmin'),
+      'stock_id' => array('stock_id'),
+      'germ_id' => array('germplasm_id'),
     ),
   );
 }
