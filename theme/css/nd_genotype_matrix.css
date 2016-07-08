@@ -1,4 +1,3 @@
-
 /* Size of columns */
 th.position.backbone, td.position.backbone {
   width: 150px;
@@ -7,11 +6,54 @@ th.position, td.position {
   width: 50px;
 }
 th.germplasm, td.germplasm {
-  width: 100px;
+  min-width: 60px;
 }
 
 td.germplasm {
   text-align: center;
+}
+
+/* Element Styling */
+.form-textarea-wrapper {
+  margin-right: 45px;
+}
+
+input#edit-project-name {
+  width: 100%;
+}
+.form-item-project-name {
+  margin-right: 55px;
+}
+
+.form-item-variant-type select, .form-item-marker-type select {
+  width: 300px;
+}
+
+/* Seq Range Element Styling */
+.seq-range-element {
+  margin-right: 45px;
+}
+.seq-range-element .form-item label {
+  font-weight: normal;
+  font-style: italic;
+  padding-right: 10px;
+}
+.seq-range-element .end-elements label {
+  padding-right: 25px;
+}
+.seq-range-element .start-elements, .seq-range-element .end-elements{
+  width: 50%;
+  display: inline-block;
+}
+.seq-range-element .end-elements {
+  text-align: right;
+}
+.seq-range-element select {
+  width: 28%;
+  height: 24px;
+}
+.seq-range-element input {
+  width: 48%;
 }
 
 /* Colour coding of alleles */

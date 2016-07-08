@@ -29,56 +29,9 @@ function nd_genotypes_matrix_page($genus) {
   $form = drupal_get_form('nd_genotypes_matrix_filter_form', $genus);
   $output .= drupal_render($form);
 
-  // Grab the filter criteria from the path.
-  $stocks = array();
-  $stock_where = array();
-  if (isset($_GET['germplasm'])) {
-    $i = 0;
-    foreach ($_GET['germplasm'] as $stock_id) {
-      $stocks[':s'.$i] = $stock_id;
-      $stock_where[] = 'germplasm_id=:s'.$i;
-      $i++;
-    }
-  }
-
-  $limit = sizeof($stocks) * $total_num_rows;
-
-  // If there are no stocks we need to warn the user to add some.
-  if (empty($stocks)) {
-    $output .= '<p>You must enter <em>at least one stock</em> to display genotypes for under <em>Genotypes</em> above.</p>';
-    return $output;
-  }
-
-  // Determine where/args needed to limit the query based on the URL.
-  $pager_where = '';
-  $pager_args = array();
-  if (isset($_GET['pager_loc']['current'])) {
-
-    if ($_GET['pager_loc']['current'] != $_GET['pager_loc']['first']) {
-      $parts = explode(':', $_GET['pager_loc']['current']);
-      $pager_where = ' AND ((srcfeature_name = :srcfeature AND fmin > :fmin) OR srcfeature_name > :srcfeature) ';
-      $pager_args = array(
-        'srcfeature' => $parts[0],
-        'fmin' => $parts[1],
-      );
-    }
-  }
-
-  // Retrieve the data.
-  $args = array_merge($stocks, $pager_args);
-  $sql = "SELECT
-            variant_id,
-            variant_name,
-            srcfeature_name,
-            fmin,
-            fmax,
-            germplasm_id,
-            germplasm_name,
-            consensus_allele
-          FROM {genotype_mview}
-          WHERE (" . implode(' OR ', $stock_where) . ") " . $pager_where
-        ."ORDER BY srcfeature_name ASC, fmin ASC "
-        ."LIMIT " . $limit;
+  // Determine the query & execute it.
+  $args = array();
+  $sql = nd_genotypes_genotype_matrix_get_query($args, $_GET, array('total_num_rows' => $total_num_rows));
   $resource = chado_query($sql, $args);
 
   // Set the non-germplasm specific header.
@@ -91,13 +44,14 @@ function nd_genotypes_matrix_page($genus) {
   $germplasm = array();
 
   // Generate the table rows.
-  // Keep in mind that we retrieve the dat as a long listing rather than a table
+  // Keep in mind that we retrieve the data as a long listing rather than a table
   // and join it ourself based on variant_id.
   $rows = array();
   $last_loc = NULL;
   $first_loc = NULL;
   foreach($resource as $r) {
 
+    // Save the first location for use with the pager.
     if (!isset($first_loc)) {
       $first_loc = $r->srcfeature_name . ':' .$r->fmin;
     }
@@ -118,17 +72,23 @@ function nd_genotypes_matrix_page($genus) {
 
     // Determine whether we are still within our row limit.
     $num_rows = sizeof($rows);
-    //dpm($num_rows . ' of ' . $total_num_rows);
     if ($num_rows > $total_num_rows) {
       unset($rows[$r->variant_id]);
       break;
     }
 
+    // Save the last location for use with the pager.
     $last_loc = $r->srcfeature_name . ':' . $r->fmin;
 
     // Save the call.
     $rows[$r->variant_id][$r->germplasm_id] = $r->consensus_allele;
 
+  }
+
+  // If there are no results then we should tell the user that...
+  if (empty($rows)) {
+    $output .= 'No variants matching the above filter criteria had genotypes for the given germplasm.';
+    return $output;
   }
 
   // Sanitize the table to ensure there is a  cell for each germplasm.
@@ -145,18 +105,379 @@ function nd_genotypes_matrix_page($genus) {
     }
   }
 
-  if (sizeof($germplasm) != sizeof($stocks)) {
+  if (sizeof($germplasm) != sizeof($_GET['germplasm'])) {
     drupal_set_message('At least one of the germplasm indicated do not have any genotype calls under the specified criteria.','warning');
   }
 
+  // Render the table.
   $table = array(
     'header' => $header,
     'rows' => $rows,
   );
   $output .= theme('table', $table);
 
-  // PAGER
-  //-------------------------
+  // Render the pager.
+  $output .= theme('genotype_matrix_pager', nd_genotypes_genotype_matrix_get_pager($first_loc, $last_loc, $total_num_rows));
+
+  return $output;
+}
+
+/**
+ * The Filter form for the genotype matrix page.
+ */
+function nd_genotypes_matrix_filter_form($form, $form_state) {
+  $genus = $form_state['build_info']['args'][0];
+
+  // Determine the select box for species.
+  $options = array('order_by' => array(
+    'organism_id' => 'ASC'
+  ));
+  $organism = chado_select_record('organism',array('organism_id', 'genus', 'species'),array('genus' => $genus),$options);
+  if (is_array($organism)) {
+    foreach ($organism as $o) {
+      $organism_genus = $o->genus;
+      $organism_options[$o->organism_id] = $o->genus .' '. $o->species;
+    }
+  }
+
+  // Determine the select list for sequence backbone.
+  $seq_chr = unserialize(variable_get('nd_genotypes_seq_backbones', NULL));
+
+  // Grab defaults for germplasm from path if form_state is not set.
+  $germ_defaults = (isset($form_state['values']['multiple_stocks'])) ? $form_state['values']['multiple_stocks'] : array();
+  if (!$germ_defaults AND isset($_GET['germplasm'])) {
+    $i = 0;
+
+    // Fill in name/organism if only stock_id is provided.
+    foreach ($_GET['germplasm'] as $v) {
+      $s = chado_query('SELECT name, organism_id FROM {stock} WHERE stock_id=:id',
+        array(':id' => $v))->fetchObject();
+      if ($s) {
+        $germ_defaults['existing'][$i]['stock_name'] = $s->name;
+        $germ_defaults['existing'][$i]['organism_id'] = $s->organism_id;
+      }
+
+      $i++;
+    }
+  }
+
+  // Grab defaults for the other fields.
+  $defaults = array();
+  foreach (array('variant_name','project_name','variant_type','marker_type') as $field) {
+
+    // If the field is in the path.
+    // We will validate it at the database layer using placeholders.
+    if (isset($_GET[$field])) {
+      $defaults[$field] = $_GET[$field];
+    }
+  }
+
+  $form['multiple_stocks'] = array(
+      '#type' => 'multiple_organism_stock',
+      '#title' => 'Genotypes',
+      '#organism_title' => 'Source Species',
+      '#organism_options' => $organism_options,
+      '#name_title' => 'Germplasm/Stock Name',
+      '#added_description' => 'Specify the stock (and species of the stock) you want to display the genotypes of.',
+      '#default_value' => $germ_defaults,
+      '#name_autocomplete_path' => 'tripal_ajax/nd_genotypes/genotyped_germplasm/name_to_id/' . $genus . '/only',
+  );
+
+  $description = 'The range of the genome you would like to display variants from. If you enter just the start or just the end position then all variants before or after that location, respectively, will be displayed.';
+  $form['seq_range'] = array(
+    '#type' => 'markup',
+    '#tree' => TRUE,
+    '#prefix' => '<div class="seq-range-element form-item"><label>Genome Range</label>',
+    '#suffix' => '<div class="description">' . $description . '</div></div>',
+  );
+
+  $form['seq_range']['start'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div class="start-elements container-inline">',
+    '#suffix' => '</div>',
+  );
+
+  $form['seq_range']['start']['backbone'] = array(
+    '#type' => 'select',
+    '#title' => 'From',
+    '#empty_option' => '- ' . t('Genome') . ' -',
+    '#options' => $seq_chr,
+    '#default_value' => (isset($_GET['seq_range']['start']['backbone'])) ? $_GET['seq_range']['start']['backbone'] : NULL,
+  );
+
+  $form['seq_range']['start']['pos'] = array(
+    '#type' => 'textfield',
+    '#attributes' => array('placeholder' => 'Start'),
+    '#default_value' => (isset($_GET['seq_range']['start']['pos'])) ? $_GET['seq_range']['start']['pos']:  NULL,
+  );
+
+  $form['seq_range']['end'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div class="end-elements container-inline">',
+    '#suffix' => '</div>',
+  );
+
+  $form['seq_range']['end']['backbone'] = array(
+    '#type' => 'select',
+    '#title' => 'to',
+    '#empty_option' => '- ' . t('Genome') . ' -',
+    '#options' => $seq_chr,
+    '#default_value' => (isset($_GET['seq_range']['end']['backbone'])) ? $_GET['seq_range']['end']['backbone'] : NULL,
+  );
+
+  $form['seq_range']['end']['pos'] = array(
+    '#type' => 'textfield',
+    '#attributes' => array('placeholder' => 'End'),
+    '#default_value' => (isset($_GET['seq_range']['end']['pos'])) ? $_GET['seq_range']['end']['pos']:  NULL
+  );
+
+  $form['variant_name'] = array(
+    '#type' => 'textarea',
+    '#title' => 'Variant Name(s)',
+    '#description' => 'A list of variant names you wish to see genotypes for with one variant per line.',
+    '#rows' => 1,
+    '#default_value' => (isset($defaults['variant_name'])) ? implode("\n",$defaults['variant_name']) : '',
+  );
+
+/*$form['project_name'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Project Name',
+    '#description' => 'The name of the project you want to restrict genotypes to.',
+    //'#autocomplete' @todo this should be an autocomplete.
+    '#default_value' => (isset($defaults['project_name'])) ? $defaults['project_name'] : '',
+  );*/
+
+  $form['variant_type'] = array(
+    '#type' => 'select',
+    '#title' => 'Variant Type',
+    '#description' => 'The types of variants you would like to see genotypes for (e.g. indels only).',
+    '#empty_option' => '- ' . t('Choose One to Filter') . ' -',
+    '#options' => unserialize(variable_get('nd_genotypes_variant_types', NULL)),
+    '#default_value' => (isset($defaults['variant_type'])) ? $defaults['variant_type'] : NULL,
+  );
+
+/*$form['marker_type'] = array(
+    '#type' => 'select',
+    '#title' => 'Marker Type',
+    '#description' => 'The types of markers you would like to see genotypes for (e.g. exome capture).',
+    '#empty_option' => '- ' . t('Choose One to Filter') . ' -',
+    '#options' => unserialize(variable_get('nd_genotypes_marker_types', NULL)),
+    '#default_value' => (isset($defaults['marker_type'])) ? $defaults['marker_type'] : NULL,
+  );*/
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Search',
+  );
+
+  return $form;
+}
+
+/**
+ * Add the fitlers specified to the path.
+ */
+function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
+
+  $form_state['rebuild'] = FALSE;
+
+  // Save all the values to go in the query.
+  // We do this instead of using form_state directly so that we can unset the
+  // values as add them to the query.
+  $values = $form_state['values'];
+
+  // Unset non-field values.
+  unset($values['submit'], $values['form_build_id'], $values['form_token'], $values['form_id'], $values['op']);
+
+  // Handle germplasm.
+  $query = array();
+  if (isset($values['multiple_stocks']['existing'])) {
+    foreach($values['multiple_stocks']['existing'] as $stock) {
+      if (!empty($stock) and !empty($stock['stock_id'])) {
+        $query['germplasm'][] = $stock['stock_id'];
+      }
+    }
+    unset($values['multiple_stocks']);
+  }
+
+  // Deal with sequence range.
+  if (isset($values['seq_range'])) {
+    foreach($values['seq_range'] as $k1 => $v1) {
+      foreach($v1 as $k2 => $v2) {
+        if (!empty($v2)) {
+          $query['seq_range'][$k1][$k2] = $v2;
+        }
+        else {
+          unset($query['seq_range'][$k1][$k2]);
+        }
+      }
+    } 
+    unset($values['seq_range']);
+  }
+
+  // Separate the variant_names into multiple arguements.
+  // Not only does this keep the URL readable, it also does some processing ahead of time.
+  if (isset($values['variant_name']) AND !empty($values['variant_name'])) {
+    $list = preg_split("/\s*(\r\n|\n|\r)\s*/", $values['variant_name']);
+    $query['variant_name'] = $list;
+    unset($values['variant_name']);
+  }
+
+  // Add the remaining simple arguements into the URL.
+  foreach ($values as $field => $v) {
+    if (is_array($v)) {
+      foreach ($v as $k => $sv) {
+        if (!empty($sv)) {
+          $query[$field][$k] = $sv;
+        }
+        else {
+          unset($query[$field][$k]);
+        }
+      }
+    }
+    elseif (!empty($v)) {
+      $query[$field] = $v;
+    }
+    else {
+      unset($query[$field]);
+    }
+  }
+
+  drupal_goto('chado/genotype/Lens', array('query' => $query));
+}
+
+/**
+ * Determine the query needed to retrieve data for the genotype matrix.
+ */
+function nd_genotypes_genotype_matrix_get_query(&$args, $get, $vars) {
+
+  // Grab the filter criteria from the path.
+  $stocks = array();
+  $stock_where = array();
+  if (isset($get['germplasm'])) {
+    $stocks = array(':germplasm' => $get['germplasm']);
+  }
+
+  $limit = sizeof($stocks[':germplasm']) * $vars['total_num_rows'];
+
+  // If there are no stocks we need to warn the user to add some.
+  if (empty($stocks)) {
+    $output .= '<p>You must enter <em>at least one stock</em> to display genotypes for under <em>Genotypes</em> above.</p>';
+    return $output;
+  }
+
+  // Determine where/args needed to limit the query based on the URL.
+  $pager_where = '';
+  $pager_args = array();
+  if (isset($get['pager_loc']['current'])) {
+
+    if ($get['pager_loc']['current'] != $get['pager_loc']['first']) {
+      $parts = explode(':', $get['pager_loc']['current']);
+      $pager_where = ' AND ((srcfeature_name = :srcfeature AND fmin > :fmin) OR srcfeature_name > :srcfeature) ';
+      $pager_args = array(
+        'srcfeature' => $parts[0],
+        'fmin' => $parts[1],
+      );
+    }
+  }
+
+  // Use any other filter parameters in the query using placeholders b/c this is from the URL.
+  $joins = '';
+  $adtl_where = array();
+  $adtl_args = array();
+  // -- sequence range.
+  if (isset($get['seq_range'])) {
+    if (isset($get['seq_range']['start']['backbone'])) {
+      if (isset($get['seq_range']['start']['pos'])) {
+        $adtl_where[] = '((srcfeature_name = :sbackbone AND fmin >= :sfmin::int) OR srcfeature_name > :sbackbone)';
+        $adtl_args[':sbackbone'] = $get['seq_range']['start']['backbone'];
+        $adtl_args[':sfmin'] = (int) $get['seq_range']['start']['pos'];
+      }
+      else {
+        $adtl_where[] = '(srcfeature_name = :sbackbone OR srcfeature_name > :sbackbone)';
+        $adtl_args[':sbackbone'] = $get['seq_range']['start']['backbone'];
+      }
+    }
+    if (isset($get['seq_range']['end']['backbone'])) {
+      if (isset($get['seq_range']['end']['pos'])) {
+        $adtl_where[] = '((srcfeature_name = :ebackbone AND fmin <= :efmin::int) OR srcfeature_name < :ebackbone)';
+        $adtl_args[':ebackbone'] = $get['seq_range']['end']['backbone'];
+        $adtl_args[':efmin'] = (int) $get['seq_range']['end']['pos'];
+      }
+      else {
+        $adtl_where[] = '(srcfeature_name < :ebackbone OR srcfeature_name = :ebackbone)';
+        $adtl_args[':ebackbone'] = $get['seq_range']['end']['backbone'];
+      } 
+    }
+  }
+  // -- variant name.
+  if (isset($get['variant_name']) AND !empty($get['variant_name'])) {
+    $adtl_where[] = 'variant_name IN (:names)';
+    $adtl_args[':names'] = $get['variant_name'];
+  }
+  // -- variant type.
+  if (isset($get['variant_type']) AND !empty($get['variant_type'])) {
+    $adtl_where[] = 'variant_id IN (SELECT feature_id FROM {feature} WHERE type_id=:variant_type_id)';
+    $adtl_args[':variant_type_id'] = $get['variant_type'];
+  }
+  // -- marker type. (also applies to filtering by project).
+  // This is much more complicated then previously thought. We cannot simply return the
+  // consensus call computed across all data for positions with at least one call from
+  // the specified technology because that is very misleading. Instead we need a way to
+  // compute a separate consensus call per technology in addition to the master consensus
+  // call. This allows us to simply choose the consensus call for a given technology
+  // when asked for it.
+  // One way to pull out such a consensus might be to use the new PostgreSQL 9.4
+  // FILTER functionality which allows you to filter an aggregated set in place.
+  // Unfortunatly this doesn't extend well to an array per technology since you
+  // need to hard-code the where clause.
+  /* @code
+  SELECT gc.variant_id, array_agg(g.description) as alleles,
+    array_agg(g.description) FILTER(WHERE stock_id=82) stock_82
+  FROM genotype_call gc
+  LEFT JOIN genotype g ON g.genotype_id=gc.genotype_id
+  GROUP BY gc.variant_id LIMIT 5;
+ variant_id |             alleles             | stock_82
+------------+---------------------------------+----------
+    1094657 | {CC,CC,CC,GG,GG,CC,CG,CC,CC,CC} | {CC}
+    1094659 | {TT,TT,TC,TT,CC,TC,TC,TT,CC,CC} | {CC}
+    1094661 | {AA,GG,AA,AG,AA,AA,AA,AA,AA,AA} | {AA}
+    1094663 | {TT,AT,AT,AT,AA,TT,AA,AA,AA,AA} | {AA}
+    1094665 | {AG,GG,AA,AG,AA,AG,AA,GG,AA,GG} | {AA}
+  */
+  //if (isset($get['marker_type']) AND !empty($get['marker_type'])) {
+    //$adtl_where[] = 'markers::bigint[] <@ (SELECT array_agg(feature_id) FROM {featureprop} WHERE type_id=2534 AND value=:marker_type GROUP BY type_id)';
+    //$joins = ' LEFT JOIN chado.featureprop ON ARRAY[featureprop.feature_id] <@ genotype_mview.markers::bigint[]';
+    //$adtl_where[] = '(SELECT value from {featureprop} WHERE feature_id = ANY(genotype_mview.markers::bigint[]))=:marker_type';
+    //$adtl_args[':marker_type'] = $get['marker_type'];
+  //}
+
+  $adtl_where = (!empty($adtl_where)) ? ' AND ' . implode(' AND ', $adtl_where) : '';
+
+  // Retrieve the data.
+  $args = array_merge($stocks, $pager_args, $adtl_args);
+  $sql = "SELECT
+            variant_id,
+            variant_name,
+            srcfeature_name,
+            fmin,
+            fmax,
+            germplasm_id,
+            germplasm_name,
+            consensus_allele
+          FROM {genotype_mview} "
+       .  $joins
+       ." WHERE germplasm_id IN (:germplasm) " . $pager_where . $adtl_where
+       ." ORDER BY srcfeature_name ASC, fmin ASC "
+       ." LIMIT " . $limit;
+
+  return $sql;
+}
+
+/**
+ * Determines the query pager.
+ */
+function nd_genotypes_genotype_matrix_get_pager($first_loc, $last_loc, $total_num_rows) {
+
   $pager = array('label' => $first_loc.'-'.$last_loc);
   $curr_path = current_path();
   $query_param = drupal_get_query_parameters();
@@ -232,86 +553,12 @@ function nd_genotypes_matrix_page($genus) {
     $pager['next'] = url($curr_path, array('query' => $q));
   }
 
-  $output .= theme('genotype_matrix_pager', $pager);
-
-  return $output;
+  return $pager;
 }
 
 /**
- * The Filter form for the genotype matrix page.
+ * Theme the pager.
  */
-function nd_genotypes_matrix_filter_form($form, $form_state) {
-  $genus = $form_state['build_info']['args'][0];
-
-  // Determine the select box for species.
-  $options = array('order_by' => array(
-    'organism_id' => 'ASC'
-  ));
-  $organism = chado_select_record('organism',array('organism_id', 'genus', 'species'),array('genus' => $genus),$options);
-  if (is_array($organism)) {
-    foreach ($organism as $o) {
-      $organism_genus = $o->genus;
-      $organism_options[$o->organism_id] = $o->genus .' '. $o->species;
-    }
-  }
-
-  // Grab defaults from path if form_state is not set.
-  $defaults = (isset($form_state['values']['multiple_stocks'])) ? $form_state['values']['multiple_stocks'] : array();
-  if (!$defaults AND isset($_GET['germplasm'])) {
-    $i = 0;
-
-    // Fill in name/organism if only stock_id is provided.
-    foreach ($_GET['germplasm'] as $v) {
-      $s = chado_query('SELECT name, organism_id FROM {stock} WHERE stock_id=:id',
-        array(':id' => $v))->fetchObject();
-      if ($s) {
-        $defaults['existing'][$i]['stock_name'] = $s->name;
-        $defaults['existing'][$i]['organism_id'] = $s->organism_id;
-      }
-
-      $i++;
-    }
-  }
-
-  $form['multiple_stocks'] = array(
-      '#type' => 'multiple_organism_stock',
-      '#title' => 'Genotypes',
-      '#organism_title' => 'Source Species',
-      '#organism_options' => $organism_options,
-      '#name_title' => 'Germplasm/Stock Name',
-      '#added_description' => 'Specify the stock (and species of the stock) you want to display the genotypes of.',
-      '#default_value' => $defaults,
-      '#name_autocomplete_path' => 'tripal_ajax/nd_genotypes/genotyped_germplasm/name_to_id/' . $genus . '/only',
-  );
-
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => 'Search',
-  );
-
-  return $form;
-}
-
-/**
- * Add the fitlers specified to the path.
- */
-function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
-
-  $form_state['rebuild'] = FALSE;
-
-  $query = array();
-  if (isset($form_state['values']['multiple_stocks']['existing'])) {
-    foreach($form_state['values']['multiple_stocks']['existing'] as $stock) {
-      if (!empty($stock) and !empty($stock['stock_id'])) {
-        $query['germplasm'][] = $stock['stock_id'];
-      }
-    }
-  }
-
-
-  drupal_goto('chado/genotype/Lens', array('query' => $query));
-}
-
 function theme_genotype_matrix_pager($vars) {
   $output = '';
 
