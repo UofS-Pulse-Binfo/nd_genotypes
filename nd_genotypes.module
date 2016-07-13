@@ -102,6 +102,20 @@ function nd_genotypes_theme($existing, $type, $theme, $path) {
     'path' => $path . '/theme/templates/',
   );
 
+  // Features: Genotype pane
+  $items['nd_genotypes_feature_genotypes'] = array(
+    'variables' => array('node' => NULL),
+    'template' => 'nd_genotypes_feature_genotypes',
+    'path' => "$path/theme/templates",
+  );
+
+  // Features: Marked-up sequence pane
+  $items['nd_genotypes_feature_sequence'] = array(
+    'variables' => array('node' => NULL),
+    'template' => 'nd_genotypes_feature_sequence',
+    'path' => "$path/theme/templates",
+  );
+
   return $items;
 }
 
@@ -292,3 +306,121 @@ function nd_genotypes_preprocess_nd_genotype_matrix(&$vars) {
 
   //dpm($vars, 'in preprocess');
  }
+
+/**
+ * Implements hook_node_view().
+ * This is used to attache the Genotypes display to Marker/Variant pages.
+ */
+function nd_genotypes_node_view($node, $view_mode, $langcode) {
+  switch ($node->type) {
+    case 'chado_feature':
+      if ($view_mode == 'full' AND in_array($node->feature->type_id->name, array('genetic_marker','SNP','indel'))) {
+        // the tripal_natural_diversity module provides a tripal_feature_nd_genotype
+        // template. if the tripal_natural_diversity content is present get rid of it as this
+        // module superceeds it.
+        if (array_key_exists('tripal_feature_nd_genotypes', $node->content)) {
+          unset($node->content['tripal_feature_nd_genotypes']);
+        }
+        if (array_key_exists('tripal_feature_seqence', $node->content)) {
+          unset($node->content['tripal_feature_seqence']);
+        }
+       $node->content['nd_genotypes_feature_genotypes'] = array(
+          '#theme' => 'nd_genotypes_feature_genotypes',
+          '#node' => $node,
+          '#tripal_toc_id'    => 'genotypes',
+          '#tripal_toc_title' => 'Genotypes',
+        );
+        // Sequence mark-up page
+        $node->content['nd_genotypes_feature_sequence'] = array(
+          '#theme' => 'nd_genotypes_feature_sequence',
+          '#node' => $node,
+          '#tripal_toc_id'    => 'sequence',
+          '#tripal_toc_title' => 'Sequence',
+        );
+      }
+    break;
+  }
+}
+
+/**
+ * Preprocessor: nd_genotypes_feature_sequence
+ */
+function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
+
+  // The maximum length fo sequence to show.
+  $max_sequence_length = 500;
+
+  $srcfeature = chado_query('
+    SELECT 
+      f.feature_id, 
+      f.name, 
+      f.uniquename, 
+      (fmin::int-200) as substring_start, 
+      substring(residues from fmin::int-200 for 500) as residues, 
+      cf.nid, 
+      cvt.name as type_name 
+    FROM featureloc fl 
+      LEFT JOIN feature f ON f.feature_id=fl.srcfeature_id 
+      LEFT JOIN cvterm cvt ON cvt.cvterm_id=f.type_id 
+      LEFT JOIN chado_feature cf ON cf.feature_id=f.feature_id 
+    WHERE fl.feature_id=:id', 
+  array(':id' => $variables['node']->feature->feature_id))->fetchObject();
+
+  // Defaults.
+  $variables['type'] = 'sequence';
+  $variables['sequence_feature_name'] = $srcfeature->name;
+  $variables['fasta_description'] = 'The following sequence is that of the ' . $srcfeature->type_name
+      . ' <strong>without any variants taken into account</strong>.';
+  $variables['marked_description'] = '';
+  $variables['sequence'] = $srcfeature->residues;
+
+  $variant_types = array('SNP', 'indel'); 
+  $marker_types = array('genetic_marker');
+
+  // Current Node: Marker
+  if (isset($marker_types[ $variables['node']->feature->type_id->cvterm_id ])) {
+    $variables['type'] = 'marker';
+  }
+  // Current Node: Variant
+  elseif (isset($variant_types[ $variables['node']->feature->type_id->cvterm_id ])) {
+    $variables['type'] = 'variant';
+  }
+
+  if ($srcfeature->residues) { 
+      $variables['sequence_range'] = array(
+        'feature_id' => $srcfeature->feature_id,
+        'feature_name' => $srcfeature->name,
+        'start' => $srcfeature->substring_start,
+        'end' => $srcfeature->substring_start + $max_sequence_length,
+        'length' => $max_sequence_length,
+        'full_sequence' => FALSE
+      );
+   }
+   else {
+      tripal_report_error(
+        'nd_genotypes',
+        TRIPAL_WARNING,
+        'Unable to determine the sequence for the :category :name (:id)',
+        array(
+          ':category' => $variables['type'],
+          ':name' => $variables['node']->feature->name,
+          ':id' => $variables['node']->feature->feature_id
+        )
+      );
+      return '';
+  }
+
+  if ($variables['sequence']) {
+    $variables['fasta_header'] = '>' . $variables['sequence_range']['feature_name'] . ':' . $variables['sequence_range']['start'] . '-' . $variables['sequence_range']['end'] . ' (' . $variables['node']->feature->uniquename . ': ' . $variables['node']->feature->type_id->name . ')';
+/*
+    // Add the marked-up sequence
+    $variables['sequence_range'] = array_merge($variables['sequence_range'], array('sequence' => $variables['sequence']));
+    $variables['sequence_with_variants'] = nd_genotypes_markup_sequence_with_variants(
+      $variables['node']->feature,
+      $variables['sequence_range'],
+      $variables['type']
+    );
+*/
+  }
+
+}
