@@ -31,6 +31,14 @@
     margin-top: 0;
     background-color: transparent;
   }
+
+  .variant-marked-up-sequence .variant {
+    font-weight: bold;
+    font-size: 1.25em;
+  }
+  .variant-marked-up-sequence .variant-expanded a {
+    color: blue;
+  }
 </style>
 
 <?php

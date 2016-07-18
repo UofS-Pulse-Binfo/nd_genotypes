@@ -174,8 +174,9 @@ function nd_genotypes_update_mview_for_nd_exp($job_id) {
  */
 function nd_genotypes_update_mview_for_genotype_call($job_id) {
 
-  $table_name = 'genotype_mview';
+  /* Genotype MVIEW */
 
+  $table_name = 'genotype_mview';
   // Create the mview if it doesn't already exist.
   chado_create_custom_table(
     $table_name,
@@ -228,6 +229,89 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
     chado_query("
       INSERT INTO {$table_name}
         (variant_id, variant_name, srcfeature_id, srcfeature_name, fmin, fmax, stock_id, stock_name, germplasm_id, germplasm_name, alleles, markers, projects, consensus_allele)
+      " . $query);
+
+  // Then report how many were inserted.
+  $count = chado_query("SELECT count(*) FROM {".$table_name."}")->fetchField();
+  drupal_set_message("Sucessfully updated Genotype materialized view with $count records");
+
+  /* Genotype Counts MVIEW */
+
+  $table_name = 'genotype_counts_mview';
+  // Create the mview if it doesn't already exist.
+  chado_create_custom_table(
+    $table_name,
+    nd_genotypes_genotype_counts_mview_schema_template()
+  );
+  chado_query("TRUNCATE {".$table_name."}");
+
+  $query = "SELECT
+      gc.variant_id,
+      v.name as variant_name,
+      loc.srcfeature_id,
+      p.name as srcfeature_name,
+      loc.fmin,
+      loc.fmax,
+      mp.value as marker_type,
+      'All' as germplasm_category,
+      g.description as allele,
+      count(*) as num_occurances
+    FROM chado.genotype_call gc
+      LEFT JOIN chado.feature v ON v.feature_id=gc.variant_id
+      LEFT JOIN (
+          SELECT *
+          FROM ( SELECT *, row_number() OVER (partition by feature_id order by locgroup desc, rank asc) as row_num FROM chado.featureloc ) as ordered_locs
+          WHERE ordered_locs.row_num = 1
+        ) as loc ON loc.feature_id=v.feature_id
+      LEFT JOIN chado.feature m ON m.feature_id=gc.marker_id
+      LEFT JOIN chado.featureprop mp ON mp.feature_id=m.feature_id
+      LEFT JOIN chado.feature p ON p.feature_id=loc.srcfeature_id
+      LEFT JOIN chado.stock s ON s.stock_id=gc.stock_id
+      LEFT JOIN chado.stock_relationship sr ON sr.subject_id=s.stock_id
+      LEFT JOIN chado.stock germ ON germ.stock_id=sr.object_id
+      LEFT JOIN chado.genotype g ON g.genotype_id=gc.genotype_id
+    WHERE
+      mp.type_id IN (SELECT cvterm_id FROM chado.cvterm WHERE name='marker_type')
+      AND sr.type_id IN (SELECT cvterm_id FROM chado.cvterm WHERE name='is_extracted_from')
+    GROUP BY gc.variant_id, v.name, loc.srcfeature_id, p.name, loc.fmin, loc.fmax, mp.value, allele";
+
+
+    chado_query("
+      INSERT INTO {$table_name}
+        (variant_id, variant_name, srcfeature_id, srcfeature_name, fmin, fmax, marker_type, germplasm_category, allele, num_occurances)
+      " . $query);
+
+  // It's easier to add counts for all marker types separately so we will do that now.
+  $query = "SELECT
+      gc.variant_id,
+      v.name as variant_name,
+      loc.srcfeature_id,
+      p.name as srcfeature_name,
+      loc.fmin,
+      loc.fmax,
+      'All' as marker_type,
+      'All' as germplasm_category,
+      g.description as allele,
+      count(*) as num_occurances
+    FROM chado.genotype_call gc
+      LEFT JOIN chado.feature v ON v.feature_id=gc.variant_id
+      LEFT JOIN (
+          SELECT *
+          FROM ( SELECT *, row_number() OVER (partition by feature_id order by locgroup desc, rank asc) as row_num FROM chado.featureloc ) as ordered_locs
+          WHERE ordered_locs.row_num = 1
+        ) as loc ON loc.feature_id=v.feature_id
+      LEFT JOIN chado.feature p ON p.feature_id=loc.srcfeature_id
+      LEFT JOIN chado.stock s ON s.stock_id=gc.stock_id
+      LEFT JOIN chado.stock_relationship sr ON sr.subject_id=s.stock_id
+      LEFT JOIN chado.stock germ ON germ.stock_id=sr.object_id
+      LEFT JOIN chado.genotype g ON g.genotype_id=gc.genotype_id
+    WHERE
+      sr.type_id IN (SELECT cvterm_id FROM chado.cvterm WHERE name='is_extracted_from')
+    GROUP BY gc.variant_id, v.name, loc.srcfeature_id, p.name, loc.fmin, loc.fmax, allele";
+
+    chado_query("
+      INSERT INTO {$table_name}
+        (variant_id, variant_name, srcfeature_id, srcfeature_name, fmin, fmax, marker_type, germplasm_category, allele, num_occurances)
       " . $query);
 
   // Then report how many were inserted.
@@ -421,6 +505,97 @@ function nd_genotypes_genotype_mview_schema_template() {
       'germ_id' => array('germplasm_id'),
     ),
   );
+}
+
+/**
+ * The schema for the genotpye count mview. This is used for summary charts needing the
+ * number of germplasm genotypes per marker type, germplasm category, etc.
+ *
+ * Fields:
+ *  - variant_id
+ *  - variant_name
+ *  - srcfeature_id
+ *  - srcfeature_name
+ *  - fmin
+ *  - fmax
+ *  - marker_type
+ *  - germplasm_category
+ *  - allele
+ *  - num_occurances
+ */
+function nd_genotypes_genotype_counts_mview_schema_template() {
+
+  return array(
+    'description' => 'A materialized view for storing genotype information.',
+    'fields' => array(
+      'variant_id' => array(
+        'description' => 'Links to the feature describing the loci with variation.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'variant_name' => array(
+        'description' => 'The name of the variant.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'srcfeature_id' => array(
+        'description' => 'Links to the feature the variant is located on. Ideally this is the chromosome.',
+        'type' => 'int',
+      ),
+      'srcfeature_name' => array(
+        'description' => 'The name of the srcfeature; hopefully the name of the chromosome.',
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      'fmin' => array(
+        'descrption' => 'Start position on the scrfeature as described by the featureloc table.',
+        'type' => 'int',
+      ),
+      'fmax' => array(
+        'descrption' => 'End position on the scrfeature as described by the featureloc table.',
+        'type' => 'int',
+      ),
+      'marker_type' => array(
+        'description' => 'The type of marker the counted allele calls are from or ALL for all markers for a given variant',
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      'germplasm_category' => array(
+        'description' => 'The category of germplasm the counted allele calls are from or ALL for all germplasm.',
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      'allele' => array(
+        'description' => 'The allele call being counted.',
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      'num_occurances' => array(
+        'descrption' => 'The number of times this allele was recorded.',
+        'type' => 'int',
+      ),
+      'genotype_count_mview_id' => array(
+        'type' => 'serial',
+      ),
+    ),
+    'primary key' => array('genotype_count_mview_id'),
+    'unique keys' => array(),
+    'foreign keys' => array(
+      'feature' => array(
+        'table' => 'feature',
+        'columns' => array(
+          'variant_id' => 'feature_id',
+          'srcfeature_id' => 'feature_id'
+        ),
+      ),
+    ),
+    'indexes' => array(
+      'variant_id' => array('variant_id'),
+      'loc' => array('srcfeature_name', 'fmin'), //want filtered to marker_type = all and germplasm category = all...
+    ),
+  );
+
 }
 
 /**
