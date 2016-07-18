@@ -18,7 +18,12 @@ function nd_genotypes_admin_landing_page() {
  */
 function nd_genotypes_admin_settings($form, $form_state) {
 
-  $form['storage_method'] = array(
+  $form['storage'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Storage Method',
+  );
+
+  $form['storage']['storage_method'] = array(
     '#type' => 'select',
     '#title' => 'Storage Method',
     '#description' => 'This is the method you are using to store your genotypic data. You can find more information about the supported storage methods on the ' . l('project wiki.', 'https://github.com/UofS-Pulse-Binfo/nd_genotypes/wiki/How-to-Store-your-Data', array('attributes' => array('target' => '_blank'))),
@@ -31,10 +36,136 @@ function nd_genotypes_admin_settings($form, $form_state) {
     '#default_value' => variable_get('nd_genotype_storage_method', 'nd_exp'),
   );
 
-  $form['save'] = array(
+  $form['storage']['save'] = array(
     '#type' => 'submit',
     '#name' => 'save',
-    '#value' => 'Save'
+    '#value' => 'Save Method'
+  );
+
+  $form['cvterms'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Controlled Vocabulary Terms',
+    '#description' => 'Chado uses controlled vocalaries extensively to allow
+      for flexible storing of data. As such, this module supports that flexibility
+      to ensure that regardless of the types used for your data, this module will
+      still be able to navigate the necessary relationships and interpret your types.',
+  );
+
+  $form['cvterms']['types'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Types',
+    '#description' => 'Allows you to configure which controlled vocabulary terms
+      you would like to fall into each category of features (variants and markers)
+      handled by this module.'
+  );
+
+  // Get vocab terms for feature types.
+  $default_cv = tripal_get_default_cv('feature', 'type_id');
+  if (!empty($default_cv)) {
+    $feature_types = tripal_get_cvterm_select_options($default_cv->cv_id);
+  }
+  else {
+    tripal_set_message(
+      'There is not a default vocabulary set for Feature Types. Please set one
+      using the <a href="@url">vocabulary defaults configuration page</a>.',
+      TRIPAL_WARNING,
+      array('@url' => url('admin/tripal/chado/tripal_cv/defaults'))
+    );
+    $feature_types = array();
+  }
+
+  $form['cvterms']['types']['descrip'] = array(
+    '#type' => 'item',
+    '#markup' => 'This module assumes the following set-up of data: Sequence
+    Backbone > Variants > Markers where variants are the location/range shown
+    to vary betweeen germplasm and markers are the actual assays detecting that
+    variation. Note that genotypes are only attached to markers (ensures researches
+    know the method used) and that both variants & markers have feature locations on
+    your sequence backbone (ie: contigs, chromosomes; features with sequence
+    information).',
+  );
+
+  // Set variant types.
+  $form['cvterms']['types']['variants'] = array(
+    '#type' => 'select',
+    '#title' => 'Variants',
+    '#description' => 'Variants are the location/range shown to vary betweeen
+      germplasm. They should not have genotypes attached directly to them but
+      instead act as a way to see all the markers assaying a particular position.',
+    '#multiple' => TRUE,
+    '#options' => $feature_types,
+    '#default_value' => unserialize(variable_get('nd_genotypes_variant_types', 'a:0:{}'))
+  );
+
+  // Set marker types.
+  $form['cvterms']['types']['markers'] = array(
+    '#type' => 'select',
+    '#title' => 'Markers',
+    '#description' => 'Markers are the actual assays detecting variation and
+      the genotypes detected by each assay would be attached to it.',
+    '#multiple' => TRUE,
+    '#options' => $feature_types,
+    '#default_value' => unserialize(variable_get('nd_genotypes_marker_types', 'a:0:{}'))
+  );
+
+  // Get vocab terms for feature types.
+  $default_cv = tripal_get_default_cv('feature_relationship', 'type_id');
+  if (!empty($default_cv)) {
+    $feature_reltypes = tripal_get_cvterm_select_options($default_cv->cv_id);
+  }
+  else {
+    tripal_set_message(
+      'There is not a default vocabulary set for Feature Types. Please set one
+      using the <a href="@url">vocabulary defaults configuration page</a>.',
+      TRIPAL_WARNING,
+      array('@url' => url('admin/tripal/chado/tripal_cv/defaults'))
+    );
+    $feature_reltypes = array();
+  }
+
+  $form['cvterms']['marker_relationship'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Variant => Marker Relationship',
+    '#description' => 'Since genotypes are only attached to markers, in order to
+        display allele calls on your variant pages, this module needs to know
+        the relationship connecting your variants to your SNPs.',
+  );
+
+  $form['cvterms']['marker_relationship']['reltypes'] = array(
+    '#type' => 'hidden',
+    '#value' => serialize($feature_reltypes),
+  );
+
+  $form['cvterms']['marker_relationship']['marker_reltype'] = array(
+    '#type' => 'select',
+    '#title' => 'Relationship Type',
+    '#description' => 'Indicate the type of relationship connecting your markers
+      to the variants they determine.',
+    '#options' => $feature_reltypes,
+    '#default_value' => variable_get('nd_genotypes_rel_type_id', 0)
+  );
+
+  $form['cvterms']['marker_relationship']['marker_relposition'] = array(
+    '#type' => 'radios',
+    '#title' => 'Variant Position',
+    '#description' => 'Since relationships are specified as Subject Type Object
+      if you read it like a sentence (ie: SNP54 is_variant_of Markerp25 or
+      Markerp25 is_marker_of SNP54), the variant can be either the subject or
+      object based on the type you used. As such, we need to know which position
+      the variant is in the relationship in order to follow it. Please select
+      the position of your variant based on the relationship type provided.',
+    '#options' => array(
+      'subject' => '<strong>Subject</strong> (Variant is_variant_of Marker)',
+      'object' => '<strong>Object</strong> (Marker is_marker_of Variant)'
+    ),
+    '#default_value' => variable_get('nd_genotypes_rel_position', NULL)
+  );
+
+  $form['cvterms']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Set Terms',
+    '#validate' => array('nd_genotypes_admin_settings_cvterms_validate'),
+    '#submit' => array('nd_genotypes_admin_settings_cvterms_submit'),
   );
 
   return $form;
@@ -48,6 +179,25 @@ function nd_genotypes_admin_settings_submit($form, $form_state) {
   // Save the storage method for use later.
   variable_set('nd_genotype_storage_method', $form_state['values']['storage_method']);
 
+}
+
+/**
+ * Config -Types: Validation
+ */
+function nd_genotypes_admin_settings_cvterms_validate($form, $form_state) {}
+
+/**
+ * Config -Types: Submit
+ */
+function nd_genotypes_admin_settings_cvterms_submit($form, $form_state) {
+
+  variable_set('nd_genotypes_variant_types', serialize($form_state['values']['variants']));
+  variable_set('nd_genotypes_marker_types', serialize($form_state['values']['markers']));
+
+  $reltypes = unserialize($form_state['values']['reltypes']);
+  variable_set('nd_genotypes_rel_type_id', $form_state['values']['marker_reltype']);
+  variable_set('nd_genotypes_rel_type_name', $reltypes[ $form_state['values']['marker_reltype'] ]);
+  variable_set('nd_genotypes_rel_position', $form_state['values']['marker_relposition']);
 }
 
 /**
