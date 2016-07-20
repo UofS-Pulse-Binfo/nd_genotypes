@@ -94,7 +94,7 @@ function nd_genotypes_admin_settings($form, $form_state) {
       instead act as a way to see all the markers assaying a particular position.',
     '#multiple' => TRUE,
     '#options' => $feature_types,
-    '#default_value' => unserialize(variable_get('nd_genotypes_variant_types', 'a:0:{}'))
+    '#default_value' => unserialize(variable_get('nd_genotypes_variant_feature_types', 'a:0:{}'))
   );
 
   // Set marker types.
@@ -105,7 +105,7 @@ function nd_genotypes_admin_settings($form, $form_state) {
       the genotypes detected by each assay would be attached to it.',
     '#multiple' => TRUE,
     '#options' => $feature_types,
-    '#default_value' => unserialize(variable_get('nd_genotypes_marker_types', 'a:0:{}'))
+    '#default_value' => unserialize(variable_get('nd_genotypes_marker_feature_types', 'a:0:{}'))
   );
 
   // Get vocab terms for feature types.
@@ -191,8 +191,8 @@ function nd_genotypes_admin_settings_cvterms_validate($form, $form_state) {}
  */
 function nd_genotypes_admin_settings_cvterms_submit($form, $form_state) {
 
-  variable_set('nd_genotypes_variant_types', serialize($form_state['values']['variants']));
-  variable_set('nd_genotypes_marker_types', serialize($form_state['values']['markers']));
+  variable_set('nd_genotypes_variant_feature_types', serialize($form_state['values']['variants']));
+  variable_set('nd_genotypes_marker_feature_types', serialize($form_state['values']['markers']));
 
   $reltypes = unserialize($form_state['values']['reltypes']);
   variable_set('nd_genotypes_rel_type_id', $form_state['values']['marker_reltype']);

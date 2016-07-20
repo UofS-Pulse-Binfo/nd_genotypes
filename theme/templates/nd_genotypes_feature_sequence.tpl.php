@@ -19,30 +19,39 @@
  *   $feature->featureloc_sequences
  *
  */
+if ($sequence) :
 ?>
 
 <style>
+
+  /* Make the sequence look like it's on the terminal ;-). */
+  #tripal_feature-fasta-record {
+        font-family: Consolas, monaco, monospace;
+  }
   #tripal_feature-sequence-residues {
-    width: 400px;
+    width: 420px;
     word-wrap: break-word;
     margin: 0;
-    letter-spacing:2px;
+    letter-spacing:3px;
+    line-height: 18px;
     padding-top: 0;
     margin-top: 0;
     background-color: transparent;
+    text-align: justify;
+    font-size: 12px;
   }
 
+  /* Make sure the SNPs are noticeable */
   .variant-marked-up-sequence .variant {
     font-weight: bold;
-    font-size: 1.25em;
+    font-size: 14px;
+    letter-spacing: 2px;
   }
   .variant-marked-up-sequence .variant-expanded a {
     color: blue;
   }
 </style>
 
-<?php
-if ($sequence) : ?>
   <div class="tripal_feature-data-block-desc tripal-data-block-desc"></div>
 
     <!-- Variant Marked-up Sequence -->
@@ -52,9 +61,9 @@ if ($sequence) : ?>
 
       <div id="tripal_feature-fasta-record">
         <div id="tripal_feature-sequence-header"><?php print $fasta_header; ?></div>
-        <pre id="tripal_feature-sequence-residues" class="variant-marked-up-sequence">
+        <div id="tripal_feature-sequence-residues" class="variant-marked-up-sequence">
           <?php print $sequence_with_variants ?>
-        </pre>
+        </div>
       </div>
       <br />
     <?php } else { drupal_set_message(t('Unable to determine the Marked-up Sequence for this :type', array(':type' => $node->feature->type_id->name)), 'warning'); }?>
@@ -65,9 +74,9 @@ if ($sequence) : ?>
 
     <div id="tripal_feature-fasta-record">
       <div id="tripal_feature-sequence-header"><?php print $fasta_header; ?></div>
-      <pre id="tripal_feature-sequence-residues">
+      <div id="tripal_feature-sequence-residues">
         <?php print $sequence; ?>
-      </pre>
+      </div>
     </div>
 
 <?php endif; ?>

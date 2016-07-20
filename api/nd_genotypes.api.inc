@@ -59,6 +59,19 @@ function nd_genotypes_get_marker($variant_id, $id_only = FALSE) {
 }
 
 /**
+ * Retrieve the marker type of the given marker.
+ *
+ * @param $variant_id
+ *   The feature_id of the variant.
+ * @return
+ *   The type of marker as stored in the featureprop table.
+ */
+function nd_genotypes_get_marker_type($marker_id) {
+  return chado_query("SELECT value FROM {featureprop} WHERE feature_id=:id AND type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='marker_type')",
+    array(':id' => $marker_id))->fetchField();
+}
+
+/**
  * Retrieve the variant given the marker.
  *
  * @param $marker_id
@@ -204,6 +217,7 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
     );
     return '';
   }
+
   // Now get all the markers with their associated genotypes for the range
   // specified in sequence details.
   if (isset($sequence_details['start']) AND isset($sequence_details['end'])) {
@@ -282,6 +296,29 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
         )
       );
   }
+
+  // Double check that the current variant/marker location is marked-up.
+  // Note: We can only do this if we know the position of the current variant/marker ;-).
+  if (isset($feature->featureloc->feature_id[0]->fmin)) {
+    $variant_loc = $feature->featureloc->feature_id[0]->fmin - $sequence_details['start'];
+
+    if (strpos($sequence[ $variant_loc ], '[') === FALSE) {
+      $ref_allele = strip_tags($sequence[ $variant_loc ]);
+      $code = '[' . $ref_allele . ']';
+
+      if ($feature->nid > 0) {
+        $sequence[ $variant_loc ] =
+          '<span class="variant variant-expanded" title="No alleles recorded.">'
+              . l($code, 'node/' . $feature->nid)
+          . '</span>';
+      }
+      else {
+        $sequence[ $variant_loc ] = '<span class="variant variant-expanded" title="No alleles recorded.">' . $code . '</span>';
+      }
+      drupal_set_message('We do not have an alternate allele recorded for the current variant/marker.','warning');
+    }
+  }
+
   return implode('', $sequence);
 }
 
@@ -319,12 +356,15 @@ function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end) 
   $variants = array();
   $r = $resource->fetchObject();
   $offset = 0;
+  $times_checked = 1;
+  $continue = TRUE;
   do {
 
     if (!$r) {
       $offset++;
       $tmp_sql  = $sql . ' OFFSET '.($offset * $limit);
       $resource = chado_query($tmp_sql, array(':backbone' => $srcfeature_name, ':min' => $start));
+      $times_checked++;
     }
     $r = $resource->fetchObject();
 
@@ -348,7 +388,10 @@ function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end) 
       }
     }
 
-  } while (empty($r) OR $r->end <= $end);
+    if (isset($r->end) AND $r->end >= $end) $continue = FALSE;
+    if ($times_checked >= 3) $continue = FALSE;
+
+  } while ($continue);
 
   return $variants;
 }

@@ -354,14 +354,15 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
   $max_sequence_length = 500;
 
   // Is the current node a variant or a marker?
-  $variant_types = unserialize(variable_get('nd_genotypes_variant_types', 'a:0:{}'));
-  $marker_types = unserialize(variable_get('nd_genotypes_marker_types', 'a:0:{}'));
+  $variant_types = unserialize(variable_get('nd_genotypes_variant_feature_types', 'a:0:{}'));
+  $marker_types = unserialize(variable_get('nd_genotypes_marker_feature_types', 'a:0:{}'));
+  $type_id = $variables['node']->feature->type_id->cvterm_id;
   $variables['type'] = NULL;
-  if (in_array($variables['node']->feature->type_id->cvterm_id, $variant_types)) {
+  if (isset($variant_types[$type_id])) {
     $variant_id = $variables['node']->feature->feature_id;
     $variables['type'] = 'variant';
   }
-  elseif (in_array($variables['node']->feature->type_id->cvterm_id, $marker_types)) {
+  elseif (isset($marker_types[$type_id])) {
     $variant_id = nd_genotypes_get_variant($variables['node']->feature->feature_id, TRUE);
     $variables['type'] = 'marker';
   }
@@ -374,8 +375,8 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
       f.feature_id,
       f.name,
       f.uniquename,
-      (fmin::int-200) as substring_start,
-      substring(residues from fmin::int-200 for 500) as residues,
+      (fmin::int-250) as substring_start,
+      substring(residues from fmin::int-250 for 500) as residues,
       cf.nid,
       cvt.name as type_name
     FROM featureloc fl
@@ -385,6 +386,11 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
     WHERE fl.feature_id=:id',
   array(':id' => $variant_id))->fetchObject();
 
+  if (!$srcfeature OR empty($srcfeature->residues)) {
+    $variables['sequence'] = '';
+    return;
+  }
+
   // Defaults.
   $variables['sequence_feature_name'] = $srcfeature->name;
   $variables['fasta_description'] = 'The following sequence is that of the ' . $srcfeature->type_name
@@ -392,12 +398,17 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
   $variables['marked_description'] = '';
   $variables['sequence'] = $srcfeature->residues;
 
+  // Do some checks on the sequence to handle "edge" (literally ;-)) cases.
+  if ($srcfeature->substring_start < 0) {
+    $srcfeature->substring_start = 0;
+  }
+
   if ($srcfeature->residues) {
       $variables['sequence_range'] = array(
         'feature_id' => $srcfeature->feature_id,
         'feature_name' => $srcfeature->name,
         'start' => $srcfeature->substring_start,
-        'end' => $srcfeature->substring_start + $max_sequence_length,
+        'end' => $srcfeature->substring_start + strlen($srcfeature->residues) -1,
         'length' => $max_sequence_length,
         'full_sequence' => FALSE,
         'variant_id' => $variant_id,
@@ -418,7 +429,7 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
   }
 
   if ($variables['sequence']) {
-    $variables['fasta_header'] = '>' . $variables['sequence_range']['feature_name'] . ':' . $variables['sequence_range']['start'] . '-' . $variables['sequence_range']['end'] . ' (' . $variables['node']->feature->uniquename . ': ' . $variables['node']->feature->type_id->name . ')';
+    $variables['fasta_header'] = '>' . $variables['sequence_range']['feature_name'] . ':' . ($variables['sequence_range']['start']+1) . '-' . $variables['sequence_range']['end'] . ' (' . $variables['node']->feature->uniquename . ': ' . $variables['node']->feature->type_id->name . ')';
 
     // Add the marked-up sequence
     $variables['sequence_range'] = array_merge($variables['sequence_range'], array('sequence' => $variables['sequence']));
@@ -428,4 +439,67 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
       $variables['type']
     );
   }
+}
+
+/**
+ * Preprocessor: nd_genotypes_feature_sequence
+ */
+function nd_genotypes_preprocess_nd_genotypes_feature_genotypes(&$variables) {
+  $type_id = $variables['node']->feature->type_id->cvterm_id;
+
+  // Is the current node a variant or a marker?
+  $variant_types = unserialize(variable_get('nd_genotypes_variant_feature_types', 'a:0:{}'));
+  $marker_types = unserialize(variable_get('nd_genotypes_marker_feature_types', 'a:0:{}'));
+  $variables['type'] = NULL;
+  $variables['marker_type'] = NULL;
+  if (isset($variant_types[$type_id])) {
+    $variant_id = $variables['node']->feature->feature_id;
+    $variables['type'] = 'variant';
+  }
+  elseif (isset($marker_types[$type_id])) {
+    $variant_id = nd_genotypes_get_variant($variables['node']->feature->feature_id, TRUE);
+    $variables['type'] = 'marker';
+    $variables['marker_type'] = nd_genotypes_get_marker_type($variables['node']->feature->feature_id);
+  }
+  else {
+    return;
+  }
+
+  $variables['variant'] = nd_genotypes_get_alleles_for_variant($variant_id);
+
+  // Check if there are arn't genotypes and
+  // if not, tell the template so she can not add the Genotypes pane.
+  $variables['no_genotypes'] = FALSE;
+  if (!$variables['variant']) {
+    $variables['no_genotypes'] = TRUE;
+    return;
+  }
+
+  $data = array();
+  foreach ($variables['variant']['marker_alleles'] as $type => $alleles) {
+    if ($variables['type'] == 'variant' OR $type == $variables['marker_type']) {
+      $tmp = array();
+      $tmp['label'] = $type;
+      $tmp['portions'] = array();
+      foreach ($alleles as $d) {
+        $tmp['portions'][] = array(
+          'label' => $d['allele'],
+          'num' => $d['num_germplasm'],
+          'class' => 'marker-type'
+        );
+      }
+      $data[] = $tmp;
+    }
+  }
+  $variables['js_data'] = $data;
+  drupal_add_js(array('nd_genotypes' => array('genotypes' => $data)), 'setting');
+
+  drupal_add_js('http://d3js.org/d3.v3.js');
+  if (sizeof($data) == 1) {
+    drupal_add_js(drupal_get_path('module','nd_genotypes').'/theme/js/genotypeFeatureSinglePieChart.js');
+  }
+  else {
+    drupal_add_js(drupal_get_path('module','nd_genotypes').'/theme/js/genotypeFeatureMultiPieChart.js');
+  }
+
 }
