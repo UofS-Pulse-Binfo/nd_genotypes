@@ -19,7 +19,7 @@
  *   $feature->featureloc_sequences
  *
  */
-if ($sequence) :
+if (isset($sequence) AND !empty($sequence)) :
 ?>
 
 <style>
