@@ -42,7 +42,7 @@ if (($type == 'marker' OR $type == 'variant') AND $no_genotypes === FALSE) :
 
 <div id="nd-genotypes-pie-chart"></div>
 
-<div>For specific genotype calls: <a href="<?php print $matrix_url; ?>" target="_blank">Genotype Matrix</a>.</div>
-<div>For comparison with other markers: <a href="<?php print $variant_url; ?>" target="_blank">Variant Genotypes</a>.</div>
+<div>For germplasm-specific genotype calls: <a href="<?php print $matrix_url; ?>" target="_blank">Genotype Matrix</a>.</div>
+<div>For all marker types at this locus: <a href="<?php print $variant_url; ?>" target="_blank">Variant Page: Genotypes</a>.</div>
 
 <?php endif; ?>

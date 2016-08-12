@@ -27,7 +27,7 @@ $query['sql'][] = '  LIMIT ' . $settings['query_limit'];
 // @see POST/Redirect/GET note above: Obviously, we only want to execute the heavy query
 // on the new data and not the old post data. As such, only execute on GET (ie: page refresh).
 $resource = array();
-if ($_SERVER['REQUEST_METHOD'] =='GET' AND $settings['query_limit'] > 0) {
+if ($_SERVER['REQUEST_METHOD'] =='GET' AND $settings['query_limit'] > 0 AND $query['args'][':germplasm']) {
   $resource = chado_query(implode(' ',$query['sql']), $query['args']);
 }
 
@@ -93,7 +93,7 @@ foreach($resource as $r) {
 // @see POST/Redirect/GET note above: We check here to keep the messages
 // from being duplicated; not to mention, to keep incorrect, stale messages from
 // confusing the user.
-if ($_SERVER['REQUEST_METHOD'] =='GET') {
+if ($_SERVER['REQUEST_METHOD'] =='GET' AND $query['args'][':germplasm']) {
   if (sizeof($table['rows']) < $settings['total_num_rows']) {
     if (!empty($missing_list['germplasm'])) {
       foreach ($missing_list['germplasm'] as $germ_id => $v) {
@@ -140,6 +140,9 @@ if ($_SERVER['REQUEST_METHOD'] =='GET') {
 
   <?php } else { ?>
 
+    <div class="matrix-download">Download:
+      <?php print l('CSV', 'chado/genotype/'.$genus.'/csv', array('query' => drupal_get_query_parameters(), 'attributes' => array('target' => '_blank'))); ?>
+    </div>
     <div class="matrix-proper">
       <?php print theme('table', $table); ?>
     </div>

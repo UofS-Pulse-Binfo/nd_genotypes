@@ -9,6 +9,9 @@ require_once('api/nd_genotypes.api.inc');
 require_once('includes/nd_genotypes.mview.inc');
 require_once('includes/nd_genotypes.form_elements.inc');
 
+require_once('includes/nd_genotypes.genotype_matrix.inc');
+require_once('includes/nd_genotypes.genotype_matrix.download.inc');
+
 /**
  * Implements hook_menu().
  */
@@ -71,6 +74,14 @@ function nd_genotypes_menu() {
       'access arguments' => array('access content'),
       'type' => MENU_NORMAL_ITEM,
       'file' => 'includes/nd_genotypes.genotype_matrix.inc',
+    );
+
+   $items['chado/genotype/' . $organism->genus . '/csv'] = array(
+     'title' => 'Download Genotypes: CSV',
+     'page callback' => 'trpdownload_download_page',
+     'page arguments' => array('genotype_matrix_csv', 4),
+     'access arguments' => array('access content'),
+     'type' => MENU_CALLBACK,
     );
   }
 
@@ -139,173 +150,12 @@ function nd_genotypes_preprocess_nd_genotype_matrix(&$vars) {
   // Add the CSS.
   drupal_add_css(drupal_get_path('module', 'nd_genotypes') . '/theme/css/nd_genotype_matrix.css');
 
-  // Initialize some defaults.
-  $vars['query'] = array('sql' => array(), 'args' => array());
-  $vars['germplasm'] = array();
-  $vars['defaults'] = array();
-
   // Save the query paramters.
   $vars['q'] = drupal_get_query_parameters();
 
-  // Start to compile the header and template row.
-  $vars['header'] = array(
-    'variant_name' => array('data' => 'Variant Name', 'class' => array('variant_name')),
-    'srcfeature_name' => array('data' => 'Backbone', 'class' => array('position','backbone')),
-    'fmin' => array('data' => 'Start', 'class' => array('position', 'start')),
-    'fmax' => array('data' => 'End', 'class' => array('position','end')),
-  );
-  $vars['template_row'] = array('variant_name' => '', 'srcfeature_name' => '', 'fmin' => '', 'fmax' => '');
+  nd_genotypes_process_query_parameters($vars);
 
-  // Start the query.
-  $vars['query']['sql'][] = 'SELECT';
-  $vars['query']['sql'][] = '    variant_id,';
-  $vars['query']['sql'][] = '    variant_name,';
-  $vars['query']['sql'][] = '    srcfeature_name,';
-  $vars['query']['sql'][] = '    fmin,';
-  $vars['query']['sql'][] = '    fmax,';
-  $vars['query']['sql'][] = '    germplasm_id,';
-  $vars['query']['sql'][] = '    germplasm_name,';
-  $vars['query']['sql'][] = '    d.nid,';
-  $vars['query']['sql'][] = '    consensus_allele';
-  $vars['query']['sql'][] = '  FROM {genotype_mview} gm';
-  $vars['query']['sql'][] = '    LEFT JOIN [chado_feature] d ON d.feature_id=gm.variant_id';
-  $vars['query']['sql'][] = '  WHERE';
-
-  // --Germplasm.
-  if (isset($vars['q']['germplasm'])) {
-    foreach ($vars['q']['germplasm'] as $germ_id) {
-
-      // retrieve more details.
-      $s = chado_query('SELECT name, organism_id FROM {stock} WHERE stock_id=:id',
-        array(':id' => $germ_id))->fetchObject();
-
-      // Save details for later use.
-      $vars['germplasm'][$germ_id] = array(
-        'object' => $s,
-        'name' => $s->name,
-        'class' => strtolower(drupal_clean_css_identifier( $s->name )),
-      );
-
-      // Add to the header and template row.
-      $vars['header'][$germ_id] = array('data' => $s->name, 'class' => array('germplasm', $vars['germplasm'][$germ_id]['class']));
-      $vars['template_row'][$germ_id] = '';
-
-      // Add to the query.
-      $vars['query']['args'][':germplasm'][] = $germ_id;
-
-      // Save as defaults for use in the form.
-      $vars['defaults']['germ']['existing'][] = array(
-        'stock_id' => $germ_id,
-        'organism_id' => $s->organism_id,
-        'stock_name' => $s->name,
-      );
-    }
-
-    // Add germplasm to the query.
-    $vars['query']['sql'][] = '    germplasm_id IN (:germplasm)';
-  }
-
-  // --Sequence Range.
-  if (isset($vars['q']['seq_range'])) {
-    if (isset($vars['q']['seq_range']['start']['backbone'])) {
-      if (isset($vars['q']['seq_range']['start']['pos'])) {
-        $vars['query']['sql'][] = '    AND ((srcfeature_name = :sbackbone AND fmin >= :sfmin::int) OR srcfeature_name > :sbackbone)';
-        $vars['query']['args'][':sbackbone'] = $vars['q']['seq_range']['start']['backbone'];
-        $vars['query']['args'][':sfmin'] = (int) $vars['q']['seq_range']['start']['pos'];
-
-        $vars['defaults']['seq_range']['start']['backbone'] = $vars['q']['seq_range']['start']['backbone'];
-        $vars['defaults']['seq_range']['start']['pos'] = $vars['q']['seq_range']['start']['pos'];
-      }
-      else {
-        $vars['query']['sql'][] = '    AND (srcfeature_name >= :sbackbone)';
-        $vars['query']['args'][':sbackbone'] = $vars['q']['seq_range']['start']['backbone'];
-
-        $vars['defaults']['seq_range']['start']['backbone'] = $vars['q']['seq_range']['start']['backbone'];
-      }
-    }
-    if (isset($vars['q']['seq_range']['end']['backbone'])) {
-      if (isset($vars['q']['seq_range']['end']['pos'])) {
-        $vars['query']['sql'][] = '    AND ((srcfeature_name = :ebackbone AND fmin <= :efmin::int) OR srcfeature_name < :ebackbone)';
-        $vars['query']['args'][':ebackbone'] = $vars['q']['seq_range']['end']['backbone'];
-        $vars['query']['args'][':efmin'] = (int) $vars['q']['seq_range']['end']['pos'];
-
-        $vars['defaults']['seq_range']['end']['backbone'] = $vars['q']['seq_range']['end']['backbone'];
-        $vars['defaults']['seq_range']['end']['pos'] = $vars['q']['seq_range']['end']['pos'];
-      }
-      else {
-        $vars['query']['sql'][] = '    AND (srcfeature_name <= :ebackbone)';
-        $vars['query']['args'][':ebackbone'] = $vars['q']['seq_range']['end']['backbone'];
-
-        $vars['defaults']['seq_range']['end']['backbone'] = $vars['q']['seq_range']['end']['backbone'];
-      }
-    }
-  }
-
-  // --Pager.
-  if (isset($vars['q']['pager_loc']['current'])) {
-    if ($vars['q']['pager_loc']['current'] != $vars['q']['pager_loc']['first']) {
-      $parts = explode(':', $vars['q']['pager_loc']['current']);
-      $vars['query']['sql'][] = '    AND ((srcfeature_name = :srcfeature AND fmin >= :fmin) OR srcfeature_name > :srcfeature) ';
-      $vars['query']['args'][':srcfeature'] = $parts[0];
-      $vars['query']['args'][':fmin'] = $parts[1];
-    }
-  }
-
-  // --Variant name.
-  if (isset($vars['q']['variant_name']) AND !empty($vars['q']['variant_name'])) {
-    $vars['query']['sql'][] = '    AND variant_name IN (:names)';
-    $vars['query']['args'][':names'] = $vars['q']['variant_name'];
-  }
-
-  // --Variant type.
-  if (isset($vars['q']['variant_type']) AND !empty($vars['q']['variant_type'])) {
-    $vars['query']['sql'][] = '    AND variant_id IN (SELECT feature_id FROM {feature} WHERE type_id=:variant_type_id)';
-    $vars['query']['args'][':variant_type_id'] = $vars['q']['variant_type'];
-  }
-
-  // -- Marker Type. (also applies to filtering by project).
-  // This is much more complicated then previously thought. We cannot simply return the
-  // consensus call computed across all data for positions with at least one call from
-  // the specified technology because that is very misleading. Instead we need a way to
-  // compute a separate consensus call per technology in addition to the master consensus
-  // call. This allows us to simply choose the consensus call for a given technology
-  // when asked for it.
-  // One way to pull out such a consensus might be to use the new PostgreSQL 9.4
-  // FILTER functionality which allows you to filter an aggregated set in place.
-  // Unfortunatly this doesn't extend well to an array per technology since you
-  // need to hard-code the where clause.
-  /* @code
-  SELECT gc.variant_id, array_agg(g.description) as alleles,
-    array_agg(g.description) FILTER(WHERE stock_id=82) stock_82
-  FROM genotype_call gc
-  LEFT JOIN genotype g ON g.genotype_id=gc.genotype_id
-  GROUP BY gc.variant_id LIMIT 5;
- variant_id |             alleles             | stock_82
-------------+---------------------------------+----------
-    1094657 | {CC,CC,CC,GG,GG,CC,CG,CC,CC,CC} | {CC}
-    1094659 | {TT,TT,TC,TT,CC,TC,TC,TT,CC,CC} | {CC}
-    1094661 | {AA,GG,AA,AG,AA,AA,AA,AA,AA,AA} | {AA}
-    1094663 | {TT,AT,AT,AT,AA,TT,AA,AA,AA,AA} | {AA}
-    1094665 | {AG,GG,AA,AG,AA,AG,AA,GG,AA,GG} | {AA}
-  */
-  //if (isset($get['marker_type']) AND !empty($get['marker_type'])) {
-    //$adtl_where[] = 'markers::bigint[] <@ (SELECT array_agg(feature_id) FROM {featureprop} WHERE type_id=2534 AND value=:marker_type GROUP BY type_id)';
-    //$joins = ' LEFT JOIN chado.featureprop ON ARRAY[featureprop.feature_id] <@ genotype_mview.markers::bigint[]';
-    //$adtl_where[] = '(SELECT value from {featureprop} WHERE feature_id = ANY(genotype_mview.markers::bigint[]))=:marker_type';
-    //$adtl_args[':marker_type'] = $get['marker_type'];
-  //}
-
-  // Finish off the query.
-  $vars['query']['sql'][] = '  ORDER BY srcfeature_name ASC, fmin ASC';
-
-  // Set the defaults for all other fields in the form.
-  $fields = $vars['q'];
-  unset($fields['germplasm'], $fields['seq_range']);
-  foreach ($fields as $field => $value) {
-    // We will validate it at the database layer using placeholders.
-    $vars['defaults'][$field] = $value;
-  }
- }
+}
 
 /**
  * Implements hook_node_view().

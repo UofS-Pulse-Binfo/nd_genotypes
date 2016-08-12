@@ -11,3 +11,5 @@ dependencies[] = tripal_genetic
 dependencies[] = tripal_stock
 dependencies[] = tripal_natural_diversity
 
+dependencies[] = trpdownload_api
+
