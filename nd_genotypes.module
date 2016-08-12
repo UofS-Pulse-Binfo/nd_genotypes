@@ -7,6 +7,7 @@
 require_once('api/nd_genotypes.api.inc');
 
 require_once('includes/nd_genotypes.mview.inc');
+require_once('includes/nd_genotypes.mview.sync.inc');
 require_once('includes/nd_genotypes.form_elements.inc');
 
 require_once('includes/nd_genotypes.genotype_matrix.inc');

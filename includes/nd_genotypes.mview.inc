@@ -16,14 +16,14 @@ function nd_genotypes_update_mview_cache() {
     WITH RECURSIVE t AS (
       (SELECT type_id
         FROM {feature}
-        WHERE feature_id IN (SELECT variant_id FROM {genotype_mview})
+        WHERE feature_id IN (SELECT variant_id FROM {mview_ndg_variants})
         ORDER BY type_id
         LIMIT 1)
       UNION ALL
       SELECT
           (SELECT type_id
             FROM {feature}
-            WHERE type_id > t.type_id AND feature_id IN (SELECT variant_id FROM {genotype_mview})
+            WHERE type_id > t.type_id AND feature_id IN (SELECT variant_id FROM {mview_ndg_variants})
             ORDER BY type_id
             LIMIT 1)
         FROM t
@@ -66,13 +66,13 @@ function nd_genotypes_update_mview_cache() {
   $resource = chado_query("
     WITH RECURSIVE t AS (
       (SELECT srcfeature_name
-        FROM {genotype_mview}
+        FROM {mview_ndg_variants}
         ORDER BY srcfeature_name
         LIMIT 1)
       UNION ALL
       SELECT
           (SELECT srcfeature_name
-            FROM {genotype_mview}
+            FROM {mview_ndg_variants}
             WHERE srcfeature_name > t.srcfeature_name
             ORDER BY srcfeature_name
             LIMIT 1)
@@ -89,320 +89,28 @@ function nd_genotypes_update_mview_cache() {
 }
 
 /**
- * Method 1: Nd Experiment Tables.
- */
-function nd_genotypes_update_mview_for_nd_exp($job_id) {
-
-  $table_name = 'genotype_mview';
-
-  // Create the table if it doesn't already exist.
-  chado_create_custom_table(
-    $table_name,
-    nd_genotypes_genotype_mview_schema_template()
-  );
-
-  chado_query("TRUNCATE {".$table_name."}");
-
-  $query = "SELECT
-      v.feature_id as variant_id,
-      v.name as variant_name,
-      loc.srcfeature_id,
-      b.name as srcfeature_name,
-      loc.fmin,
-      loc.fmax,
-      s.stock_id as stock_id,
-      s.name as stock_name,
-      germ.stock_id as germplasm_id,
-      germ.name as germplasm_name,
-      array_agg(g.description) as alleles,
-      mode() WITHIN GROUP (ORDER BY g.description) as consensus_allele
-    FROM {nd_experiment} nde
-    LEFT JOIN {nd_experiment_project} ndep ON ndep.nd_experiment_id=nde.nd_experiment_id
-    LEFT JOIN {nd_geolocation} ndg ON ndg.nd_geolocation_id=nde.nd_geolocation_id
-    LEFT JOIN {project} p ON p.project_id=ndep.project_id
-    LEFT JOIN {nd_experiment_stock} ndes ON ndes.nd_experiment_id=nde.nd_experiment_id
-    LEFT JOIN {stock} s ON s.stock_id=ndes.stock_id
-    LEFT JOIN {stock_relationship} sr ON sr.subject_id=s.stock_id
-    LEFT JOIN {stock} germ ON germ.stock_id=sr.object_id
-    LEFT JOIN {nd_experiment_genotype} ndeg ON ndeg.nd_experiment_id=nde.nd_experiment_id
-    LEFT JOIN {genotype} g ON g.genotype_id=ndeg.genotype_id
-    LEFT JOIN {feature_genotype} fg ON fg.genotype_id=g.genotype_id
-    LEFT JOIN {feature} m ON m.feature_id=fg.feature_id
-    LEFT JOIN {feature_relationship} fr ON m.feature_id=fr.subject_id
-    LEFT JOIN {feature v} ON v.feature_id=fr.object_id
-    LEFT JOIN (
-        SELECT *
-        FROM ( SELECT *, row_number() OVER (partition by feature_id order by locgroup desc, rank asc) as row_num FROM {featureloc} ) as ordered_locs
-        WHERE ordered_locs.row_num = 1
-      ) as loc ON loc.feature_id=v.feature_id
-    LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
-    WHERE sr.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='is_extracted_from')
-      AND fr.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='is_marker_of')
-    GROUP BY v.feature_id, v.name, s.stock_id, s.name, germ.stock_id, germ.name, loc.srcfeature_id, b.name, loc.fmin, loc.fmax
-    ORDER BY b.name ASC, loc.fmin ASC";
-
-    chado_query("
-      INSERT INTO {$table_name}
-        (variant_id, variant_name, srcfeature_id, srcfeature_name, fmin, fmax, stock_id, stock_name, germplasm_id, germplasm_name, alleles, consensus_allele)
-      " . $query);
-
-  // Then report how many were inserted.
-  $count = chado_query("SELECT count(*) FROM {".$table_name."}")->fetchField();
-  drupal_set_message("Sucessfully updated Genotype materialized view with $count records");
-
-  nd_genotypes_update_mview_cache();
-}
-
-/**
- * Method 2: Genotype Call Custom Table.
+ * A listing of all the variants sorted by location. If a variant is in more than
+ * one location then it will be repeated in the listing.
  *
- * Genotype_call custom table:
- *   - genotype_call_id: primary key for this table,
- *   - variant_id: the feature_id of the variant,
- *   - marker_id: the feature_id of the marker,
- *   - genotype_id: the genotype_id of the allele call for the given marker/stock combination
- *   - project_id: the project_id of the over-aching project
- *   - stock_id: the stock_id of the germplasm assayed
- *   - meta_data: JSONB blob to store meta-data
+ * The sync functions ensure that only locations from the specified genome
+ * assembly are present.
  *
- * Approach:
- *  1) using a single query to populate the entire table
- *  2) iterate over that table
- *      a) refining the consensus call and
- *      b) filling in the marker details.
- * Notice that we will attempt to create the table if it doesn't already exist.
- */
-function nd_genotypes_update_mview_for_genotype_call($job_id) {
-
-  /* Genotype MVIEW */
-
-  $table_name = 'genotype_mview';
-  // Create the mview if it doesn't already exist.
-  chado_create_custom_table(
-    $table_name,
-    nd_genotypes_genotype_mview_schema_template()
-  );
-
-  // Create the custom genotype_call table if it doesn't exist.
-  chado_create_custom_table(
-    'genotype_call',
-    nd_genotypes_genotype_call_schema_template()
-  );
-
-  chado_query("TRUNCATE {".$table_name."}");
-
-  $query = "SELECT
-      gc.variant_id,
-      v.name as variant_name,
-      loc.srcfeature_id,
-      p.name as srcfeature_name,
-      loc.fmin,
-      loc.fmax,
-      gc.stock_id,
-      s.name as stock_name,
-      germ.stock_id as germplasm_id,
-      germ.name as germplasm_name,
-      array_agg(g.description) as alleles,
-      array_agg(m.feature_id) as markers,
-      array_agg(gc.project_id) as projects,
-      mode() WITHIN GROUP (ORDER BY g.description) as consensus_allele
-    FROM {genotype_call} gc
-      LEFT JOIN {feature} v ON v.feature_id=gc.variant_id
-      LEFT JOIN (
-          SELECT *
-          FROM ( SELECT *, row_number() OVER (partition by feature_id order by locgroup desc, rank asc) as row_num FROM {featureloc} ) as ordered_locs
-          WHERE ordered_locs.row_num = 1
-        ) as loc ON loc.feature_id=v.feature_id
-      LEFT JOIN {feature} p ON p.feature_id=loc.srcfeature_id
-      LEFT JOIN {stock} s ON s.stock_id=gc.stock_id
-      LEFT JOIN {stock_relationship} sr ON sr.subject_id=s.stock_id
-      LEFT JOIN {stock} germ ON germ.stock_id=sr.object_id
-      LEFT JOIN {genotype} g ON g.genotype_id=gc.genotype_id
-      LEFT JOIN {feature_relationship} fr ON fr.object_id=v.feature_id
-      LEFT JOIN {feature} m ON m.feature_id=fr.subject_id
-    WHERE
-      sr.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='is_extracted_from')
-      AND fr.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='is_marker_of')
-    GROUP BY gc.variant_id, v.name, loc.srcfeature_id, p.name, loc.fmin, loc.fmax, gc.stock_id, s.name, germ.stock_id, germ.name";
-
-
-    chado_query("
-      INSERT INTO {$table_name}
-        (variant_id, variant_name, srcfeature_id, srcfeature_name, fmin, fmax, stock_id, stock_name, germplasm_id, germplasm_name, alleles, markers, projects, consensus_allele)
-      " . $query);
-
-  // Then report how many were inserted.
-  $count = chado_query("SELECT count(*) FROM {".$table_name."}")->fetchField();
-  drupal_set_message("Sucessfully updated Genotype materialized view with $count records");
-
-  /* Genotype Counts MVIEW */
-
-  $table_name = 'genotype_counts_mview';
-  // Create the mview if it doesn't already exist.
-  chado_create_custom_table(
-    $table_name,
-    nd_genotypes_genotype_counts_mview_schema_template()
-  );
-  chado_query("TRUNCATE {".$table_name."}");
-
-  $query = "SELECT
-      gc.variant_id,
-      v.name as variant_name,
-      loc.srcfeature_id,
-      p.name as srcfeature_name,
-      loc.fmin,
-      loc.fmax,
-      mp.value as marker_type,
-      'All' as germplasm_category,
-      g.description as allele,
-      count(*) as num_occurances
-    FROM chado.genotype_call gc
-      LEFT JOIN chado.feature v ON v.feature_id=gc.variant_id
-      LEFT JOIN (
-          SELECT *
-          FROM ( SELECT *, row_number() OVER (partition by feature_id order by locgroup desc, rank asc) as row_num FROM chado.featureloc ) as ordered_locs
-          WHERE ordered_locs.row_num = 1
-        ) as loc ON loc.feature_id=v.feature_id
-      LEFT JOIN chado.feature m ON m.feature_id=gc.marker_id
-      LEFT JOIN chado.featureprop mp ON mp.feature_id=m.feature_id
-      LEFT JOIN chado.feature p ON p.feature_id=loc.srcfeature_id
-      LEFT JOIN chado.stock s ON s.stock_id=gc.stock_id
-      LEFT JOIN chado.stock_relationship sr ON sr.subject_id=s.stock_id
-      LEFT JOIN chado.stock germ ON germ.stock_id=sr.object_id
-      LEFT JOIN chado.genotype g ON g.genotype_id=gc.genotype_id
-    WHERE
-      mp.type_id IN (SELECT cvterm_id FROM chado.cvterm WHERE name='marker_type')
-      AND sr.type_id IN (SELECT cvterm_id FROM chado.cvterm WHERE name='is_extracted_from')
-    GROUP BY gc.variant_id, v.name, loc.srcfeature_id, p.name, loc.fmin, loc.fmax, mp.value, allele";
-
-
-    chado_query("
-      INSERT INTO {$table_name}
-        (variant_id, variant_name, srcfeature_id, srcfeature_name, fmin, fmax, marker_type, germplasm_category, allele, num_occurances)
-      " . $query);
-
-  // It's easier to add counts for all marker types separately so we will do that now.
-  $query = "SELECT
-      gc.variant_id,
-      v.name as variant_name,
-      loc.srcfeature_id,
-      p.name as srcfeature_name,
-      loc.fmin,
-      loc.fmax,
-      'All' as marker_type,
-      'All' as germplasm_category,
-      g.description as allele,
-      count(*) as num_occurances
-    FROM chado.genotype_call gc
-      LEFT JOIN chado.feature v ON v.feature_id=gc.variant_id
-      LEFT JOIN (
-          SELECT *
-          FROM ( SELECT *, row_number() OVER (partition by feature_id order by locgroup desc, rank asc) as row_num FROM chado.featureloc ) as ordered_locs
-          WHERE ordered_locs.row_num = 1
-        ) as loc ON loc.feature_id=v.feature_id
-      LEFT JOIN chado.feature p ON p.feature_id=loc.srcfeature_id
-      LEFT JOIN chado.stock s ON s.stock_id=gc.stock_id
-      LEFT JOIN chado.stock_relationship sr ON sr.subject_id=s.stock_id
-      LEFT JOIN chado.stock germ ON germ.stock_id=sr.object_id
-      LEFT JOIN chado.genotype g ON g.genotype_id=gc.genotype_id
-    WHERE
-      sr.type_id IN (SELECT cvterm_id FROM chado.cvterm WHERE name='is_extracted_from')
-    GROUP BY gc.variant_id, v.name, loc.srcfeature_id, p.name, loc.fmin, loc.fmax, allele";
-
-    chado_query("
-      INSERT INTO {$table_name}
-        (variant_id, variant_name, srcfeature_id, srcfeature_name, fmin, fmax, marker_type, germplasm_category, allele, num_occurances)
-      " . $query);
-
-  // Then report how many were inserted.
-  $count = chado_query("SELECT count(*) FROM {".$table_name."}")->fetchField();
-  drupal_set_message("Sucessfully updated Genotype materialized view with $count records");
-
-  nd_genotypes_update_mview_cache();
-}
-
-/**
- * Method 3: Genotype Stock Table.
- */
-function nd_genotypes_update_mview_for_stock_genotype($job_id) {
-
-  $table_name = 'genotype_mview';
-
-  // Create the table if it doesn't already exist.
-  chado_create_custom_table(
-    $table_name,
-    nd_genotypes_genotype_mview_schema_template()
-  );
-
-  chado_query("TRUNCATE {".$table_name."}");
-
-  $query = "SELECT
-      v.feature_id as variant_id,
-      v.name as variant_name,
-      loc.srcfeature_id,
-      b.name as srcfeature_name,
-      loc.fmin,
-      loc.fmax,
-      s.stock_id as stock_id,
-      s.name as stock_name,
-      germ.stock_id as germplasm_id,
-      germ.name as germplasm_name,
-      array_agg(g.description) as alleles,
-      mode() WITHIN GROUP (ORDER BY g.description) as consensus_allele
-    FROM {stock_genotype} sg
-    LEFT JOIN {stock} s ON s.stock_id=sg.stock_id
-    LEFT JOIN {stock_relationship} sr ON s.stock_id=sr.subject_id
-    LEFT JOIN {stock} germ ON germ.stock_id=sr.object_id
-    LEFT JOIN {genotype} g ON g.genotype_id=sg.genotype_id
-    LEFT JOIN {feature_genotype} fg ON fg.genotype_id=g.genotype_id
-    LEFT JOIN {feature} m ON m.feature_id=fg.feature_id
-    LEFT JOIN {feature_relationship} fr ON m.feature_id=fr.subject_id
-    LEFT JOIN {feature} v ON v.feature_id=fr.object_id
-    LEFT JOIN (
-        SELECT *
-        FROM ( SELECT *, row_number() OVER (partition by feature_id order by locgroup desc, rank asc) as row_num FROM {featureloc} ) as ordered_locs
-        WHERE ordered_locs.row_num = 1
-      ) as loc ON loc.feature_id=v.feature_id
-    LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
-    WHERE sr.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='is_extracted_from')
-      AND fr.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='is_marker_of')
-    GROUP BY v.feature_id, v.name, s.stock_id, s.name, germ.stock_id, germ.name, loc.srcfeature_id, b.name, loc.fmin, loc.fmax";
-
-    chado_query("
-      INSERT INTO {$table_name}
-        (variant_id, variant_name, srcfeature_id, srcfeature_name, fmin, fmax, stock_id, stock_name, germplasm_id, germplasm_name, alleles, consensus_allele)
-      " . $query);
-
-  // Then report how many were inserted.
-  $count = chado_query("SELECT count(*) FROM {".$table_name."}")->fetchField();
-  drupal_set_message("Sucessfully updated Genotype materialized view with $count records");
-
-  nd_genotypes_update_mview_cache();
-}
-
-/**
- * Provides the schema for creating new genotype_mview partitions.
+ * @param $tablename
+ *   The name of the table. This allows you to create hard-partitions for this mview.
  *
- * Fields:
- *  - variant_id: references the feature describing the loci with variation.
- *  - variant_name: the name of the variant.
- *  - srcfeature_id: references the feature the variant is located on. Ideally this is the chromosome.
- *  - srcfeature_name: the name of the srcfeature; hopefully the name of the chromosome ;-).
- *  - fmin: the start position of the variant on the srcfeature; positions are 0-indexed.
- *  - fmax: the end position of the variant on the srcfeature; posoitions are 0-indexed.
- *  - stock_id: references the stock assayed.
- *  - stock_name: the name of the stock assayed.
- *  - germplasm_id:references the germplasm the DNA stock was extracted from.
- *  - germplasm_name: the name of the germplasm.
- *  - consensus_allele: the consensus allele for this stock.
- *  - alleles: a postgresql array of alleles detected for this stock.
- *  - marker_calls: a JSONB array defining the markers and subsequent calls;
- *     generated using nd_genotypes_encode_markers().
+ * Columns:
+ *  - ndg_variants_id: primary key
+ *  - variant_id: the feature_id of the variant
+ *  - variant_name: the feature.name of the variant
+ *  - srcfeature_id: the feature_id of the backbone the variant is located on
+ *  - srcfeature_name: the feature.name of the backbone the variant is located on
+ *  - fmin: the start location on the backbone
+ *  - fmax: the end position on the backbone
  */
-function nd_genotypes_genotype_mview_schema_template() {
+function nd_genotypes_create_mview_ndg_variants($tablename = 'mview_ndg_variants') {
 
-  return array(
-    'description' => 'A materialized view for storing genotype information.',
+  $schema = array(
+    'description' => 'A listing of all the variants sorted by location.',
     'fields' => array(
       'variant_id' => array(
         'description' => 'Links to the feature describing the loci with variation.',
@@ -431,6 +139,75 @@ function nd_genotypes_genotype_mview_schema_template() {
       'fmax' => array(
         'descrption' => 'End position on the scrfeature as described by the featureloc table.',
         'type' => 'int',
+      ),
+      'ndg_variants_id' => array(
+        'type' => 'serial',
+      ),
+    ),
+    'primary key' => array('ndg_variants_id'),
+    'unique keys' => array(),
+    'foreign keys' => array(
+      'feature' => array(
+        'table' => 'feature',
+        'columns' => array(
+          'variant_id' => 'feature_id',
+          'srcfeature_id' => 'feature_id'
+        ),
+      ),
+    ),
+    'indexes' => array(    ),
+  );
+
+  chado_create_custom_table( $tablename, $schema );
+}
+
+/**
+ * A listing of all the marker calls.
+ *
+ * @param $tablename
+ *   The name of the table. This allows you to create hard-partitions for this mview.
+ *
+ * Columns:
+ *  - ndg_call_id: primary key
+ *  - variant_id: the feature_id of the variant
+ *  - marker_id: the feature_id of the marker
+ *  - marker_name: the feature.name of the marker
+ *  - marker_type: the type of the marker (featureprop of type=marker_type)
+ *  - stock_id: the stock_id of the DNA extraction
+ *  - stock_name: the stock.name of the DNA extraction
+ *  - germplasm_id: the stock_id of the germplasm the stock was extracted from
+ *  - germplasm_name: the stock.name of the germplasm the stock was extracted from
+ *  - project_id: the project_id of the project this call was generated as part of
+ *  - genotype_id: the genotype_id of the resultant allele call
+ *  - allele_call: the result of the marker assay (ie: AA)
+ *  - marker_data: a json blon storing any quality information
+ */
+function nd_genotypes_create_mview_ndg_calls($tablename = 'mview_ndg_calls') {
+
+  $schema = array(
+    'description' => 'A listing of all the marker calls.',
+    'fields' => array(
+      'variant_id' => array(
+        'description' => 'The feature_id of the loci with variation.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'marker_id' => array(
+        'description' => 'The feature_id of the marker.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'marker_name' => array(
+        'description' => 'The name of the marker.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'marker_type' => array(
+        'description' => 'The type of marker.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
       ),
       'stock_id' => array(
         'description' => 'Links to the DNA stock assayed by the marker.',
@@ -454,39 +231,37 @@ function nd_genotypes_genotype_mview_schema_template() {
         'length' => 255,
         'not null' => TRUE,
       ),
-      'consensus_allele' => array(
-        'description' => 'The consensus allele of all germplasm for this variant.',
+      'project_id' => array(
+        'description' => 'The project_id of the project the marker was assayed as part of.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'genotype_id' => array(
+        'description' => 'The genotype_id of the resultant allele call.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'allele_call' => array(
+        'description' => 'the result of the marker assay (ie: AA).',
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
       ),
-      'alleles' => array(
-        'pgsql_type' => 'text[]',
-        'not null' => TRUE,
-      ),
-      'markers' => array(
-        'pgsql_type' => 'int[]',
-        'not null' => TRUE,
-      ),
-      'projects' => array(
-        'pgsql_type' => 'int[]',
-        'not null' => TRUE,
-      ),
-      'marker_calls' => array(
+      'marker_data' => array(
         'pgsql_type' => 'jsonb',
       ),
-      'genotype_mview_id' => array(
+      'ndg_call_id' => array(
         'type' => 'serial',
       ),
     ),
-    'primary key' => array('genotype_mview_id'),
+    'primary key' => array('ndg_call_id'),
     'unique keys' => array(),
     'foreign keys' => array(
       'feature' => array(
         'table' => 'feature',
         'columns' => array(
           'variant_id' => 'feature_id',
-          'srcfeature_id' => 'feature_id'
+          'marker_id' => 'feature_id'
         ),
       ),
       'stock' => array(
@@ -496,106 +271,23 @@ function nd_genotypes_genotype_mview_schema_template() {
           'germplasm_id' => 'stock_id'
         ),
       ),
-    ),
-    'indexes' => array(
-      'variant_id' => array('variant_id'),
-      'variant_name' => array('variant_name'),
-      'loc' => array('srcfeature_name', 'fmin'),
-      'stock_id' => array('stock_id'),
-      'germ_id' => array('germplasm_id'),
-    ),
-  );
-}
-
-/**
- * The schema for the genotpye count mview. This is used for summary charts needing the
- * number of germplasm genotypes per marker type, germplasm category, etc.
- *
- * Fields:
- *  - variant_id
- *  - variant_name
- *  - srcfeature_id
- *  - srcfeature_name
- *  - fmin
- *  - fmax
- *  - marker_type
- *  - germplasm_category
- *  - allele
- *  - num_occurances
- */
-function nd_genotypes_genotype_counts_mview_schema_template() {
-
-  return array(
-    'description' => 'A materialized view for storing genotype information.',
-    'fields' => array(
-      'variant_id' => array(
-        'description' => 'Links to the feature describing the loci with variation.',
-        'type' => 'int',
-        'not null' => TRUE,
-      ),
-      'variant_name' => array(
-        'description' => 'The name of the variant.',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
-      ),
-      'srcfeature_id' => array(
-        'description' => 'Links to the feature the variant is located on. Ideally this is the chromosome.',
-        'type' => 'int',
-      ),
-      'srcfeature_name' => array(
-        'description' => 'The name of the srcfeature; hopefully the name of the chromosome.',
-        'type' => 'varchar',
-        'length' => 255,
-      ),
-      'fmin' => array(
-        'descrption' => 'Start position on the scrfeature as described by the featureloc table.',
-        'type' => 'int',
-      ),
-      'fmax' => array(
-        'descrption' => 'End position on the scrfeature as described by the featureloc table.',
-        'type' => 'int',
-      ),
-      'marker_type' => array(
-        'description' => 'The type of marker the counted allele calls are from or ALL for all markers for a given variant',
-        'type' => 'varchar',
-        'length' => 255,
-      ),
-      'germplasm_category' => array(
-        'description' => 'The category of germplasm the counted allele calls are from or ALL for all germplasm.',
-        'type' => 'varchar',
-        'length' => 255,
-      ),
-      'allele' => array(
-        'description' => 'The allele call being counted.',
-        'type' => 'varchar',
-        'length' => 255,
-      ),
-      'num_occurances' => array(
-        'descrption' => 'The number of times this allele was recorded.',
-        'type' => 'int',
-      ),
-      'genotype_count_mview_id' => array(
-        'type' => 'serial',
-      ),
-    ),
-    'primary key' => array('genotype_count_mview_id'),
-    'unique keys' => array(),
-    'foreign keys' => array(
-      'feature' => array(
-        'table' => 'feature',
+      'project' => array(
+        'table' => 'stock',
         'columns' => array(
-          'variant_id' => 'feature_id',
-          'srcfeature_id' => 'feature_id'
+          'project_id' => 'project_id',
+        ),
+      ),
+      'genotype' => array(
+        'table' => 'genotype',
+        'columns' => array(
+          'genotype_id' => 'genotype_id',
         ),
       ),
     ),
-    'indexes' => array(
-      'variant_id' => array('variant_id'),
-      'loc' => array('srcfeature_name', 'fmin'), //want filtered to marker_type = all and germplasm category = all...
-    ),
+    'indexes' => array(),
   );
 
+  chado_create_custom_table( $tablename, $schema );
 }
 
 /**
