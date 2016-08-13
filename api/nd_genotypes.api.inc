@@ -5,6 +5,24 @@
  */
 
 /**
+ * Determine the consensus call for a set of alleles.
+ * Currently this is just based on the most frequent one.
+ * @todo: Include quality information.
+ *
+ * @param $alleles
+ *   An array of alleles.
+ * @return 
+ *   The consensus call.
+ */
+function nd_genotype_get_consensus_call($alleles) {
+
+  $counts = array_count_values($alleles);
+  arsort($counts);
+  reset($counts);
+  return key($counts);
+}
+
+/**
  * Determine whether a given stock/germplasm has genotypes in the genotype materialized view.
  *
  * @param $stock_id
@@ -15,7 +33,7 @@
  */
 function tripal_germplasm_has_nd_genotypes($stock_id) {
 
-  $query = "SELECT count(*) as nd_genotypes FROM {genotype_mview} WHERE stock_id=:stock_id OR germplasm_id=:stock_id";
+  $query = "SELECT count(*) as nd_genotypes FROM {mview_ndg_calls} WHERE stock_id=:stock_id OR germplasm_id=:stock_id";
   $result = chado_query($query, array(':stock_id' => $stock_id))->fetchField();
   if ($result > 0) {
     return TRUE;
@@ -116,15 +134,17 @@ function nd_genotypes_get_alleles_for_variant($variant_id) {
   $variant = array();
 
   $sql = "SELECT
-    variant_id,
-    variant_name,
-    fmin as start,
-    fmax as end,
-    marker_type,
-    allele,
-    num_occurances as num_germplasm
-  FROM {genotype_counts_mview}
-  WHERE variant_id=:id";
+    v.variant_id,
+    v.variant_name,
+    v.fmin as start,
+    v.fmax as end,
+    call.marker_type,
+    call.allele_call as allele,
+    count(*) as num_germplasm
+  FROM {mview_ndg_calls} call
+    LEFT JOIN {mview_ndg_variants} v ON v.variant_id=call.variant_id
+  WHERE v.variant_id=:id
+  GROUP BY v.variant_id, v.variant_name, v.fmin, v.fmax, call.marker_type, call.allele_call";
   $resource = chado_query($sql, array(':id' => $variant_id))->fetchAll();
 
   foreach ($resource as $r) {
@@ -339,16 +359,18 @@ function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end) 
 
   $limit = '500';
   $sql = "SELECT
-      variant_id,
-      variant_name,
+      v.variant_id,
+      v.variant_name,
       cf.nid as variant_nid,
-      fmin as start,
-      fmax as end,
-      allele,
-      num_occurances as num_germplasm
-    FROM {genotype_counts_mview}
-    LEFT JOIN [chado_feature] cf ON cf.feature_id=variant_id
-    WHERE srcfeature_name=:backbone AND fmin >= :min AND marker_type='All'
+      v.fmin as start,
+      v.fmax as end,
+      call.allele_call as allele,
+      count(*) as num_germplasm
+    FROM {mview_ndg_calls} call
+    LEFT JOIN {mview_ndg_variants} v ON V.variant_id=call.variant_id
+    LEFT JOIN [chado_feature] cf ON cf.feature_id=v.variant_id
+    WHERE srcfeature_name=:backbone AND fmin >= :min
+    GROUP BY v.variant_id, v.variant_name, cf.nid, v.fmin, v.fmax, call.allele_call
     ORDER BY fmin ASC
     LIMIT ".$limit;
   $resource = chado_query($sql, array(':backbone' => $srcfeature_name, ':min' => $start));

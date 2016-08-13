@@ -39,8 +39,8 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
   nd_genotypes_create_mview_ndg_calls($ndg_call);
 
   // And clear them if they do already exist.
-  chado_query("TRUNCATE {$ndg_variants}");
-  chado_query("TRUNCATE {$ndg_call}");
+  chado_query("TRUNCATE {".$ndg_variants."}");
+  chado_query("TRUNCATE {".$ndg_call."}");
 
   // First, populate the mview_ndg_calls table.
   // This is basically a materialized version of the genotype_call table itself :-).
@@ -58,17 +58,17 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
       gc.genotype_id,
       a.description as allele_call,
       gc.marker_data
-    FROM genotype_call gc
-      LEFT JOIN feature m ON m.feature_id=gc.marker_id
-      LEFT JOIN featureprop mt ON mt.feature_id=m.feature_id AND mt.type_id IN (SELECT cvterm_id FROM cvterm WHERE name='marker_type')
-      LEFT JOIN stock s ON s.stock_id=gc.stock_id
-      LEFT JOIN stock_relationship sr ON sr.subject_id=s.stock_id AND sr.type_id IN (SELECT cvterm_id FROM cvterm WHERE name='is_extracted_from')
-      LEFT JOIN stock g ON g.stock_id=sr.object_id
-      LEFT JOIN genotype a ON a.genotype_id=gc.genotype_id
+    FROM {genotype_call} gc
+      LEFT JOIN {feature} m ON m.feature_id=gc.marker_id
+      LEFT JOIN {featureprop} mt ON mt.feature_id=m.feature_id AND mt.type_id IN (SELECT cvterm_id FROM cvterm WHERE name='marker_type')
+      LEFT JOIN {stock} s ON s.stock_id=gc.stock_id
+      LEFT JOIN {stock}_relationship sr ON sr.subject_id=s.stock_id AND sr.type_id IN (SELECT cvterm_id FROM cvterm WHERE name='is_extracted_from')
+      LEFT JOIN {stock} g ON g.stock_id=sr.object_id
+      LEFT JOIN {genotype} a ON a.genotype_id=gc.genotype_id
     ORDER BY gc.variant_id ASC, gc.marker_id ASC, g.stock_id ASC
     ";
   chado_query("
-    INSERT INTO {$ndg_call} (
+    INSERT INTO {".$ndg_call."} (
       variant_id,
       marker_id,
       marker_name,
@@ -93,13 +93,13 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
       b.name as srcfeature_name,
       loc.fmin,
       loc.fmax
-    FROM mview_ndg_calls call
-      LEFT JOIN feature v ON v.feature_id=call.variant_id
-      LEFT JOIN featureloc loc ON loc.feature_id=call.variant_id
-      LEFT JOIN feature b ON b.feature_id=loc.srcfeature_id
+    FROM {mview_ndg_calls} call
+      LEFT JOIN {feature} v ON v.feature_id=call.variant_id
+      LEFT JOIN {featureloc} loc ON loc.feature_id=call.variant_id
+      LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
   ";
   chado_query("
-    INSERT INTO {$ndg_variants} (
+    INSERT INTO {".$ndg_variants."} (
       variant_id,
       variant_name,
       srcfeature_id,

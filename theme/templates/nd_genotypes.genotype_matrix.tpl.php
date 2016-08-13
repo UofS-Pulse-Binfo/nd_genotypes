@@ -38,8 +38,25 @@ $last_loc = NULL;
 $first_loc = NULL;
 $next_page_loc = NULL;
 $num_rows = 0;
+$curr_variant = NULL;
 $l_options = array('attributes' => array( 'target' => '_blank' ));
 foreach($resource as $r) {
+
+  // If this is the first record of the next row, finish off the last row first!
+  if ($curr_variant != $r->variant_id AND $curr_variant !== NULL) {
+
+    // Determine the consensus call for each germplasm.
+    foreach ($table['rows'][$curr_variant] as $germplasm_id => $alleles) {
+      if (isset($germplasm[ $germplasm_id ])) {
+        $consensus_allele = nd_genotype_get_consensus_call($alleles);
+        $table['rows'][$curr_variant][$germplasm_id] = array(
+          'data' => $consensus_allele,
+          'class' => array('germplasm', $germplasm[ $germplasm_id ]['class'], 'genotype', $consensus_allele)
+        );
+      }
+    }
+  }
+  $curr_variant = $r->variant_id;
 
   // Save the first location for use with the pager.
   if (!isset($first_loc)) {
@@ -79,11 +96,8 @@ foreach($resource as $r) {
   // Save the last location for use with the pager.
   $last_loc = $r->srcfeature_name . ':' . $r->fmin;
 
-  // Save the call.
-  $table['rows'][$r->variant_id][$r->germplasm_id] = array(
-    'data' => $r->consensus_allele,
-    'class' => array('germplasm', $germplasm[ $r->germplasm_id ]['class'], 'genotype', $r->consensus_allele)
-  );
+  // Save the call. We will determine the consensus and mark it up at the end of the row.
+  $table['rows'][$r->variant_id][$r->germplasm_id][] = $r->allele;
 
   $num_rows++;
 }

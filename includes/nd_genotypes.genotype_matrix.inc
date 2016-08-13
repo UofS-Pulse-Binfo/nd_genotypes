@@ -452,17 +452,18 @@ function nd_genotypes_process_query_parameters(&$vars) {
 
   // Start the query.
   $vars['query']['sql'][] = 'SELECT';
-  $vars['query']['sql'][] = '    variant_id,';
-  $vars['query']['sql'][] = '    variant_name,';
-  $vars['query']['sql'][] = '    srcfeature_name,';
-  $vars['query']['sql'][] = '    fmin,';
-  $vars['query']['sql'][] = '    fmax,';
-  $vars['query']['sql'][] = '    germplasm_id,';
-  $vars['query']['sql'][] = '    germplasm_name,';
+  $vars['query']['sql'][] = '    v.variant_id,';
+  $vars['query']['sql'][] = '    v.variant_name,';
+  $vars['query']['sql'][] = '    v.srcfeature_name,';
+  $vars['query']['sql'][] = '    v.fmin,';
+  $vars['query']['sql'][] = '    v.fmax,';
+  $vars['query']['sql'][] = '    call.germplasm_id,';
+  $vars['query']['sql'][] = '    call.germplasm_name,';
   $vars['query']['sql'][] = '    d.nid,';
-  $vars['query']['sql'][] = '    consensus_allele';
-  $vars['query']['sql'][] = '  FROM {genotype_mview} gm';
-  $vars['query']['sql'][] = '    LEFT JOIN [chado_feature] d ON d.feature_id=gm.variant_id';
+  $vars['query']['sql'][] = '    call.allele_call as allele';
+  $vars['query']['sql'][] = '  FROM {mview_ndg_calls} call';
+  $vars['query']['sql'][] = '    LEFT JOIN {mview_ndg_variants} v ON v.variant_id=call.variant_id'; 
+  $vars['query']['sql'][] = '    LEFT JOIN [chado_feature] d ON d.feature_id=v.variant_id';
   $vars['query']['sql'][] = '  WHERE';
 
   // --Germplasm.
@@ -496,14 +497,14 @@ function nd_genotypes_process_query_parameters(&$vars) {
     }
 
     // Add germplasm to the query.
-    $vars['query']['sql'][] = '    germplasm_id IN (:germplasm)';
+    $vars['query']['sql'][] = '   call.germplasm_id IN (:germplasm)';
   }
 
   // --Sequence Range.
   if (isset($vars['q']['seq_range'])) {
     if (isset($vars['q']['seq_range']['start']['backbone'])) {
       if (isset($vars['q']['seq_range']['start']['pos'])) {
-        $vars['query']['sql'][] = '    AND ((srcfeature_name = :sbackbone AND fmin >= :sfmin::int) OR srcfeature_name > :sbackbone)';
+        $vars['query']['sql'][] = '    AND ((v.srcfeature_name = :sbackbone AND v.fmin >= :sfmin::int) OR v.srcfeature_name > :sbackbone)';
         $vars['query']['args'][':sbackbone'] = $vars['q']['seq_range']['start']['backbone'];
         $vars['query']['args'][':sfmin'] = (int) $vars['q']['seq_range']['start']['pos'];
 
@@ -511,7 +512,7 @@ function nd_genotypes_process_query_parameters(&$vars) {
         $vars['defaults']['seq_range']['start']['pos'] = $vars['q']['seq_range']['start']['pos'];
       }
       else {
-        $vars['query']['sql'][] = '    AND (srcfeature_name >= :sbackbone)';
+        $vars['query']['sql'][] = '    AND (v.srcfeature_name >= :sbackbone)';
         $vars['query']['args'][':sbackbone'] = $vars['q']['seq_range']['start']['backbone'];
 
         $vars['defaults']['seq_range']['start']['backbone'] = $vars['q']['seq_range']['start']['backbone'];
@@ -519,7 +520,7 @@ function nd_genotypes_process_query_parameters(&$vars) {
     }
     if (isset($vars['q']['seq_range']['end']['backbone'])) {
       if (isset($vars['q']['seq_range']['end']['pos'])) {
-        $vars['query']['sql'][] = '    AND ((srcfeature_name = :ebackbone AND fmin <= :efmin::int) OR srcfeature_name < :ebackbone)';
+        $vars['query']['sql'][] = '    AND ((v.srcfeature_name = :ebackbone AND v.fmin <= :efmin::int) OR v.srcfeature_name < :ebackbone)';
         $vars['query']['args'][':ebackbone'] = $vars['q']['seq_range']['end']['backbone'];
         $vars['query']['args'][':efmin'] = (int) $vars['q']['seq_range']['end']['pos'];
 
@@ -527,7 +528,7 @@ function nd_genotypes_process_query_parameters(&$vars) {
         $vars['defaults']['seq_range']['end']['pos'] = $vars['q']['seq_range']['end']['pos'];
       }
       else {
-        $vars['query']['sql'][] = '    AND (srcfeature_name <= :ebackbone)';
+        $vars['query']['sql'][] = '    AND (v.srcfeature_name <= :ebackbone)';
         $vars['query']['args'][':ebackbone'] = $vars['q']['seq_range']['end']['backbone'];
 
         $vars['defaults']['seq_range']['end']['backbone'] = $vars['q']['seq_range']['end']['backbone'];
@@ -539,7 +540,7 @@ function nd_genotypes_process_query_parameters(&$vars) {
   if (isset($vars['q']['pager_loc']['current'])) {
     if ($vars['q']['pager_loc']['current'] != $vars['q']['pager_loc']['first']) {
       $parts = explode(':', $vars['q']['pager_loc']['current']);
-      $vars['query']['sql'][] = '    AND ((srcfeature_name = :srcfeature AND fmin >= :fmin) OR srcfeature_name > :srcfeature) ';
+      $vars['query']['sql'][] = '    AND ((v.srcfeature_name = :srcfeature AND v.fmin >= :fmin) OR v.srcfeature_name > :srcfeature) ';
       $vars['query']['args'][':srcfeature'] = $parts[0];
       $vars['query']['args'][':fmin'] = $parts[1];
     }
@@ -547,13 +548,13 @@ function nd_genotypes_process_query_parameters(&$vars) {
 
   // --Variant name.
   if (isset($vars['q']['variant_name']) AND !empty($vars['q']['variant_name'])) {
-    $vars['query']['sql'][] = '    AND variant_name IN (:names)';
+    $vars['query']['sql'][] = '    AND v.variant_name IN (:names)';
     $vars['query']['args'][':names'] = $vars['q']['variant_name'];
   }
 
   // --Variant type.
   if (isset($vars['q']['variant_type']) AND !empty($vars['q']['variant_type'])) {
-    $vars['query']['sql'][] = '    AND variant_id IN (SELECT feature_id FROM {feature} WHERE type_id=:variant_type_id)';
+    $vars['query']['sql'][] = '    AND v.variant_id IN (SELECT feature_id FROM {feature} WHERE type_id=:variant_type_id)';
     $vars['query']['args'][':variant_type_id'] = $vars['q']['variant_type'];
   }
 

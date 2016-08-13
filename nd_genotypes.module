@@ -230,10 +230,10 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
       substring(residues from fmin::int-250 for 500) as residues,
       cf.nid,
       cvt.name as type_name
-    FROM featureloc fl
-      LEFT JOIN feature f ON f.feature_id=fl.srcfeature_id
-      LEFT JOIN cvterm cvt ON cvt.cvterm_id=f.type_id
-      LEFT JOIN chado_feature cf ON cf.feature_id=f.feature_id
+    FROM {featureloc} fl
+      LEFT JOIN {feature} f ON f.feature_id=fl.srcfeature_id
+      LEFT JOIN {cvterm} cvt ON cvt.cvterm_id=f.type_id
+      LEFT JOIN [chado_feature] cf ON cf.feature_id=f.feature_id
     WHERE fl.feature_id=:id',
   array(':id' => $variant_id))->fetchObject();
 
