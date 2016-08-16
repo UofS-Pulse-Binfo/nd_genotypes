@@ -8,8 +8,8 @@ Drupal.behaviors.ndGenotypesFeaturePieChart = {
 
     var width = 600,
         height = 250,
-        maxRadius = height / 2,
-        donutWidth = Math.floor(maxRadius/data.length)
+        maxRadius = height / 2 -1,
+        donutWidth = Math.floor(maxRadius/(data.length))
         labelPadding = width - height - 300;
 
     // Retrieve a set of colours to use.
@@ -27,7 +27,7 @@ Drupal.behaviors.ndGenotypesFeaturePieChart = {
     svg.append("circle")
       .attr("cx", 0)
       .attr("cy", 0)
-      .attr("r", maxRadius-1)
+      .attr("r", function() { if (data.length == 1) { return maxRadius+1; } else { return maxRadius-1; } })
       .attr("fill", "#808080");
 
     // Actually draw each ring/donut in the pie chart based on the data provided.
@@ -44,6 +44,17 @@ Drupal.behaviors.ndGenotypesFeaturePieChart = {
 
     // Label the alleles.
     drawAlleleLegend();
+
+    // If there is only a single series then we would like to make this a donot chart.
+    if (data.length == 1) {
+      svg.append("circle")
+        .attr("cx", 0)
+        .attr("cy", 0)
+        .attr("r", donutWidth/3)
+        .attr("fill", "#FFF")
+        .attr("stroke", "#808080")
+        .attr("stroke-width", 2);
+    }
 
     /**
      * This function draws the segments of the pie chart. Each time this function
@@ -72,7 +83,9 @@ Drupal.behaviors.ndGenotypesFeaturePieChart = {
 
       g.append("path")
           .attr("d", arc)
-          .style("fill", function(d) { return color(d.data.label); });
+          .style("fill", function(d) { return color(d.data.label); })
+          .append("svg:title")
+            .text(function(d) { return _data.label + ': ' + d.data.label + ' (' + d.data.num + ' calls)'; });
 
     }
 

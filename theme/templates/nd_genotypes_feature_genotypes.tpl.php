@@ -31,9 +31,9 @@ if (($type == 'marker' OR $type == 'variant') AND $no_genotypes === FALSE) :
 <div class="tripal_feature-data-block-desc tripal-data-block-desc">
   <?php if ($type == 'variant') { ?>
     The current variant has genotypes generated from <?php print sizeof($variant['marker_alleles']); ?> different
-    marker technologies. The distribution of alleles for each tecnology is shown below as
+    marker(s). The distribution of alleles for each marker is shown below as
     one ring composing the pie chart. This allows you to compare the distribution across
-    marker technologies, as well as, get an overall idea of the distribution of alleles.
+    marker(s), as well as, get an overall idea of the distribution of alleles.
   <?php } else { ?>
     The distribution of alleles for the current marker is shown below as
     coloured portions of the pie chart where each colour represents an observed allele.

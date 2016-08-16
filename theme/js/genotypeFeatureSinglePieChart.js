@@ -82,7 +82,9 @@ Drupal.behaviors.ndGenotypesFeaturePieChart = {
 
       g.append("path")
           .attr("d", arc)
-          .style("fill", function(d) { return color(d.data.label); });
+          .style("fill", function(d) { return color(d.data.label); })
+          .append("svg:title")
+            .text(function(d) { return d.data.label + ' (' + d.data.num + ' calls)'; });
 
     }
 
