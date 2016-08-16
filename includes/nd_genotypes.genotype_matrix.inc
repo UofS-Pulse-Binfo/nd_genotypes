@@ -285,10 +285,12 @@ function nd_genotypes_genotype_matrix_get_pager($vars) {
   $query_param = drupal_get_query_parameters();
 
   // Adding the label to give context to the current page.
-  $tmp_start = explode(':', $vars['first_loc']);
-  $tmp_end = explode(':', $vars['last_loc']);
-  if ($tmp_start[0] == $tmp_end[0]) {
-    $pager['label'] = $tmp_start[0] . ':' . $tmp_start[1] . '-' . $tmp_end[1];
+  if ($vars['first_loc'] AND $vars['last_loc']) {
+    $tmp_start = explode(':', $vars['first_loc']);
+    $tmp_end = explode(':', $vars['last_loc']);
+    if ($tmp_start[0] == $tmp_end[0]) {
+      $pager['label'] = $tmp_start[0] . ':' . $tmp_start[1] . '-' . $tmp_end[1];
+    }
   }
 
   // If the pager is not set then we are on the first page...
@@ -391,6 +393,9 @@ function nd_genotypes_genotype_matrix_get_pager($vars) {
   if ($vars['num_rows'] < $vars['max_rows']) {
     $is_last_page = TRUE;
   }
+  if ($vars['next_page_loc'] == NULL) {
+    $is_last_page = TRUE;
+  }
 
   // Provide a link back to the first page.
   if (!$is_first_page) {
@@ -421,7 +426,7 @@ function nd_genotypes_genotype_matrix_get_pager($vars) {
   }
 
   // Add a last link!
-  if (isset($query_param['pager_loc']['last']) AND $query_param['pager_loc']['last'] != $query_param['pager_loc']['current']) {
+  if (isset($query_param['pager_loc']['last']) AND !$is_last_page) {
     $q = $query_param;
     $q['pager_loc']['current'] = $q['pager_loc']['last'];
     unset($q['pager_loc']['previous']);
@@ -462,7 +467,7 @@ function nd_genotypes_process_query_parameters(&$vars) {
   $vars['query']['sql'][] = '    d.nid,';
   $vars['query']['sql'][] = '    call.allele_call as allele';
   $vars['query']['sql'][] = '  FROM {mview_ndg_calls} call';
-  $vars['query']['sql'][] = '    LEFT JOIN {mview_ndg_variants} v ON v.variant_id=call.variant_id'; 
+  $vars['query']['sql'][] = '    LEFT JOIN {mview_ndg_variants} v ON v.variant_id=call.variant_id';
   $vars['query']['sql'][] = '    LEFT JOIN [chado_feature] d ON d.feature_id=v.variant_id';
   $vars['query']['sql'][] = '  WHERE';
 

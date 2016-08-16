@@ -6,11 +6,11 @@ Drupal.behaviors.ndGenotypesFeaturePieChart = {
 
     data = Drupal.settings.nd_genotypes.genotypes;
 
-    var width = 450,
+    var width = 600,
         height = 250,
         maxRadius = height / 2,
         donutWidth = Math.floor(maxRadius/data.length)
-        labelPadding = width - height - 150;
+        labelPadding = width - height - 300;
 
     // Retrieve a set of colours to use.
     var color = d3.scale.ordinal()

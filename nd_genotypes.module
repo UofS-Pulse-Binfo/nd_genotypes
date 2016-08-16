@@ -327,16 +327,16 @@ function nd_genotypes_preprocess_nd_genotypes_feature_genotypes(&$variables) {
   }
 
   $data = array();
-  foreach ($variables['variant']['marker_alleles'] as $type => $alleles) {
-    if ($variables['type'] == 'variant' OR $type == $variables['marker_type']) {
+  foreach ($variables['variant']['marker_alleles'] as $marker_name => $alleles) {
+    if ($variables['type'] == 'variant' OR $marker_name == $variables['node']->feature->name) {
       $tmp = array();
-      $tmp['label'] = $type;
+      $tmp['label'] = $marker_name;
       $tmp['portions'] = array();
       foreach ($alleles as $d) {
         $tmp['portions'][] = array(
           'label' => $d['allele'],
           'num' => $d['num_germplasm'],
-          'class' => 'marker-type'
+          'class' => 'marker-name'
         );
       }
       $data[] = $tmp;
@@ -346,7 +346,7 @@ function nd_genotypes_preprocess_nd_genotypes_feature_genotypes(&$variables) {
   drupal_add_js(array('nd_genotypes' => array('genotypes' => $data)), 'setting');
 
   drupal_add_js('http://d3js.org/d3.v3.js');
-  if (sizeof($data) == 1) {
+  if ($variables['type'] == 'marker') {
     drupal_add_js(drupal_get_path('module','nd_genotypes').'/theme/js/genotypeFeatureSinglePieChart.js');
   }
   else {

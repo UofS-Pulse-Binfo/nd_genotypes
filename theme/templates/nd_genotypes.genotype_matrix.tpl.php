@@ -47,7 +47,7 @@ foreach($resource as $r) {
 
     // Determine the consensus call for each germplasm.
     foreach ($table['rows'][$curr_variant] as $germplasm_id => $alleles) {
-      if (isset($germplasm[ $germplasm_id ])) {
+      if (isset($germplasm[ $germplasm_id ]) AND is_array($alleles)) {
         $consensus_allele = nd_genotype_get_consensus_call($alleles);
         $table['rows'][$curr_variant][$germplasm_id] = array(
           'data' => $consensus_allele,
@@ -70,14 +70,29 @@ foreach($resource as $r) {
 
     // Then fill in the core information.
     if ($r->nid) {
-      $table['rows'][$r->variant_id]['variant_name'] = array('data' => l($r->variant_name, 'node/'.$r->nid, $l_options), 'class' => array('variant_name'));
+      $table['rows'][$r->variant_id]['variant_name'] = array(
+        'data' => l($r->variant_name, 'node/'.$r->nid, $l_options),
+        'class' => array('variant_name')
+      );
     }
     else {
-      $table['rows'][$r->variant_id]['variant_name'] = array('data' => $r->variant_name, 'class' => array('variant_name'));
+      $table['rows'][$r->variant_id]['variant_name'] = array(
+        'data' => $r->variant_name,
+        'class' => array('variant_name')
+      );
     }
-    $table['rows'][$r->variant_id]['srcfeature_name'] = array('data' => $r->srcfeature_name, 'class' => array('position','backbone'));
-    $table['rows'][$r->variant_id]['fmin'] = array('data' => $r->fmin, 'class' => array('position', 'start'));
-    $table['rows'][$r->variant_id]['fmax'] = array('data' => $r->fmax, 'class' => array('position','end'));
+    $table['rows'][$r->variant_id]['srcfeature_name'] = array(
+      'data' => $r->srcfeature_name,
+      'class' => array('position','backbone')
+    );
+    $table['rows'][$r->variant_id]['fmin'] = array(
+      'data' => $r->fmin,
+      'class' => array('position', 'start')
+    );
+    $table['rows'][$r->variant_id]['fmax'] = array(
+      'data' => $r->fmax,
+      'class' => array('position','end')
+    );
   }
 
   // Since we have data for this variant, remove it from the missing list.
@@ -102,12 +117,25 @@ foreach($resource as $r) {
   $num_rows++;
 }
 
+// Determine the consensus call for each germplasm in the last row.
+if (isset($table['rows'][$curr_variant])) {
+  foreach ($table['rows'][$curr_variant] as $germplasm_id => $alleles) {
+    if (isset($germplasm[ $germplasm_id ]) AND is_array($alleles)) {
+      $consensus_allele = nd_genotype_get_consensus_call($alleles);
+      $table['rows'][$curr_variant][$germplasm_id] = array(
+        'data' => $consensus_allele,
+        'class' => array('germplasm', $germplasm[ $germplasm_id ]['class'], 'genotype', $consensus_allele)
+      );
+    }
+  }
+}
+
 // Use the missing lists to warn users but only if the number of results is less than
 // the number of rows for a page.
 // @see POST/Redirect/GET note above: We check here to keep the messages
 // from being duplicated; not to mention, to keep incorrect, stale messages from
 // confusing the user.
-if ($_SERVER['REQUEST_METHOD'] =='GET' AND $query['args'][':germplasm']) {
+if ($_SERVER['REQUEST_METHOD'] =='GET' AND $query['args'][':germplasm'] AND sizeof($table['rows']) > 0) {
   if (sizeof($table['rows']) < $settings['total_num_rows']) {
     if (!empty($missing_list['germplasm'])) {
       foreach ($missing_list['germplasm'] as $germ_id => $v) {

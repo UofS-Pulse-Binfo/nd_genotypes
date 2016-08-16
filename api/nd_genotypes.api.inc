@@ -11,7 +11,7 @@
  *
  * @param $alleles
  *   An array of alleles.
- * @return 
+ * @return
  *   The consensus call.
  */
 function nd_genotype_get_consensus_call($alleles) {
@@ -138,13 +138,13 @@ function nd_genotypes_get_alleles_for_variant($variant_id) {
     v.variant_name,
     v.fmin as start,
     v.fmax as end,
-    call.marker_type,
+    call.marker_name,
     call.allele_call as allele,
     count(*) as num_germplasm
   FROM {mview_ndg_calls} call
     LEFT JOIN {mview_ndg_variants} v ON v.variant_id=call.variant_id
   WHERE v.variant_id=:id
-  GROUP BY v.variant_id, v.variant_name, v.fmin, v.fmax, call.marker_type, call.allele_call";
+  GROUP BY v.variant_id, v.variant_name, v.fmin, v.fmax, call.marker_name, call.allele_call";
   $resource = chado_query($sql, array(':id' => $variant_id))->fetchAll();
 
   foreach ($resource as $r) {
@@ -154,14 +154,17 @@ function nd_genotypes_get_alleles_for_variant($variant_id) {
     $variant['end'] = $r->end;
 
     // Add in the current allele.
-    $variant['alleles'][$r->allele]['allele'] = $r->allele;
-    $variant['alleles'][$r->allele]['num_germplasm'] = $r->num_germplasm;
+    if (isset($variant['alleles'][$r->allele])) {
+      $variant['alleles'][$r->allele]['num_germplasm'] += $r->num_germplasm;
+    }
+    else {
+      $variant['alleles'][$r->allele]['allele'] = $r->allele;
+      $variant['alleles'][$r->allele]['num_germplasm'] = $r->num_germplasm;
+    }
 
     // Add in allele by marker type.
-    if ($r->marker_type != 'All') {
-      $variant['marker_alleles'][$r->marker_type][$r->allele]['allele'] = $r->allele;
-      $variant['marker_alleles'][$r->marker_type][$r->allele]['num_germplasm'] = $r->num_germplasm;
-    }
+    $variant['marker_alleles'][$r->marker_name][$r->allele]['allele'] = $r->allele;
+    $variant['marker_alleles'][$r->marker_name][$r->allele]['num_germplasm'] = $r->num_germplasm;
 
     //Add in the single base nucleotides.
     foreach (str_split($r->allele) as $n) {

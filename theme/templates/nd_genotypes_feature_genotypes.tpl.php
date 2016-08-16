@@ -5,7 +5,7 @@
 $matrix_url = url(
   'chado/genotype/Lens',
   array(
-    'query' => array('variant_name' => array('Chr1p801')),
+    'query' => array('variant_name' => array( $variant['variant_name'] )),
   )
 );
 $variant_url = url(
@@ -35,7 +35,7 @@ if (($type == 'marker' OR $type == 'variant') AND $no_genotypes === FALSE) :
     one ring composing the pie chart. This allows you to compare the distribution across
     marker technologies, as well as, get an overall idea of the distribution of alleles.
   <?php } else { ?>
-    The distribution of alleles for the current marker technology is shown below as
+    The distribution of alleles for the current marker is shown below as
     coloured portions of the pie chart where each colour represents an observed allele.
   <?php } ?>
 </div>
@@ -43,6 +43,8 @@ if (($type == 'marker' OR $type == 'variant') AND $no_genotypes === FALSE) :
 <div id="nd-genotypes-pie-chart"></div>
 
 <div>For germplasm-specific genotype calls: <a href="<?php print $matrix_url; ?>" target="_blank">Genotype Matrix</a>.</div>
-<div>For all marker types at this locus: <a href="<?php print $variant_url; ?>" target="_blank">Variant Page: Genotypes</a>.</div>
+<?php if ($type == 'marker') : ?>
+  <div>For all marker types at this locus: <a href="<?php print $variant_url; ?>" target="_blank">Variant Page: Genotypes</a>.</div>
+<?php endif; ?>
 
 <?php endif; ?>

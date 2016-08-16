@@ -66,6 +66,7 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
       LEFT JOIN {stock} g ON g.stock_id=sr.object_id
       LEFT JOIN {genotype} a ON a.genotype_id=gc.genotype_id
     ORDER BY gc.variant_id ASC, gc.marker_id ASC, g.stock_id ASC
+    LIMIT 2000
     ";
   chado_query("
     INSERT INTO {".$ndg_call."} (
@@ -97,6 +98,7 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
       LEFT JOIN {feature} v ON v.feature_id=call.variant_id
       LEFT JOIN {featureloc} loc ON loc.feature_id=call.variant_id
       LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
+    GROUP BY call.variant_id, v.name, loc.srcfeature_id, b.name, loc.fmin, loc.fmax
   ";
   chado_query("
     INSERT INTO {".$ndg_variants."} (
