@@ -182,9 +182,9 @@ if ($_SERVER['REQUEST_METHOD'] =='GET' AND $query['args'][':germplasm'] AND size
 
   <?php } else { ?>
 
-    <div class="matrix-download">Download:
+    <!-- <div class="matrix-download">Download:
       <?php print l('CSV', 'chado/genotype/'.$genus.'/csv', array('query' => drupal_get_query_parameters(), 'attributes' => array('target' => '_blank'))); ?>
-    </div>
+    </div> -->
     <div class="matrix-proper">
       <?php print theme('table', $table); ?>
     </div>
