@@ -158,6 +158,13 @@ if ($_SERVER['REQUEST_METHOD'] =='GET' AND $query['args'][':germplasm'] AND size
     'query' => $query,
   ));
 }
+
+// Since the germplasm list is absolutely critical to getting results, (if they have
+// parameters but haven't set that (only possibly through links or modifying the URL)
+// we should warn them if it's not set.
+if ($_SERVER['REQUEST_METHOD'] =='GET' AND !$query['args'][':germplasm']) {
+  drupal_set_message('Enter the names of the germplasm you would like to see the genotypes of under "Germplasm" below.', 'warning');
+}
 ?>
 
 <div id="genotype-matrix-<?php print $genus;?>">
