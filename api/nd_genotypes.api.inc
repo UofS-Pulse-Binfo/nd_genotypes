@@ -44,6 +44,27 @@ function tripal_germplasm_has_nd_genotypes($stock_id) {
 }
 
 /**
+ * Determine whether a given stock/germplasm has genotypes in the genotype materialized view.
+ *
+ * @param $stock_id
+ *   The unique ID of the stock you want to check
+ *
+ * @return
+ *   TRUE if there are genotypes available and FALSE otherwise
+ */
+function nd_genotypes_has_genotypes($feature_id) {
+
+  $query = "SELECT count(*) as nd_genotypes FROM {mview_ndg_calls} WHERE variant_id=:id OR marker_id=:id";
+  $result = chado_query($query, array(':id' => $feature_id))->fetchField();
+  if ($result > 0) {
+    return TRUE;
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
  * Retrieve the marker given the variant.
  *
  * @param $variant_id

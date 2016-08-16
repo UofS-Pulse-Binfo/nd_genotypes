@@ -1,0 +1,16 @@
+<?php
+/**
+ *
+ */
+
+/**
+ * Implements hook_install().
+ */
+function nd_genotypes_install() {
+  $ndg_variants = 'mview_ndg_variants';
+  $ndg_call = 'mview_ndg_calls';
+
+  // Create both tables if they don't already exists.
+  nd_genotypes_create_mview_ndg_variants($ndg_variants);
+  nd_genotypes_create_mview_ndg_calls($ndg_call);
+}
