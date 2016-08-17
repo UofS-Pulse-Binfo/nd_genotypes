@@ -38,25 +38,28 @@ $last_loc = NULL;
 $first_loc = NULL;
 $next_page_loc = NULL;
 $num_rows = 0;
-$curr_variant = NULL;
+$curr_row = NULL;
 $l_options = array('attributes' => array( 'target' => '_blank' ));
 foreach($resource as $r) {
 
+  $row_id = $r->srcfeature_name . ':' .$r->fmin . '_' . $r->variant_id;
+
   // If this is the first record of the next row, finish off the last row first!
-  if ($curr_variant != $r->variant_id AND $curr_variant !== NULL) {
+  if ($curr_row != $row_id AND $curr_row !== NULL) {
 
     // Determine the consensus call for each germplasm.
-    foreach ($table['rows'][$curr_variant] as $germplasm_id => $alleles) {
+    foreach ($table['rows'][$curr_row] as $germplasm_id => $alleles) {
       if (isset($germplasm[ $germplasm_id ]) AND is_array($alleles)) {
+
         $consensus_allele = nd_genotype_get_consensus_call($alleles);
-        $table['rows'][$curr_variant][$germplasm_id] = array(
+        $table['rows'][$curr_row][$germplasm_id] = array(
           'data' => $consensus_allele,
           'class' => array('germplasm', $germplasm[ $germplasm_id ]['class'], 'genotype', $consensus_allele)
         );
       }
     }
   }
-  $curr_variant = $r->variant_id;
+  $curr_row = $row_id;
 
   // Save the first location for use with the pager.
   if (!isset($first_loc)) {
@@ -64,32 +67,32 @@ foreach($resource as $r) {
   }
 
   // Initialize the variant if this is the first time we have come across it.
-  if (!isset($table['rows'][$r->variant_id])) {
+  if (!isset($table['rows'][$row_id])) {
     // First initialize the row with empty values.
-    $table['rows'][$r->variant_id] = $template_row;
+    $table['rows'][$row_id] = $template_row;
 
     // Then fill in the core information.
     if ($r->nid) {
-      $table['rows'][$r->variant_id]['variant_name'] = array(
+      $table['rows'][$row_id]['variant_name'] = array(
         'data' => l($r->variant_name, 'node/'.$r->nid, $l_options),
         'class' => array('variant_name')
       );
     }
     else {
-      $table['rows'][$r->variant_id]['variant_name'] = array(
+      $table['rows'][$row_id]['variant_name'] = array(
         'data' => $r->variant_name,
         'class' => array('variant_name')
       );
     }
-    $table['rows'][$r->variant_id]['srcfeature_name'] = array(
+    $table['rows'][$row_id]['srcfeature_name'] = array(
       'data' => $r->srcfeature_name,
       'class' => array('position','backbone')
     );
-    $table['rows'][$r->variant_id]['fmin'] = array(
+    $table['rows'][$row_id]['fmin'] = array(
       'data' => $r->fmin,
       'class' => array('position', 'start')
     );
-    $table['rows'][$r->variant_id]['fmax'] = array(
+    $table['rows'][$row_id]['fmax'] = array(
       'data' => $r->fmax,
       'class' => array('position','end')
     );
@@ -104,7 +107,7 @@ foreach($resource as $r) {
   $num_rows = sizeof($table['rows']);
   if ($num_rows > $settings['total_num_rows']) {
     $next_page_loc = $r->srcfeature_name . ':' . $r->fmin;
-    unset($table['rows'][$r->variant_id]);
+    unset($table['rows'][$row_id]);
     break;
   }
 
@@ -112,14 +115,14 @@ foreach($resource as $r) {
   $last_loc = $r->srcfeature_name . ':' . $r->fmin;
 
   // Save the call. We will determine the consensus and mark it up at the end of the row.
-  $table['rows'][$r->variant_id][$r->germplasm_id][] = $r->allele;
+  $table['rows'][$row_id][$r->germplasm_id][] = $r->allele;
 
   $num_rows++;
 }
 
 // Determine the consensus call for each germplasm in the last row.
-if (isset($table['rows'][$curr_variant])) {
-  foreach ($table['rows'][$curr_variant] as $germplasm_id => $alleles) {
+if (isset($table['rows'][$curr_row])) {
+  foreach ($table['rows'][$curr_row] as $germplasm_id => $alleles) {
     if (isset($germplasm[ $germplasm_id ]) AND is_array($alleles)) {
       $consensus_allele = nd_genotype_get_consensus_call($alleles);
       $table['rows'][$curr_variant][$germplasm_id] = array(
