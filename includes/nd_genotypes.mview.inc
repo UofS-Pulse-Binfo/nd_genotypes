@@ -15,15 +15,16 @@ function nd_genotypes_update_mview_cache() {
   $resource = chado_query('
     WITH RECURSIVE t AS (
       (SELECT type_id
-        FROM {feature}
-        WHERE feature_id IN (SELECT variant_id FROM {mview_ndg_variants})
+        FROM {feature} f
+        LEFT JOIN {mview_ndg_variants} v ON v.variant_id=f.feature_id
         ORDER BY type_id
         LIMIT 1)
       UNION ALL
       SELECT
           (SELECT type_id
-            FROM {feature}
-            WHERE type_id > t.type_id AND feature_id IN (SELECT variant_id FROM {mview_ndg_variants})
+            FROM {feature} f
+            LEFT JOIN {mview_ndg_variants} v ON v.variant_id=f.feature_id
+            WHERE type_id > t.type_id
             ORDER BY type_id
             LIMIT 1)
         FROM t
@@ -62,7 +63,7 @@ function nd_genotypes_update_mview_cache() {
   }
   variable_set('nd_genotypes_marker_types', serialize($types));
 
-  //nd_genotypes_seq_backbones
+  // The backbone names (ie: Chr1, Chr2, etc.).
   $resource = chado_query("
     WITH RECURSIVE t AS (
       (SELECT srcfeature_name
@@ -159,6 +160,33 @@ function nd_genotypes_create_mview_ndg_variants($tablename = 'mview_ndg_variants
   );
 
   chado_create_custom_table( $tablename, $schema );
+}
+
+/**
+ * Create Indexes for the mview_ndg_variants table.
+ *
+ * Note: This is done seperately since it is inefficient to create indexes before bulk
+ * loading the data. Thus we create the table with no indexes or drop the indexes if the
+ * table is pre-existing, load the data and then use this function to add the indexes
+ * after the fact.
+ *
+ * @param $tablename
+ *   The name of the table. This allows you to create hard-partitions for this mview.
+ */
+function nd_genotypes_create_mview_ndg_variants_indexes($tablename = 'mview_ndg_variants') {
+
+  $indexes = array(
+    // CREATE INDEX ndg_variants_loc ON mview_ndg_variants (srcfeature_name ASC, fmin ASC);
+    // Used for paging the genotype matrix as well as restricting to a range.
+    'loc' => array(
+      'columns' => array('srcfeature_name ASC', 'fmin ASC')
+    ),
+  );
+  foreach ($indexes as $name_suffix => $details) {
+    $index_name = str_replace('_','',$tablename) . '_' . $name_suffix;
+    chado_query("CREATE INDEX $index_name ON $tablename (" . implode(', ', $details['columns']) . ')');
+  }
+
 }
 
 /**
@@ -284,10 +312,45 @@ function nd_genotypes_create_mview_ndg_calls($tablename = 'mview_ndg_calls') {
         ),
       ),
     ),
+    // We do not add indexes when creating the table because it slows down bulk
+    // populating of the table. Indexes will be added after the table is sync'd
     'indexes' => array(),
   );
 
   chado_create_custom_table( $tablename, $schema );
+
+}
+
+/**
+ * Create Indexes for the mview_ndg_calls table.
+ *
+ * Note: This is done seperately since it is inefficient to create indexes before bulk
+ * loading the data. Thus we create the table with no indexes or drop the indexes if the
+ * table is pre-existing, load the data and then use this function to add the indexes
+ * after the fact.
+ *
+ * @param $tablename
+ *   The name of the table. This allows you to create hard-partitions for this mview.
+ */
+function nd_genotypes_create_mview_ndg_calls_indexes($tablename = 'mview_ndg_calls') {
+
+  $indexes = array(
+    // CREATE INDEX ndgcalls_variant_id ON mview_ndg_calls (variant_id);
+    // Used for updating the mview_ndg_variants mview to chunk the records.
+    'variant_id' => array(
+      'columns' => array('variant_id')
+    ),
+    // CREATE INDEX ndgcalls_germplasm_id ON mview_ndg_calls (germplasm_id);
+    // Used for the genotype matrix when restricting to germplasm to add.
+    'germplasm_id' => array(
+      'columns' => array('germplasm_id')
+    ),
+  );
+  foreach ($indexes as $name_suffix => $details) {
+    $index_name = str_replace('_','',$tablename) . '_' . $name_suffix;
+    chado_query("CREATE INDEX $index_name ON $tablename (" . implode(', ', $details['columns']) . ')');
+  }
+
 }
 
 /**
@@ -360,10 +423,10 @@ function nd_genotypes_genotype_call_schema_template() {
       ),
     ),
     'indexes' => array(
-      'idx1' => array('variant_id'),
-      'idx2' => array('marker_id'),
-      'idx3' => array('project_id'),
-      'idx4' => array('stock_id'),
+      'genotypecall_variant_id' => array('variant_id'),
+      'genotypecall_marker_id' => array('marker_id'),
+      'genotypecall_project_id' => array('project_id'),
+      'genotypecall_stock_id' => array('stock_id'),
     ),
   );
 }

@@ -35,14 +35,55 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
   $ndg_call = 'mview_ndg_calls';
 
   // Create both tables if they don't already exists.
+  print "\nCreating $ndg_variants if it doesn't already exist...\n";
   nd_genotypes_create_mview_ndg_variants($ndg_variants);
+  print "Creating $ndg_call if it doesn't already exist...\n";
   nd_genotypes_create_mview_ndg_calls($ndg_call);
 
   // And clear them if they do already exist.
+  print "\nTruncating $ndg_variants...\n";
   chado_query("TRUNCATE {".$ndg_variants."}");
+  print "Truncating $ndg_call...\n";
   chado_query("TRUNCATE {".$ndg_call."}");
 
-  // First, populate the mview_ndg_calls table.
+  //-------------------------
+  // mview_ndg_calls
+  print "\nSync'ing genotypes to the mview_ndg_calls mview...\n";
+
+  // Drop all the indexes on the mview to make copying faster.
+  print "\tDropping indexes on mview_ndg_calls...\n";
+  $delete_indexes = <<<'EOT'
+    DO
+      $$BEGIN
+        IF EXISTS (select true from pg_index i where i.indrelid = 'chado.mview_ndg_calls'::regclass and i.indisprimary = false)
+        THEN
+          EXECUTE (
+            SELECT 'DROP INDEX ' || string_agg(indexrelid::regclass::text, ', ')
+            FROM pg_index  i
+              LEFT JOIN pg_depend d ON d.objid = i.indexrelid AND d.deptype = 'i'
+            WHERE i.indrelid = 'chado.mview_ndg_calls'::regclass
+              AND d.objid IS NULL
+          );
+        END IF;
+      END$$;
+EOT;
+  chado_query($delete_indexes);
+  print "\t\tComplete.\n";
+
+  // We would like to chunk the dataset into hopefully reasonable pieces for updating
+  // the materialized view. However, we would also like to avoid sorting first since
+  // the has a large performance hit. Our soluition is to break the dataset by the
+  // allele/genotype for each call. While this makes no sense from a biological standpoint
+  // it is at least something we can assume is present (since calls are genotypes;-) ).
+  // This approach will suffer if there are a large number of alleles (ie: MNPs or indels)
+  // especially if the overall dataset is small. That said it is well suited to SNP data
+  // which we forsee being the bulk of the data.
+  // For this approach we first need to get the list of genotype_ids to use for chunk
+  // delimiters.
+  $genotypes = chado_query('SELECT genotype_id FROM {genotype}')->fetchCol();
+  print "\tDetermined there should be " . sizeof($genotypes) . " chunks.\n";
+
+  // Now, populate the mview_ndg_calls table for each genotype/allele.
   // This is basically a materialized version of the genotype_call table itself :-).
   $query = "
     SELECT
@@ -65,27 +106,90 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
       LEFT JOIN {stock}_relationship sr ON sr.subject_id=s.stock_id AND sr.type_id IN (SELECT cvterm_id FROM cvterm WHERE name='is_extracted_from')
       LEFT JOIN {stock} g ON g.stock_id=sr.object_id
       LEFT JOIN {genotype} a ON a.genotype_id=gc.genotype_id
-    ORDER BY gc.variant_id ASC, gc.marker_id ASC, g.stock_id ASC
-    LIMIT 2000
+    WHERE gc.genotype_id=:id
     ";
-  chado_query("
-    INSERT INTO {".$ndg_call."} (
-      variant_id,
-      marker_id,
-      marker_name,
-      marker_type,
-      stock_id,
-      stock_name,
-      germplasm_id,
-      germplasm_name,
-      project_id,
-      genotype_id,
-      allele_call,
-      marker_data)
-    " . $query);
 
-  // Now, calculate the variant list.
-  // @TODO: Restrict locations to a given assembly.
+  $i = 0;
+
+  foreach ($genotypes as $genotype_id) {
+    $i++;
+
+    print "\tWorking on genotype_id=$genotype_id ($i of $total)...\n";
+
+    // Copy it to a file.
+    print "\t\tCopying to file...\n";
+    $result = chado_query("COPY (" . $query . ") TO '/tmp/mview_ndg_calls.copy'", array(':id' => $genotype_id))->rowCount();
+
+    // Then copy it back into the mview.
+    print "\t\tCopying it into the mview...\n";
+    $result = chado_query("COPY {".$ndg_call."} (
+          variant_id,
+          marker_id,
+          marker_name,
+          marker_type,
+          stock_id,
+          stock_name,
+          germplasm_id,
+          germplasm_name,
+          project_id,
+          genotype_id,
+          allele_call,
+          marker_data) FROM '/tmp/mview_ndg_calls.copy'")->rowCount();
+    print "\t\tFinished $result records.\n";
+  }
+
+  // Create the indexes you dropped earlier.
+  print "\t\Creating Indexes\n";
+  nd_genotypes_create_mview_ndg_calls_indexes($ndg_call);
+
+  //-------------------------
+  // mview_ndg_variants
+  print "\nSync'ing genotypes to the mview_ndg_variants mview...\n";
+
+  // Drop all the indexes on the mview to make copying faster.
+  print "\tDropping indexes on mview_ndg_variants...\n";
+  $delete_indexes = <<<'EOT'
+    DO
+      $$BEGIN
+        IF EXISTS (select true from pg_index i where i.indrelid = 'chado.mview_ndg_variants'::regclass and i.indisprimary = false)
+        THEN
+          EXECUTE (
+            SELECT 'DROP INDEX ' || string_agg(indexrelid::regclass::text, ', ')
+            FROM pg_index  i
+              LEFT JOIN pg_depend d ON d.objid = i.indexrelid AND d.deptype = 'i'
+            WHERE i.indrelid = 'chado.mview_ndg_variants'::regclass
+              AND d.objid IS NULL
+          );
+        END IF;
+      END$$;
+EOT;
+  chado_query($delete_indexes);
+  print "\t\tComplete.\n";
+
+  // We would like to chunk the dataset into hopefully reasonable pieces for updating
+  // the materialized view. However, we would also like to avoid sorting first since
+  // the has a large performance hit. Our soluition is to break the dataset by the
+  // allele/genotype for each call. While this makes no sense from a biological standpoint
+  // it is at least something we can assume is present (since calls are genotypes;-) ).
+  // This approach will suffer if there are a large number of alleles (ie: MNPs or indels)
+  // especially if the overall dataset is small. That said it is well suited to SNP data
+  // which we forsee being the bulk of the data.
+  // For this approach we first need to get the list of genotype_ids to use for chunk
+  // delimiters.
+  $total_min = chado_query('SELECT min(variant_id) FROM {mview_ndg_calls}')->fetchField();
+  $total_max = chado_query('SELECT max(variant_id) FROM {mview_ndg_calls}')->fetchField();
+  // Seems relatively performant at 50 million.
+  $chunk_size = 500000;
+  $num_chunks = 1;
+  $total = $total_max - $total_min;
+  if ($chunk_size <= $total) {
+   $num_chunks = ($total_max-$total_min) / $chunk_size;
+  }
+
+  print "\tDetermined there should be " . ceil($num_chunks) . " chunks.\n";
+
+  // Now, populate the mview_ndg_variants table for each genotype/allele
+  // based on the mview_ndg_calls table :-).
   $query = "
     SELECT
       call.variant_id,
@@ -98,19 +202,43 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
       LEFT JOIN {feature} v ON v.feature_id=call.variant_id
       LEFT JOIN {featureloc} loc ON loc.feature_id=call.variant_id
       LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
-    GROUP BY call.variant_id, v.name, loc.srcfeature_id, b.name, loc.fmin, loc.fmax
-  ";
-  chado_query("
-    INSERT INTO {".$ndg_variants."} (
+    WHERE call.variant_id BETWEEN :min AND :max
+    ";
+
+  $i = 0;
+  $total = $max - $min;
+  for ($min = $total_min; $min < $total_max; $min += $chunk_size) {
+    $max = $min + $chunk_size - 1;
+    $i++;
+
+    print "\tWorking on $min to $max ($i of ".ceil($num_chunks).")...\n";
+
+    // Copy it to a file.
+    print "\t\tCopying to file...\n";
+    $result = chado_query("COPY (" . $query . ") TO '/tmp/mview_ndg_variants.copy'", array(':min' => $min, ':max' => $max))->rowCount();
+
+    // Then we have to collapse it.
+    print "\t\tCollapsing it to unique variants...\n";
+    system('sort --unique --output /tmp/mview_ndg_variants.copy.unique /tmp/mview_ndg_variants.copy');
+
+    // Then copy it back into the mview.
+    print "\t\tCopying it into the mview...\n";
+    $result = chado_query("COPY {".$ndg_variants."} (
       variant_id,
       variant_name,
       srcfeature_id,
       srcfeature_name,
       fmin,
-      fmax)
-    " . $query);
+      fmax) FROM '/tmp/mview_ndg_variants.copy.unique'")->rowCount();
+    print "\t\tFinished $result records.\n";
+  }
+
+  // Create the indexes you dropped earlier.
+  print "\t\Creating Indexes\n";
+  nd_genotypes_create_mview_ndg_variants_indexes();
 
   // Update the cached lists.
+  print "\nUpdating cached lists used for select boxes and what-not\n";
   nd_genotypes_update_mview_cache();
 }
 
