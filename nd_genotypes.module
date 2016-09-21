@@ -56,34 +56,36 @@ function nd_genotypes_menu() {
     'weight' => 4
   );
 
-  // Add Marker x Germplasm Matrix links (1/organism synced)
-  $sql = "
-    SELECT *
-    FROM [chado_organism] CO
-      INNER JOIN {organism} O ON O.organism_id = CO.organism_id
-    ORDER BY O.genus, O.species
-  ";
-  $orgs = chado_query($sql);
-  foreach ($orgs as $organism) {
-    $items['chado/genotype/' . $organism->genus] = array(
-      'title' => $organism->genus . ' Genotypes',
-      'description' => 'Marker by Germplasm Genotypes Search for ' . $organism->genus . ' species.',
-      'page callback' => 'nd_genotype_matrix_page',
-      'page arguments' => array($organism->genus),
-      //'page callback' => 'drupal_get_form',
-      //'page arguments' => array('nd_genotypes_matrix_filter_form', $organism->genus),
-      'access arguments' => array('access content'),
-      'type' => MENU_NORMAL_ITEM,
-      'file' => 'includes/nd_genotypes.genotype_matrix.inc',
-    );
+  if (chado_table_exists('mview_ndg_calls') AND chado_table_exists('mview_ndg_variants')) {
+    // Add Marker x Germplasm Matrix links (1/organism synced)
+    $sql = "
+      SELECT *
+      FROM [chado_organism] CO
+        INNER JOIN {organism} O ON O.organism_id = CO.organism_id
+      ORDER BY O.genus, O.species
+    ";
+    $orgs = chado_query($sql);
+    foreach ($orgs as $organism) {
+      $items['chado/genotype/' . $organism->genus] = array(
+        'title' => $organism->genus . ' Genotypes',
+        'description' => 'Marker by Germplasm Genotypes Search for ' . $organism->genus . ' species.',
+        'page callback' => 'nd_genotype_matrix_page',
+        'page arguments' => array($organism->genus),
+        //'page callback' => 'drupal_get_form',
+        //'page arguments' => array('nd_genotypes_matrix_filter_form', $organism->genus),
+        'access arguments' => array('access content'),
+        'type' => MENU_NORMAL_ITEM,
+        'file' => 'includes/nd_genotypes.genotype_matrix.inc',
+      );
 
-   $items['chado/genotype/' . $organism->genus . '/csv'] = array(
-     'title' => 'Download Genotypes: CSV',
-     'page callback' => 'trpdownload_download_page',
-     'page arguments' => array('genotype_matrix_csv', 4),
-     'access arguments' => array('access content'),
-     'type' => MENU_CALLBACK,
-    );
+     $items['chado/genotype/' . $organism->genus . '/csv'] = array(
+       'title' => 'Download Genotypes: CSV',
+       'page callback' => 'trpdownload_download_page',
+       'page arguments' => array('genotype_matrix_csv', 4),
+       'access arguments' => array('access content'),
+       'type' => MENU_CALLBACK,
+      );
+    }
   }
 
   return $items;
@@ -109,26 +111,28 @@ function nd_genotypes_theme($existing, $type, $theme, $path) {
     'render element' => 'element',
   );
 
-  // This template executes the query as well as building the genotype matrix table.
-  // The filter form is in nd_genotypes_matrix_filter_form().
-  $items['nd_genotype_matrix'] = array(
-    'template' => 'nd_genotypes.genotype_matrix',
-    'path' => $path . '/theme/templates/',
-  );
+  if (chado_table_exists('mview_ndg_calls') AND chado_table_exists('mview_ndg_variants')) {
+    // This template executes the query as well as building the genotype matrix table.
+    // The filter form is in nd_genotypes_matrix_filter_form().
+    $items['nd_genotype_matrix'] = array(
+      'template' => 'nd_genotypes.genotype_matrix',
+      'path' => $path . '/theme/templates/',
+    );
 
-  // Features: Genotype pane
-  $items['nd_genotypes_feature_genotypes'] = array(
-    'variables' => array('node' => NULL),
-    'template' => 'nd_genotypes_feature_genotypes',
-    'path' => "$path/theme/templates",
-  );
+    // Features: Genotype pane
+    $items['nd_genotypes_feature_genotypes'] = array(
+      'variables' => array('node' => NULL),
+      'template' => 'nd_genotypes_feature_genotypes',
+      'path' => "$path/theme/templates",
+    );
 
-  // Features: Marked-up sequence pane
-  $items['nd_genotypes_feature_sequence'] = array(
-    'variables' => array('node' => NULL),
-    'template' => 'nd_genotypes_feature_sequence',
-    'path' => "$path/theme/templates",
-  );
+    // Features: Marked-up sequence pane
+    $items['nd_genotypes_feature_sequence'] = array(
+      'variables' => array('node' => NULL),
+      'template' => 'nd_genotypes_feature_sequence',
+      'path' => "$path/theme/templates",
+    );
+  }
 
   return $items;
 }
@@ -163,36 +167,39 @@ function nd_genotypes_preprocess_nd_genotype_matrix(&$vars) {
  * This is used to attache the Genotypes display to Marker/Variant pages.
  */
 function nd_genotypes_node_view($node, $view_mode, $langcode) {
-  switch ($node->type) {
-    case 'chado_feature':
-      if ($view_mode == 'full' AND in_array($node->feature->type_id->name, array('genetic_marker','SNP','indel'))) {
 
-        // the tripal_natural_diversity module provides a tripal_feature_nd_genotype
-        // template. if the tripal_natural_diversity content is present get rid of it as this
-        // module superceeds it.
-        if (array_key_exists('tripal_feature_nd_genotypes', $node->content)) {
-          unset($node->content['tripal_feature_nd_genotypes']);
-        }
-        if (array_key_exists('tripal_feature_seqence', $node->content)) {
-          unset($node->content['tripal_feature_seqence']);
-        }
+  if (chado_table_exists('mview_ndg_calls') AND chado_table_exists('mview_ndg_variants')) {
+    switch ($node->type) {
+      case 'chado_feature':
+        if ($view_mode == 'full' AND in_array($node->feature->type_id->name, array('genetic_marker','SNP','indel'))) {
 
-       // Add the two genotype specific panes: Genotypes and Sequence.
-       $node->content['nd_genotypes_feature_genotypes'] = array(
-          '#theme' => 'nd_genotypes_feature_genotypes',
-          '#node' => $node,
-          '#tripal_toc_id'    => 'genotypes',
-          '#tripal_toc_title' => 'Genotypes',
-        );
-        // Sequence mark-up page
-        $node->content['nd_genotypes_feature_sequence'] = array(
-          '#theme' => 'nd_genotypes_feature_sequence',
-          '#node' => $node,
-          '#tripal_toc_id'    => 'sequence',
-          '#tripal_toc_title' => 'Sequence',
-        );
-      }
-    break;
+          // the tripal_natural_diversity module provides a tripal_feature_nd_genotype
+          // template. if the tripal_natural_diversity content is present get rid of it as this
+          // module superceeds it.
+          if (array_key_exists('tripal_feature_nd_genotypes', $node->content)) {
+            unset($node->content['tripal_feature_nd_genotypes']);
+          }
+          if (array_key_exists('tripal_feature_seqence', $node->content)) {
+            unset($node->content['tripal_feature_seqence']);
+          }
+
+         // Add the two genotype specific panes: Genotypes and Sequence.
+         $node->content['nd_genotypes_feature_genotypes'] = array(
+            '#theme' => 'nd_genotypes_feature_genotypes',
+            '#node' => $node,
+            '#tripal_toc_id'    => 'genotypes',
+            '#tripal_toc_title' => 'Genotypes',
+          );
+          // Sequence mark-up page
+          $node->content['nd_genotypes_feature_sequence'] = array(
+            '#theme' => 'nd_genotypes_feature_sequence',
+            '#node' => $node,
+            '#tripal_toc_id'    => 'sequence',
+            '#tripal_toc_title' => 'Sequence',
+          );
+        }
+      break;
+    }
   }
 }
 
