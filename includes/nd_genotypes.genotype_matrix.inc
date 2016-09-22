@@ -596,7 +596,7 @@ function nd_genotypes_process_query_parameters(&$vars) {
   //}
 
   // Finish off the query.
-  $vars['query']['sql'][] = '  ORDER BY srcfeature_name ASC, fmin ASC';
+  $vars['query']['sql'][] = '  ORDER BY srcfeature_name ASC, fmin ASC, variant_name ASC';
 
   // Set the defaults for all other fields in the form.
   $fields = $vars['q'];

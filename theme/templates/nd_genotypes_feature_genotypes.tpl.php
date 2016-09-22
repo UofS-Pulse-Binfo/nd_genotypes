@@ -2,6 +2,9 @@
 /**
  *
  */
+
+if (($type == 'marker' OR $type == 'variant') AND $no_genotypes === FALSE) :
+
 $matrix_url = url(
   'chado/genotype/Lens',
   array(
@@ -14,8 +17,6 @@ $variant_url = url(
     'query' => array('pane' => 'genotypes'),
   )
 );
-
-if (($type == 'marker' OR $type == 'variant') AND $no_genotypes === FALSE) :
 ?>
 
 <style>
