@@ -376,13 +376,16 @@ function nd_genotypes_genotype_matrix_get_pager($vars) {
         }
       }
     }
+    $query['sql'][] = '    AND v.srcfeature_name = :srcfeature';
     $query['sql'][] = '  GROUP BY srcfeature_name, fmin';
     // We reverse the ordering so that we can travel back 100 records. Unfortunatly
     // a negative offset is not aloud so this is the equivalent.
-    $query['sql'][] = '  ORDER BY srcfeature_name DESC, fmin DESC';
+    $query['sql'][] = '  ORDER BY fmin DESC';
     $query['sql'][] = '  OFFSET '.($vars['max_rows']-1).' LIMIT 1';
     // Then remove the pager args.
     unset($query['args'][':srcfeature'], $query['args'][':fmin']);
+    // @TODO: not Hard-code
+    $query['args'][':srcfeature'] = 'Chr9';
 
     $lastest_loc = chado_query(implode(" \n",$query['sql']),
       $query['args'])->fetchField();
@@ -471,6 +474,8 @@ function nd_genotypes_process_query_parameters(&$vars) {
   $vars['query']['sql'][] = '    LEFT JOIN [chado_feature] d ON d.feature_id=v.variant_id';
   $vars['query']['sql'][] = '  WHERE';
 
+  $order_by = 'srcfeature_name ASC, fmin ASC';
+
   // --Germplasm.
   if (isset($vars['q']['germplasm'])) {
     foreach ($vars['q']['germplasm'] as $germ_id) {
@@ -541,20 +546,11 @@ function nd_genotypes_process_query_parameters(&$vars) {
     }
   }
 
-  // --Pager.
-  if (isset($vars['q']['pager_loc']['current'])) {
-    if ($vars['q']['pager_loc']['current'] != $vars['q']['pager_loc']['first']) {
-      $parts = explode(':', $vars['q']['pager_loc']['current']);
-      $vars['query']['sql'][] = '    AND ((v.srcfeature_name = :srcfeature AND v.fmin >= :fmin) OR v.srcfeature_name > :srcfeature) ';
-      $vars['query']['args'][':srcfeature'] = $parts[0];
-      $vars['query']['args'][':fmin'] = $parts[1];
-    }
-  }
-
   // --Variant name.
   if (isset($vars['q']['variant_name']) AND !empty($vars['q']['variant_name'])) {
     $vars['query']['sql'][] = '    AND v.variant_name IN (:names)';
     $vars['query']['args'][':names'] = $vars['q']['variant_name'];
+    $vars['defaults']['variant_name'] = $vars['q']['variant_name'];
   }
 
   // --Variant type.
@@ -595,8 +591,26 @@ function nd_genotypes_process_query_parameters(&$vars) {
     //$adtl_args[':marker_type'] = $get['marker_type'];
   //}
 
+  // --Pager.
+  if (isset($vars['q']['pager_loc']['current'])) {
+    if ($vars['q']['pager_loc']['current'] != $vars['q']['pager_loc']['first']) {
+      $parts = explode(':', $vars['q']['pager_loc']['current']);
+      $vars['query']['sql'][] = '    AND ((v.srcfeature_name = :srcfeature AND v.fmin >= :fmin) OR v.srcfeature_name > :srcfeature) ';
+      $vars['query']['args'][':srcfeature'] = $parts[0];
+      $vars['query']['args'][':fmin'] = $parts[1];
+    }
+  }
+  // We want to ensure that if we are only filtering by germplasm... just start with
+  // the first chromosome for speed reasons.
+  elseif (isset($vars['defaults']['germ']) AND sizeof($vars['defaults']) == 1) {
+    $vars['query']['sql'][] = '    AND v.srcfeature_name = :srcfeature';
+    // @TODO: not Hard-code
+    $vars['query']['args'][':srcfeature'] = 'Chr1';
+    $order_by = 'fmin ASC';
+  }
+
   // Finish off the query.
-  $vars['query']['sql'][] = '  ORDER BY srcfeature_name ASC, fmin ASC, variant_name ASC';
+  $vars['query']['sql'][] = '  ORDER BY ' . $order_by;
 
   // Set the defaults for all other fields in the form.
   $fields = $vars['q'];
@@ -605,5 +619,4 @@ function nd_genotypes_process_query_parameters(&$vars) {
     // We will validate it at the database layer using placeholders.
     $vars['defaults'][$field] = $value;
   }
-
 }

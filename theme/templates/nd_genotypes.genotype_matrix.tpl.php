@@ -125,7 +125,7 @@ if (isset($table['rows'][$curr_row])) {
   foreach ($table['rows'][$curr_row] as $germplasm_id => $alleles) {
     if (isset($germplasm[ $germplasm_id ]) AND is_array($alleles)) {
       $consensus_allele = nd_genotype_get_consensus_call($alleles);
-      $table['rows'][$curr_variant][$germplasm_id] = array(
+      $table['rows'][$curr_row][$germplasm_id] = array(
         'data' => $consensus_allele,
         'class' => array('germplasm', $germplasm[ $germplasm_id ]['class'], 'genotype', $consensus_allele)
       );

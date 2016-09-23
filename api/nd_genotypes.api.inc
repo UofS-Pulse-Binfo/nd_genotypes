@@ -388,14 +388,11 @@ function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end) 
       cf.nid as variant_nid,
       v.fmin as start,
       v.fmax as end,
-      call.allele_call as allele,
-      count(*) as num_germplasm
+      call.allele_call as allele
     FROM {mview_ndg_calls} call
     LEFT JOIN {mview_ndg_variants} v ON V.variant_id=call.variant_id
     LEFT JOIN [chado_feature] cf ON cf.feature_id=v.variant_id
     WHERE srcfeature_name=:backbone AND fmin >= :min
-    GROUP BY v.variant_id, v.variant_name, cf.nid, v.fmin, v.fmax, call.allele_call
-    ORDER BY fmin ASC
     LIMIT ".$limit;
   $resource = chado_query($sql, array(':backbone' => $srcfeature_name, ':min' => $start));
 
@@ -426,7 +423,12 @@ function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end) 
       $variants[$r->variant_id]['end'] = $r->end;
       // Add in the current allele.
       $variants[$r->variant_id]['alleles'][$r->allele]['allele'] = $r->allele;
-      $variants[$r->variant_id]['alleles'][$r->allele]['num_germplasm'] = $r->num_germplasm;
+      if (isset($variants[$r->variant_id]['alleles'][$r->allele]['num_germplasm'])) {
+        $variants[$r->variant_id]['alleles'][$r->allele]['num_germplasm']++;
+      }
+      else {
+        $variants[$r->variant_id]['alleles'][$r->allele]['num_germplasm'] = 1;
+      }
 
       //Add in the single base nucleotides.
       foreach (str_split($r->allele) as $n) {

@@ -1,5 +1,5 @@
 /**
- *
+ * @todo: make series labels URL links.
  */
 Drupal.behaviors.ndGenotypesFeaturePieChart = {
   attach: function (context, settings) {

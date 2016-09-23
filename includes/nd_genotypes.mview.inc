@@ -181,6 +181,11 @@ function nd_genotypes_create_mview_ndg_variants_indexes($tablename = 'mview_ndg_
     'loc' => array(
       'columns' => array('srcfeature_name ASC', 'fmin ASC')
     ),
+    // CREATE INDEX ndgvariants_variant_id ON mview_ndg_variants (variant_id);
+    // Used for variant/marker pages when selecting allele calls.
+    'variant_id' => array(
+      'columns' => array('variant_id')
+    ),
   );
   foreach ($indexes as $name_suffix => $details) {
     $index_name = str_replace('_','',$tablename) . '_' . $name_suffix;
