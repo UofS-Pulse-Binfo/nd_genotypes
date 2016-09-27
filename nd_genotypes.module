@@ -141,16 +141,7 @@ function nd_genotypes_theme($existing, $type, $theme, $path) {
  * Simple function to render the genotype matrix based on the template file.
  */
 function nd_genotype_matrix_page($genus) {
-  return theme('nd_genotype_matrix', array('genus' => $genus));
-}
-
-/**
- * Preprocess hook for nd_genotypes.genotype_matrix.tpl.php
- *
- * This function processes data from the URL into a more usable form. Each key in the
- * $vars array is made available as a variable in the template file.
- */
-function nd_genotypes_preprocess_nd_genotype_matrix(&$vars) {
+  $vars = array('genus' => $genus);
 
   // Add the CSS.
   drupal_add_css(drupal_get_path('module', 'nd_genotypes') . '/theme/css/nd_genotype_matrix.css');
@@ -158,9 +149,25 @@ function nd_genotypes_preprocess_nd_genotype_matrix(&$vars) {
   // Save the query paramters.
   $vars['q'] = drupal_get_query_parameters();
 
+  // Process the query paramters to determine the defaults for the filter form
+  // as well as to isolate the values that are needed to retrieve the data.
   nd_genotypes_process_query_parameters($vars);
 
+  // Actually query whatever storage method you are currently using and retrieve the
+  // data needed for the current page of the matrix.
+  // Currently there is only one backend supported (postgresql: chado) so we will just
+  // use it but things have been set-up this way to facilitate use of other backends
+  // in the future as needed or desired.
+  // ASSUMPTION: the following function should return a Variant X Germplasm Grid stored
+  // in a 'data' associative array and a list of variant details in a 'variants'
+  // associative array.
+  if ($_SERVER['REQUEST_METHOD'] =='GET') {
+    nd_genotypes_retrive_matrix_postgresql($vars);
+  }
+
+  return theme('nd_genotype_matrix', $vars);
 }
+
 
 /**
  * Implements hook_node_view().

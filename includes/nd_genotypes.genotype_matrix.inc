@@ -174,6 +174,7 @@ function nd_genotypes_matrix_filter_form_validate($form, $form_state) {
       form_set_error('seq_range][end][backbone', 'The end position must be greater than the start position.');
     }
     if ($form_state['values']['seq_range']['start']['backbone'] == $form_state['values']['seq_range']['end']['backbone']
+      AND !empty($form_state['values']['seq_range']['end']['pos'])
       AND $form_state['values']['seq_range']['start']['pos'] > $form_state['values']['seq_range']['end']['pos']) {
       form_set_error('seq_range][end][pos', 'The end position must be greater than the start position.');
     }
@@ -202,7 +203,7 @@ function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
   $values = $form_state['values'];
 
   // Unset non-field values.
-  unset($values['submit'], $values['form_build_id'], $values['form_token'], $values['form_id'], $values['op']);
+  unset($values['submit'], $values['form_build_id'], $values['form_token'], $values['form_id'], $values['op'], $values['add']);
 
   // Handle germplasm.
   $query = array();
@@ -258,6 +259,9 @@ function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
     }
   }
 
+  // Initializing paging.
+  $query['page'] = 1;
+
   $form_state['redirect'] = array('chado/genotype/Lens', array('query' => $query));
 }
 
@@ -277,7 +281,7 @@ function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
  * @return
  *   An array of URLs. For more information see theme_genotype_matrix_pager() as the
  *   results of this function are expected to be passed directly to that one.
- */
+ *
 function nd_genotypes_genotype_matrix_get_pager($vars) {
 
   $pager = array('label' => $vars['first_loc'].'-'.$vars['last_loc']);
@@ -437,15 +441,16 @@ function nd_genotypes_genotype_matrix_get_pager($vars) {
   }
 
   return $pager;
-}
+}*/
 
 /**
- *
+ * This function processes the query parameters for the genotype matrix to determine
+ * defaults for the filter form and parameters for the query.
  */
 function nd_genotypes_process_query_parameters(&$vars) {
 
   // Initialize some defaults.
-  $vars['query'] = array('sql' => array(), 'args' => array(':germplasm' => array()));
+  $vars['query_args'] = array('germplasm_id' => array());
   $vars['germplasm'] = array();
   $vars['defaults'] = array();
 
@@ -458,24 +463,6 @@ function nd_genotypes_process_query_parameters(&$vars) {
   );
   $vars['template_row'] = array('variant_name' => '', 'srcfeature_name' => '', 'fmin' => '', 'fmax' => '');
 
-  // Start the query.
-  $vars['query']['sql'][] = 'SELECT';
-  $vars['query']['sql'][] = '    v.variant_id,';
-  $vars['query']['sql'][] = '    v.variant_name,';
-  $vars['query']['sql'][] = '    v.srcfeature_name,';
-  $vars['query']['sql'][] = '    v.fmin,';
-  $vars['query']['sql'][] = '    v.fmax,';
-  $vars['query']['sql'][] = '    call.germplasm_id,';
-  $vars['query']['sql'][] = '    call.germplasm_name,';
-  $vars['query']['sql'][] = '    d.nid,';
-  $vars['query']['sql'][] = '    call.allele_call as allele';
-  $vars['query']['sql'][] = '  FROM {mview_ndg_calls} call';
-  $vars['query']['sql'][] = '    LEFT JOIN {mview_ndg_variants} v ON v.variant_id=call.variant_id';
-  $vars['query']['sql'][] = '    LEFT JOIN [chado_feature] d ON d.feature_id=v.variant_id';
-  $vars['query']['sql'][] = '  WHERE';
-
-  $order_by = 'srcfeature_name ASC, fmin ASC';
-
   // --Germplasm.
   if (isset($vars['q']['germplasm'])) {
     foreach ($vars['q']['germplasm'] as $germ_id) {
@@ -484,63 +471,59 @@ function nd_genotypes_process_query_parameters(&$vars) {
       $s = chado_query('SELECT name, organism_id FROM {stock} WHERE stock_id=:id',
         array(':id' => $germ_id))->fetchObject();
 
-      // Save details for later use.
-      $vars['germplasm'][$germ_id] = array(
-        'object' => $s,
-        'name' => $s->name,
-        'class' => strtolower(drupal_clean_css_identifier( $s->name )),
-      );
+      if ($s) {
+        // Save details for later use.
+        $vars['germplasm'][$germ_id] = array(
+          'object' => $s,
+          'name' => $s->name,
+          'class' => strtolower(drupal_clean_css_identifier( $s->name )),
+        );
 
-      // Add to the header and template row.
-      $vars['header'][$germ_id] = array('data' => $s->name, 'class' => array('germplasm', $vars['germplasm'][$germ_id]['class']));
-      $vars['template_row'][$germ_id] = '';
+        // Add to the header and template row.
+        $vars['header'][$germ_id] = array('data' => $s->name, 'class' => array('germplasm', $vars['germplasm'][$germ_id]['class']));
+        $vars['template_row'][$germ_id] = '';
 
-      // Add to the query.
-      $vars['query']['args'][':germplasm'][] = $germ_id;
+        // Add to the query.
+        $vars['query_args']['germplasm_id'][] = $germ_id;
 
-      // Save as defaults for use in the form.
-      $vars['defaults']['germ']['existing'][] = array(
-        'stock_id' => $germ_id,
-        'organism_id' => $s->organism_id,
-        'stock_name' => $s->name,
-      );
+        // Save as defaults for use in the form.
+        $vars['defaults']['germ']['existing'][] = array(
+          'stock_id' => $germ_id,
+          'organism_id' => $s->organism_id,
+          'stock_name' => $s->name,
+        );
+      }
+      else {
+        drupal_set_message('Unable to find germplasm.', 'error');
+      }
     }
-
-    // Add germplasm to the query.
-    $vars['query']['sql'][] = '   call.germplasm_id IN (:germplasm)';
   }
 
   // --Sequence Range.
   if (isset($vars['q']['seq_range'])) {
     if (isset($vars['q']['seq_range']['start']['backbone'])) {
       if (isset($vars['q']['seq_range']['start']['pos'])) {
-        $vars['query']['sql'][] = '    AND ((v.srcfeature_name = :sbackbone AND v.fmin >= :sfmin::int) OR v.srcfeature_name > :sbackbone)';
-        $vars['query']['args'][':sbackbone'] = $vars['q']['seq_range']['start']['backbone'];
-        $vars['query']['args'][':sfmin'] = (int) $vars['q']['seq_range']['start']['pos'];
+        $vars['query_args']['start_backbone'] = $vars['q']['seq_range']['start']['backbone'];
+        $vars['query_args']['start_pos'] = (int) $vars['q']['seq_range']['start']['pos'];
 
         $vars['defaults']['seq_range']['start']['backbone'] = $vars['q']['seq_range']['start']['backbone'];
         $vars['defaults']['seq_range']['start']['pos'] = $vars['q']['seq_range']['start']['pos'];
       }
       else {
-        $vars['query']['sql'][] = '    AND (v.srcfeature_name >= :sbackbone)';
-        $vars['query']['args'][':sbackbone'] = $vars['q']['seq_range']['start']['backbone'];
-
+        $vars['query_args']['start_backbone'] = $vars['q']['seq_range']['start']['backbone'];
         $vars['defaults']['seq_range']['start']['backbone'] = $vars['q']['seq_range']['start']['backbone'];
       }
     }
     if (isset($vars['q']['seq_range']['end']['backbone'])) {
       if (isset($vars['q']['seq_range']['end']['pos'])) {
-        $vars['query']['sql'][] = '    AND ((v.srcfeature_name = :ebackbone AND v.fmin <= :efmin::int) OR v.srcfeature_name < :ebackbone)';
-        $vars['query']['args'][':ebackbone'] = $vars['q']['seq_range']['end']['backbone'];
-        $vars['query']['args'][':efmin'] = (int) $vars['q']['seq_range']['end']['pos'];
+        $vars['query_args']['end_backbone'] = $vars['q']['seq_range']['end']['backbone'];
+        $vars['query_args']['end_pos'] = (int) $vars['q']['seq_range']['end']['pos'];
 
         $vars['defaults']['seq_range']['end']['backbone'] = $vars['q']['seq_range']['end']['backbone'];
         $vars['defaults']['seq_range']['end']['pos'] = $vars['q']['seq_range']['end']['pos'];
       }
       else {
-        $vars['query']['sql'][] = '    AND (v.srcfeature_name <= :ebackbone)';
-        $vars['query']['args'][':ebackbone'] = $vars['q']['seq_range']['end']['backbone'];
-
+        $vars['query_args']['end_backbone'] = $vars['q']['seq_range']['end']['backbone'];
         $vars['defaults']['seq_range']['end']['backbone'] = $vars['q']['seq_range']['end']['backbone'];
       }
     }
@@ -548,69 +531,9 @@ function nd_genotypes_process_query_parameters(&$vars) {
 
   // --Variant name.
   if (isset($vars['q']['variant_name']) AND !empty($vars['q']['variant_name'])) {
-    $vars['query']['sql'][] = '    AND v.variant_name IN (:names)';
-    $vars['query']['args'][':names'] = $vars['q']['variant_name'];
+    $vars['query_args']['variant_name'] = $vars['q']['variant_name'];
     $vars['defaults']['variant_name'] = $vars['q']['variant_name'];
   }
-
-  // --Variant type.
-  if (isset($vars['q']['variant_type']) AND !empty($vars['q']['variant_type'])) {
-    $vars['query']['sql'][] = '    AND v.variant_id IN (SELECT feature_id FROM {feature} WHERE type_id=:variant_type_id)';
-    $vars['query']['args'][':variant_type_id'] = $vars['q']['variant_type'];
-  }
-
-  // -- Marker Type. (also applies to filtering by project).
-  // This is much more complicated then previously thought. We cannot simply return the
-  // consensus call computed across all data for positions with at least one call from
-  // the specified technology because that is very misleading. Instead we need a way to
-  // compute a separate consensus call per technology in addition to the master consensus
-  // call. This allows us to simply choose the consensus call for a given technology
-  // when asked for it.
-  // One way to pull out such a consensus might be to use the new PostgreSQL 9.4
-  // FILTER functionality which allows you to filter an aggregated set in place.
-  // Unfortunatly this doesn't extend well to an array per technology since you
-  // need to hard-code the where clause.
-  /* @code
-  SELECT gc.variant_id, array_agg(g.description) as alleles,
-    array_agg(g.description) FILTER(WHERE stock_id=82) stock_82
-  FROM genotype_call gc
-  LEFT JOIN genotype g ON g.genotype_id=gc.genotype_id
-  GROUP BY gc.variant_id LIMIT 5;
- variant_id |             alleles             | stock_82
-------------+---------------------------------+----------
-    1094657 | {CC,CC,CC,GG,GG,CC,CG,CC,CC,CC} | {CC}
-    1094659 | {TT,TT,TC,TT,CC,TC,TC,TT,CC,CC} | {CC}
-    1094661 | {AA,GG,AA,AG,AA,AA,AA,AA,AA,AA} | {AA}
-    1094663 | {TT,AT,AT,AT,AA,TT,AA,AA,AA,AA} | {AA}
-    1094665 | {AG,GG,AA,AG,AA,AG,AA,GG,AA,GG} | {AA}
-  */
-  //if (isset($get['marker_type']) AND !empty($get['marker_type'])) {
-    //$adtl_where[] = 'markers::bigint[] <@ (SELECT array_agg(feature_id) FROM {featureprop} WHERE type_id=2534 AND value=:marker_type GROUP BY type_id)';
-    //$joins = ' LEFT JOIN chado.featureprop ON ARRAY[featureprop.feature_id] <@ genotype_mview.markers::bigint[]';
-    //$adtl_where[] = '(SELECT value from {featureprop} WHERE feature_id = ANY(genotype_mview.markers::bigint[]))=:marker_type';
-    //$adtl_args[':marker_type'] = $get['marker_type'];
-  //}
-
-  // --Pager.
-  if (isset($vars['q']['pager_loc']['current'])) {
-    if ($vars['q']['pager_loc']['current'] != $vars['q']['pager_loc']['first']) {
-      $parts = explode(':', $vars['q']['pager_loc']['current']);
-      $vars['query']['sql'][] = '    AND ((v.srcfeature_name = :srcfeature AND v.fmin >= :fmin) OR v.srcfeature_name > :srcfeature) ';
-      $vars['query']['args'][':srcfeature'] = $parts[0];
-      $vars['query']['args'][':fmin'] = $parts[1];
-    }
-  }
-  // We want to ensure that if we are only filtering by germplasm... just start with
-  // the first chromosome for speed reasons.
-  elseif (isset($vars['defaults']['germ']) AND sizeof($vars['defaults']) == 1) {
-    $vars['query']['sql'][] = '    AND v.srcfeature_name = :srcfeature';
-    // @TODO: not Hard-code
-    $vars['query']['args'][':srcfeature'] = 'Chr1';
-    $order_by = 'fmin ASC';
-  }
-
-  // Finish off the query.
-  $vars['query']['sql'][] = '  ORDER BY ' . $order_by;
 
   // Set the defaults for all other fields in the form.
   $fields = $vars['q'];
@@ -618,5 +541,145 @@ function nd_genotypes_process_query_parameters(&$vars) {
   foreach ($fields as $field => $value) {
     // We will validate it at the database layer using placeholders.
     $vars['defaults'][$field] = $value;
+    $vars['query_args'][$field] = $value;
   }
+}
+
+/**
+ *
+ */
+function nd_genotypes_retrive_matrix_postgresql(&$vars) {
+  $vars['variants'] = array();
+  $vars['data'] = array();
+
+  //-------------------------
+  //  First, grab the variants.
+
+  // Compile all the parameters we will use when grabbing the calls so that we can restrict
+  // the variant list to those that will have data once we do retrieve the calls.
+  $query_args = $vars['query_args'];
+  $call = $variant = $call_args = $variant_args = array();
+
+  // Sequence Ranges:
+  // First get the arguements. There must always be a backbone and fmin even if the user
+  // did not provide one.
+  if (isset($query_args['start_backbone'])) {
+    if (isset($query_args['start_pos'])) {
+      $variant_args[':sbackbone'] = $query_args['start_backbone'];
+      $variant_args[':sfmin'] = (int) $query_args['start_pos'];
+    }
+    else {
+      $variant_args[':sbackbone'] = $query_args['start_backbone'];
+      $variant_args[':sfmin'] = 1;
+    }
+    unset($query_args['start_backbone'], $query_args['start_pos']);
+  }
+  if (isset($query_args['end_backbone'])) {
+    if (isset($query_args['end_pos'])) {
+      $variant_args[':ebackbone'] = $query_args['end_backbone'];
+      $variant_args[':efmin'] = (int) $query_args['end_pos'];
+    }
+    else {
+      $variant_args[':ebackbone'] = $query_args['end_backbone'];
+      // @TODO: Switch to bigints then change this value to match the largest bigint.
+      $variant_args[':efmin'] = 2147483645;
+    }
+    unset($query_args['end_backbone'], $query_args['end_pos']);
+  }
+  // Now add the query where condition.
+  if (isset($variant_args[':sbackbone']) AND isset($variant_args[':ebackbone'])) {
+    $variant[] = 'ROW(v.srcfeature_name, v.fmin) BETWEEN ROW(:sbackbone, :sfmin) AND ROW(:ebackbone,:efmin)';
+  }
+  elseif (isset($variant_args[':sbackbone'])) {
+    $variant[] = 'ROW(v.srcfeature_name, v.fmin) >= ROW(:sbackbone, :sfmin)';
+  }
+  elseif (isset($variant_args[':ebackbone'])) {
+    $variant[] = 'ROW(v.srcfeature_name, v.fmin) <= ROW(:ebackbone, :efmin)';
+  }
+
+  // Variant Type:
+  if (isset($query_args['variant_type'])) {
+    $variant[] = 'EXISTS (SELECT true FROM {feature} f WHERE type_id=:variant_type AND f.feature_id=v.variant_id)';
+    $variant_args[':variant_type'] = $query_args['variant_type'];
+    unset($query_args['variant_type']);
+  }
+
+  // Variant Name:
+  if (isset($query_args['variant_name'])) {
+    $num_names = sizeof($query_args['variant_name']);
+    if ($num_names <=100) {
+      $variant[] = "variant_name IN (VALUES('" . implode("'), ('", $query_args['variant_name']) . "'))";
+      //$variant_args[':variant_names'] = $query_args['variant_name'];
+      unset($query_args['variant_name']);
+    }
+    else {
+      $variant[] = "variant_name IN (VALUES('" . implode("'), ('", $query_args['variant_name']) . "'))";
+      //$variant_args[':variant_names'] = $query_args['variant_name'];
+      unset($query_args['variant_name']);
+    }
+  }
+
+  // Germplasm:
+  if (isset($query_args['germplasm_id']) AND !empty($query_args['germplasm_id'])) {
+    $call[] = 'germplasm_id IN (:germplasm_ids)';
+    $call_args[':germplasm_ids'] = $query_args['germplasm_id'];
+    unset($query_args['germplasm_id']);
+  }
+  else {
+    return FALSE;
+  }
+
+  // Now determine the query.
+  $sql = "SELECT v.*, cf.nid \n"
+       . "FROM {mview_ndg_variants} v \n"
+       . "  LEFT JOIN [chado_feature] cf ON cf.feature_id=v.variant_id "
+       . "WHERE \n";
+
+  // Add in conditions on the variants table.
+  if ($variant) {
+    $sql .= implode("\n  AND ",$variant) . "\n  AND ";
+  }
+
+  // Add in conditions on the call table.
+  $sql .= "EXISTS ( \n"
+       . "    SELECT true \n"
+       . "    FROM {mview_ndg_calls} call \n"
+       . "    WHERE \n"
+       . "      " . implode("\n      AND ", $call) .  "\n"
+       . "  ) \n";
+  // Order.
+  $sql .= "\nORDER BY srcfeature_name ASC, fmin ASC \n";
+
+  // Limit.
+  if (isset($query_args['page'])) {
+    if ($query_args['page'] == 1) {
+      $sql .= "LIMIT 100";
+    }
+    elseif (is_numeric($query_args['page'])) {
+      $sql .= "OFFSET " . (100 * ($query_args['page'] - 1)) . " LIMIT 100";
+    }
+  }
+
+  $args = array_merge($call_args, $variant_args);
+  $resource = chado_query($sql, $args);
+
+  //dpm(array('sql' => $sql, 'args' => $args),'Variant Query');
+  $ids = array(); //Keep track of variant_ids to grab calls for.
+  foreach ($resource as $r) {
+    $row_id = $r->srcfeature_name . ':' .$r->fmin . '_' . $r->variant_id;
+    $vars['variants'][$row_id] = $r;
+    $ids[] = $r->variant_id;
+  }
+
+  // Now grab the allele calls.
+  $sql = "SELECT variant_id, germplasm_id, allele_call \n"
+        ."FROM unnest(ARRAY[" . implode(',',$ids) . "]) variant_id\n"
+        ."JOIN chado.mview_ndg_calls call USING(variant_id)\n"
+        ."WHERE " . implode("\n  AND ",$call) . "\n";
+  //dpm(array('sql' => $sql, 'args' => $call_args), 'Call Query');
+  $resource = db_query($sql, $call_args);
+  foreach($resource as $r) {
+    $vars['data'][$r->variant_id][$r->germplasm_id][] = $r->allele_call;
+  }
+
 }
