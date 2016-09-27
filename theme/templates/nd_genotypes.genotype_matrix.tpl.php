@@ -18,6 +18,7 @@ $missing_list['variants'] = (isset($defaults['variant_name'])) ? array_combine($
 // Generate the table rows.
 $l_options = array('attributes' => array( 'target' => '_blank' ));
 $num_rows = 0;
+$first_row = $last_row = array();
 if (isset($variants)) {
   foreach($variants as $row_id => $v) {
 
@@ -53,18 +54,35 @@ if (isset($variants)) {
     if (isset($data[$v->variant_id])) {
       foreach ($data[$v->variant_id] as $germplasm_id => $alleles) {
         if (isset($germplasm[ $germplasm_id ]) AND is_array($alleles)) {
-      
+
           $consensus_allele = nd_genotype_get_consensus_call($alleles);
           $table['rows'][$row_id][$germplasm_id] = array(
             'data' => $consensus_allele,
             'class' => array('germplasm', $germplasm[ $germplasm_id ]['class'], 'genotype', $consensus_allele)
           );
-        } 
+        }
       }
+    }
+
+    // If this is the first row then save the location for use in the pager.
+    if ($num_rows == 0) {
+      $first_row = array(
+        'srcfeature' => $v->srcfeature_name,
+        'start' => $v->fmin,
+      );
     }
 
     $num_rows++;
   }
+}
+
+// Now that we're don, if $r is set then thats the last row and we should save
+// that location for the pager as well.
+if (isset($v)) {
+  $last_row = array(
+    'srcfeature' => $v->srcfeature_name,
+    'end' => $v->fmax,
+  );
 }
 
 // And since the germplasm are absolutely critical we should warn them if it's not set.
@@ -77,30 +95,72 @@ $settings['total_num_rows'] = 100;
 $pager = array('label' => '');
 $curr_path = current_path();
 $query_param = drupal_get_query_parameters();
-if (isset($_GET['page'])) {
+if (!isset($_GET['page'])) $_GET['page'] = 1;
 
+if ($first_row AND $last_row) {
+  if ($first_row['srcfeature'] == $last_row['srcfeature']) {
+    $pager['label'] = strtr(
+      '@sbackbone: @min-@max',
+      array(
+        '@sbackbone' => $first_row['srcfeature'],
+        '@min' => $first_row['start'],
+        '@max' => $last_row['end'],
+      )
+    );
+  }
+  else {
+    $pager['label'] = strtr(
+      '@sbackbone:@min - @ebackbone:@max',
+      array(
+        '@sbackbone' => $first_row['srcfeature'],
+        '@min' => $first_row['start'],
+        '@ebackbone' => $last_row['srcfeature'],
+        '@max' => $last_row['end'],
+      )
+    );
+  }
+}
+else {
   $pager['label'] = 'Page ' . $_GET['page'];
+}
+
+// Not the first page...
+if ($_GET['page'] != 1) {
 
   // First page.
-  if ($_GET['page'] != 1) {
+  $q = $query_param;
+  $q['page'] = 1;
+  $pager['first'] = url($curr_path, array('query' => $q));
 
-    // First page.
-    $q = $query_param;
-    $q['page'] = 1;
-    $pager['first'] = url($curr_path, array('query' => $q));
+  // Previous page.
+  $q = $query_param;
+  $q['page'] = $_GET['page'] - 1;
+  $pager['prev'] = url($curr_path, array('query' => $q));
+}
 
-    // Previous page.
-    $q = $query_param;
-    $q['page'] = $_GET['page'] - 1;
-    $pager['prev'] = url($curr_path, array('query' => $q));
-  }
+// Not the "last" page...
+if ($_GET['page'] != 'last') {
 
   // Next page.
   $q = $query_param;
   $q['page'] = $_GET['page'] + 1;
   $pager['next'] = url($curr_path, array('query' => $q));
 
+  // Last page.
+  $q = $query_param;
+  $q['page'] = 'last';
+  $pager['last'] = url($curr_path, array('query' => $q));
 }
+
+// Also check for the last page if they actually paged through them all...
+// Specifically, if the total number of records is between the beginning and end of the current page.
+/*if (($_GET['page']*100-100 <= $total) AND ($_GET['page']*100 >= $total) ) {
+  unset($pager['next'], $pager['last']);
+}*/
+if ($num_rows < 100) {
+  unset($pager['next'], $pager['last']);
+}
+
 ?>
 
 <div id="genotype-matrix-<?php print $genus;?>">
@@ -125,10 +185,10 @@ if (isset($_GET['page'])) {
 
   <?php } else { ?>
 
-    <!-- <div class="matrix-download">Download:
-      <?php print l('CSV', 'chado/genotype/'.$genus.'/csv', array('query' => drupal_get_query_parameters(), 'attributes' => array('target' => '_blank'))); ?>
-    </div> -->
 
+    <!--<div class="matrix-download">Download:
+      <?php print l('CSV', 'chado/genotype/'.$genus.'/csv', array('query' => drupal_get_query_parameters(), 'attributes' => array('target' => '_blank'))); ?>
+    </div>-->
     <div class="matrix-proper">
       <?php print theme('table', $table); ?>
     </div>

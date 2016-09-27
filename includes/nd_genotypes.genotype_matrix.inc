@@ -607,7 +607,7 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   // Variant Name:
   if (isset($query_args['variant_name'])) {
     $num_names = sizeof($query_args['variant_name']);
-    if ($num_names <=100) {
+    if ($num_names <= 100) {
       $variant[] = "variant_name IN (VALUES('" . implode("'), ('", $query_args['variant_name']) . "'))";
       //$variant_args[':variant_names'] = $query_args['variant_name'];
       unset($query_args['variant_name']);
@@ -629,7 +629,7 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
     return FALSE;
   }
 
-  // Now determine the query.
+  // Now determine the query for the variants.
   $sql = "SELECT v.*, cf.nid \n"
        . "FROM {mview_ndg_variants} v \n"
        . "  LEFT JOIN [chado_feature] cf ON cf.feature_id=v.variant_id "
@@ -646,18 +646,31 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
        . "    FROM {mview_ndg_calls} call \n"
        . "    WHERE \n"
        . "      " . implode("\n      AND ", $call) .  "\n"
+       . "      AND call.variant_id=v.variant_id\n"
        . "  ) \n";
   // Order.
-  $sql .= "\nORDER BY srcfeature_name ASC, fmin ASC \n";
 
-  // Limit.
-  if (isset($query_args['page'])) {
-    if ($query_args['page'] == 1) {
-      $sql .= "LIMIT 100";
-    }
-    elseif (is_numeric($query_args['page'])) {
+
+  // Order and Limit.
+  if (isset($query_args['page']) AND is_numeric($query_args['page']) AND $query_args['page'] != 1) {
+    // Normal pages (ie: 1, 2, 3, etc).
+    if ($query_args['page'] > 1 ) {
+      $sql .= "\nORDER BY srcfeature_name ASC, fmin ASC \n";
       $sql .= "OFFSET " . (100 * ($query_args['page'] - 1)) . " LIMIT 100";
     }
+    // Negative page numbers mean we are counting backwards from the last page...
+    else {
+      $sql .= "\nORDER BY srcfeature_name DESC, fmin DESC \n";
+      $sql .= "OFFSET " . (100 * abs($query_args['page'])) . " LIMIT 100";
+    }
+  }
+  elseif (isset($query_args['page']) AND $query_args['page'] == 'last') {
+    $sql .= "\nORDER BY srcfeature_name DESC, fmin DESC \n";
+    $sql .= "LIMIT 100";
+  }
+  else {
+    $sql .= "\nORDER BY srcfeature_name ASC, fmin ASC \n";
+    $sql .= "LIMIT 100";
   }
 
   $args = array_merge($call_args, $variant_args);
@@ -669,6 +682,11 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
     $row_id = $r->srcfeature_name . ':' .$r->fmin . '_' . $r->variant_id;
     $vars['variants'][$row_id] = $r;
     $ids[] = $r->variant_id;
+  }
+
+  // If this is the last page then we need to reverse the order of the variants.
+  if (isset($query_args['page']) AND ($query_args['page'] == 'last' OR $query_args['page'] < 0)) {
+    ksort($vars['variants']);
   }
 
   // Now grab the allele calls.
