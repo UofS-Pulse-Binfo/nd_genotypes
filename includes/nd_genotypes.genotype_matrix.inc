@@ -234,6 +234,7 @@ function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
   // Separate the variant_names into multiple arguements.
   // Not only does this keep the URL readable, it also does some processing ahead of time.
   if (isset($values['variant_name']) AND !empty($values['variant_name'])) {
+    $values['variant_name'] = trim($values['variant_name']);
     $list = preg_split("/\s*(\r\n|\n|\r)\s*/", $values['variant_name']);
     $query['variant_name'] = $list;
     unset($values['variant_name']);
@@ -605,18 +606,11 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   }
 
   // Variant Name:
+  $new_from = FALSE;
   if (isset($query_args['variant_name'])) {
-    $num_names = sizeof($query_args['variant_name']);
-    if ($num_names <= 100) {
-      $variant[] = "variant_name IN (VALUES('" . implode("'), ('", $query_args['variant_name']) . "'))";
-      //$variant_args[':variant_names'] = $query_args['variant_name'];
-      unset($query_args['variant_name']);
-    }
-    else {
-      $variant[] = "variant_name IN (VALUES('" . implode("'), ('", $query_args['variant_name']) . "'))";
-      //$variant_args[':variant_names'] = $query_args['variant_name'];
-      unset($query_args['variant_name']);
-    }
+    $variant[] = "variant_name IN (VALUES('" . implode("'), ('", $query_args['variant_name']) . "'))";
+    //$variant_args[':variant_names'] = $query_args['variant_name'];
+    unset($query_args['variant_name']);
   }
 
   // Germplasm:

@@ -186,6 +186,11 @@ function nd_genotypes_create_mview_ndg_variants_indexes($tablename = 'mview_ndg_
     'variant_id' => array(
       'columns' => array('variant_id')
     ),
+    // CREATE INDEX ndgvariants_variant_name ON mview_ndg_variants (variant_name);
+    // Used for genotype matrix when filtering to a list of variants.
+    'variant_name' => array(
+      'columns' => array('variant_name')
+    ),
   );
   foreach ($indexes as $name_suffix => $details) {
     $index_name = str_replace('_','',$tablename) . '_' . $name_suffix;
