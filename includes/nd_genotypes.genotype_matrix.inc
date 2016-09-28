@@ -25,8 +25,6 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
   $defaults = $form_state['build_info']['args'][0]['defaults'];
   $total_num_rows = 100;
 
-  //dpm($form_state, 'in form');
-
   if (!$genus) { drupal_set_message('The link/URL must contain the genus of the organism you would like genotypes for.','error'); return ''; }
 
   // Form select list options.
@@ -111,7 +109,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
   $form['variant_name'] = array(
     '#type' => 'textarea',
     '#title' => 'Variant Name(s)',
-    '#description' => 'A list of variant names you wish to see genotypes for with one variant per line. Note: Although there is no limit',
+    '#description' => 'A list of variant names you wish to see genotypes for with one variant per line.',
     '#rows' => 1,
     '#default_value' => (isset($defaults['variant_name'])) ? implode("\n",$defaults['variant_name']) : '',
   );
@@ -141,6 +139,17 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
     '#options' => unserialize(variable_get('nd_genotypes_marker_types', NULL)),
     '#default_value' => (isset($defaults['marker_type'])) ? $defaults['marker_type'] : NULL,
   );*/
+
+  $form['polymorphic'] = array(
+    '#type' => 'pairwise_compare_germplasm',
+    '#title' => 'Polymorphic Variants',
+    '#options' => array(
+      'first' => $defaults['germlist'],
+      'second' => $defaults['germlist']
+    ),
+    '#default_value' => (isset($defaults['polymorphic'])) ? $defaults['polymorphic'] : NULL,
+    '#description' => 'Restrict the variants to those that have different allele calls for the selected germplasm.',
+  );
 
   $form['submit'] = array(
     '#type' => 'submit',
@@ -488,11 +497,14 @@ function nd_genotypes_process_query_parameters(&$vars) {
         $vars['query_args']['germplasm_id'][] = $germ_id;
 
         // Save as defaults for use in the form.
+        // First for the "Germplasm" form element.
         $vars['defaults']['germ']['existing'][] = array(
           'stock_id' => $germ_id,
           'organism_id' => $s->organism_id,
           'stock_name' => $s->name,
         );
+        // And second for the polymorphic form element.
+        $vars['defaults']['germlist'][$germ_id] = $s->name;
       }
       else {
         drupal_set_message('Unable to find germplasm.', 'error');
@@ -559,7 +571,7 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   // Compile all the parameters we will use when grabbing the calls so that we can restrict
   // the variant list to those that will have data once we do retrieve the calls.
   $query_args = $vars['query_args'];
-  $call = $variant = $call_args = $variant_args = array();
+  $call = $variant = $call_args = $variant_args = $variant_joins = array();
 
   // Sequence Ranges:
   // First get the arguements. There must always be a backbone and fmin even if the user
@@ -606,11 +618,30 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   }
 
   // Variant Name:
-  $new_from = FALSE;
+  $variant_name_filter = FALSE;
   if (isset($query_args['variant_name'])) {
     $variant[] = "variant_name IN (VALUES('" . implode("'), ('", $query_args['variant_name']) . "'))";
     //$variant_args[':variant_names'] = $query_args['variant_name'];
     unset($query_args['variant_name']);
+    $variant_name_filter = TRUE;
+  }
+
+  // Polymorphic:
+  $polymorphic_filter = FALSE;
+  if (isset($query_args['polymorphic'])
+    AND is_numeric($query_args['polymorphic']['first'])
+    AND is_numeric($query_args['polymorphic']['second'])) {
+      if (!$variant_name_filter) {
+        $variant_joins[] = "LEFT JOIN (
+            SELECT a.variant_id, a.allele_call=b.allele_call as monomorphic
+            FROM mview_ndg_calls a, mview_ndg_calls b
+            WHERE a.variant_id=b.variant_id AND a.germplasm_id=:poly1 AND b.germplasm_id=:poly2
+          ) p ON p.variant_id=v.variant_id ";
+        $variant_args[':poly1'] = $query_args['polymorphic']['first'];
+        $variant_args[':poly2'] = $query_args['polymorphic']['second'];
+        $variant[] = "p.monomorphic IS FALSE";
+      }
+      $polymorphic_filter = TRUE;
   }
 
   // Germplasm:
@@ -627,6 +658,7 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   $sql = "SELECT v.*, cf.nid \n"
        . "FROM {mview_ndg_variants} v \n"
        . "  LEFT JOIN [chado_feature] cf ON cf.feature_id=v.variant_id "
+       . implode("\n", $variant_joins)
        . "WHERE \n";
 
   // Add in conditions on the variants table.
@@ -642,8 +674,19 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
        . "      " . implode("\n      AND ", $call) .  "\n"
        . "      AND call.variant_id=v.variant_id\n"
        . "  ) \n";
-  // Order.
 
+  if ($polymorphic_filter AND $variant_name_filter) {
+    $sql = "SELECT * FROM (\n"
+      . $sql . ") v \n"
+      . "LEFT JOIN (
+            SELECT a.variant_id, a.allele_call=b.allele_call as monomorphic
+            FROM mview_ndg_calls a, mview_ndg_calls b
+            WHERE a.variant_id=b.variant_id AND a.germplasm_id=:poly1 AND b.germplasm_id=:poly2
+          ) p ON p.variant_id=v.variant_id \n"
+      . "WHERE p.monomorphic IS FALSE \n";
+      $variant_args[':poly1'] = $query_args['polymorphic']['first'];
+      $variant_args[':poly2'] = $query_args['polymorphic']['second'];
+  }
 
   // Order and Limit.
   if (isset($query_args['page']) AND is_numeric($query_args['page']) AND $query_args['page'] != 1) {

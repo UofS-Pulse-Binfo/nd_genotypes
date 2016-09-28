@@ -111,6 +111,10 @@ function nd_genotypes_theme($existing, $type, $theme, $path) {
     'render element' => 'element',
   );
 
+  $items['pairwise_compare_germplasm'] = array(
+    'render element' => 'element'
+  );
+
   if (chado_table_exists('mview_ndg_calls') AND chado_table_exists('mview_ndg_variants')) {
     // This template executes the query as well as building the genotype matrix table.
     // The filter form is in nd_genotypes_matrix_filter_form().

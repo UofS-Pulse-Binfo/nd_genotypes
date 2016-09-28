@@ -19,6 +19,15 @@ function nd_genotypes_element_info() {
     '#tree' => TRUE,
   );
 
+  $elements['pairwise_compare_germplasm'] = array(
+    '#input' => TRUE,
+    '#process' => array('expand_pairwise_compare_germplasm'),
+    '#element_validate' => array('pairwise_compare_germplasm_validate'),
+    '#theme' => array('pairwise_compare_germplasm'),
+    '#theme_wrappers' => array('form_element'),
+    '#tree' => TRUE,
+  );
+
   return $elements;
 }
 
@@ -309,3 +318,79 @@ function multiple_organism_stock_value_callback(&$element, $input = FALSE, &$for
 
   return $input;
 }
+
+///////////////////////////////////////////////////////////
+// Form element: pairwise_compare_germplasm
+///////////////////////////////////////////////////////////
+/**
+ * Custom form element allowing you to select two stocks to be compared from two select lists.
+ *
+ * Example on how to use it:
+ * @code
+    $options = array(
+      'stock1',stock2','stock3'
+    );
+		$form['element'] = array(
+			'#type' => 'pairwise_compare_germplasm',
+			'#options' => array(
+			  'first' => $options,
+			  'second' => $options
+			),
+			'#default_value' => $form_state['values']['element'],
+		);
+ * @endcode
+ * Will give you two select lists where each select list contains the items in $options.
+ */
+function expand_pairwise_compare_germplasm ($element) {
+
+  // Assigning default values to element. You can override these values by passing your own values using "#default_value".
+  if (empty($element['#value'])) {
+    $element['#value'] = array(
+      'first' => '<NONE>',
+      'second' => '<NONE>',
+    );
+  }
+
+  // Add <none> to options
+  $element['#options']['first']['<NONE>'] = '';
+  $element['#options']['second']['<NONE>'] = '';
+
+  $element['#tree'] = TRUE;
+  $parents = $element['#parents'];
+
+  $parents[] = 'first';
+  $element['first'] = array(
+    '#type' => 'select',
+    '#default_value' => $element['#value']['first'],
+    '#options' => $element['#options']['first'],
+    '#prefix' => '<div class="pairwise_compare_germplasm-element container-inline">Between ',
+    '#validated' => TRUE
+  );
+
+  $parents[] = 'second';
+  $element['second'] = array(
+    '#type' => 'select',
+    '#default_value' => $element['#value']['second'],
+    '#options' => $element['#options']['second'],
+    '#prefix' => ' and ',
+    '#suffix' => '</div>',
+    '#validated' => TRUE
+  );
+
+  $element['#validated'] = TRUE;
+
+  return $element;
+}
+
+/**
+ * Theme the custom form element
+ */
+function theme_pairwise_compare_germplasm ($element) {
+  return ''; //theme('form_element', $element, '<div class="pairwise_compare_germplasm-element container-inline">'. $element['#children'] .'</div>');
+}
+
+/**
+ * Validate user-input for all pairwise_compare_germplasm form elements
+ */
+function pairwise_compare_germplasm_validate ($element) { }
+
