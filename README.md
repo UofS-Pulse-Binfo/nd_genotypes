@@ -19,6 +19,12 @@ This module is currently under-going a complete re-birth as it switches from usi
 ### Genotype Matrix
 This module provides genotype search functionality that allows users to select which germplasm and variants they are interested in and be shown a colour-coded variant by germplasm table which can be further filtered by marker/variant type and to only show polymorphic variants (pairwise comparison choosen by the user). After filtering to their desired dataset, the user can download the table as a tab-delimited file.
 
+The following screenshot shows the form the user is presented with for choosing filter criteria:
+![genotypematrix_form](https://cloud.githubusercontent.com/assets/1566301/19090330/1d656d6c-8a3b-11e6-8776-6f3c1e10e18b.png)
+
+The following screenshot shows the table of genotype calls presented to the user based on their filter criteria:
+![genotypematrix_table](https://cloud.githubusercontent.com/assets/1566301/19090346/2e83e0b0-8a3b-11e6-9ad3-9574aa88b7e5.png)
+
 ### Marker/Variant Pages
 This module adds two panes to marker and variant pages:
 
