@@ -31,3 +31,5 @@ This module adds two panes to marker and variant pages:
 1. A "Genotypes" pane which summarizes the calls recorded for a given marker/variant. Specifically, a pie chart depicts the ratio of calls recorded.
 2. A "Sequences" pane which shows 500bp flanking sequence for the current marker/variant with the alleles for the current marker highlighted as [A/B] and all other variants located in the flanking sequence indicated using their IUPAC codes. This display provides an easy means for researchers to design new markers if the old technology is no longer desirable.
 
+**NOTE: A couple of scripts have been developed to generate genotype datasets for testing of functionality and optimizing of queries for large datasets. These scripts have been made available so that you can test the functionality for yourself before loading your own data.**
+https://gist.github.com/laceysanderson/146c9d5469a53c5b5a7fca27ed6717e0#file-ndgenotypes_generate_massive_dataset-md
