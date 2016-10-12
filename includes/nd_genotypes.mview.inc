@@ -285,7 +285,7 @@ function nd_genotypes_create_mview_ndg_calls($tablename = 'mview_ndg_calls') {
         'length' => 255,
         'not null' => TRUE,
       ),
-      'marker_data' => array(
+      'meta_data' => array(
         'pgsql_type' => 'jsonb',
       ),
       'ndg_call_id' => array(
@@ -399,7 +399,7 @@ function nd_genotypes_genotype_call_schema_template() {
         'type' => 'int',
         'not null' => TRUE,
       ),
-      'marker_data' => array(
+      'meta_data' => array(
         'pgsql_type' => 'jsonb',
       ),
     ),
