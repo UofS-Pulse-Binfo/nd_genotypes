@@ -42,7 +42,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
   }
 
   // Determine the select list for sequence backbone.
-  $seq_chr = unserialize(variable_get('nd_genotypes_seq_backbones', NULL));
+  $seq_chr = unserialize(variable_get('nd_genotypes_seq_backbones', 'a:0:{}'));
 
   // Filter Form.
   //-------------------------
@@ -75,9 +75,9 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
   $form['seq_range']['start']['backbone'] = array(
     '#type' => 'select',
     '#title' => 'From',
-    '#empty_option' => '- ' . t('Sequence') . ' -',
+    '#empty_option' => t('- Sequence -'),
     '#options' => $seq_chr,
-    '#default_value' => (isset($defaults['seq_range']['start']['backbone'])) ? $defaults['seq_range']['start']['backbone'] : NULL,
+    //'#default_value' => (isset($defaults['seq_range']['start']['backbone'])) ? $defaults['seq_range']['start']['backbone'] : NULL,
   );
 
   $form['seq_range']['start']['pos'] = array(
@@ -127,7 +127,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
     '#title' => 'Variant Type',
     '#description' => 'The types of variants you would like to see genotypes for (e.g. indels only).',
     '#empty_option' => '- ' . t('Choose One to Filter') . ' -',
-    '#options' => unserialize(variable_get('nd_genotypes_variant_types', NULL)),
+    '#options' => unserialize(variable_get('nd_genotypes_variant_types', 'a:0:{}')),
     '#default_value' => (isset($defaults['variant_type'])) ? $defaults['variant_type'] : NULL,
   );
 
@@ -140,6 +140,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
     '#default_value' => (isset($defaults['marker_type'])) ? $defaults['marker_type'] : NULL,
   );*/
 
+  if (!isset($defaults['germlist'])) $defaults['germlist'] = array();
   $form['polymorphic'] = array(
     '#type' => 'pairwise_compare_germplasm',
     '#title' => 'Polymorphic Variants',
@@ -272,7 +273,7 @@ function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
   // Initializing paging.
   $query['page'] = 1;
 
-  $form_state['redirect'] = array('chado/genotype/Lens', array('query' => $query));
+  $form_state['redirect'] = array(current_path(), array('query' => $query));
 }
 
 /**
@@ -727,14 +728,16 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   }
 
   // Now grab the allele calls.
-  $sql = "SELECT variant_id, germplasm_id, allele_call \n"
-        ."FROM unnest(ARRAY[" . implode(',',$ids) . "]) variant_id\n"
-        ."JOIN chado.mview_ndg_calls call USING(variant_id)\n"
-        ."WHERE " . implode("\n  AND ",$call) . "\n";
-  //dpm(array('sql' => $sql, 'args' => $call_args), 'Call Query');
-  $resource = db_query($sql, $call_args);
-  foreach($resource as $r) {
-    $vars['data'][$r->variant_id][$r->germplasm_id][] = $r->allele_call;
+  if ($ids) {
+    $sql = "SELECT variant_id, germplasm_id, allele_call \n"
+          ."FROM unnest(ARRAY[" . implode(',',$ids) . "]) variant_id\n"
+          ."JOIN chado.mview_ndg_calls call USING(variant_id)\n"
+          ."WHERE " . implode("\n  AND ",$call) . "\n";
+    //dpm(array('sql' => $sql, 'args' => $call_args), 'Call Query');
+    $resource = db_query($sql, $call_args);
+    foreach($resource as $r) {
+      $vars['data'][$r->variant_id][$r->germplasm_id][] = $r->allele_call;
+    }
   }
 
 }

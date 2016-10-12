@@ -546,3 +546,31 @@ function nd_genotypes_expand_IUPAC_code($codes) {
   $codes = count_chars($codes, 3);
   return $codes;
 }
+
+/**
+ * Drops all the indexes on a given table.
+ *
+ * @param $table_name
+ *   The table to drop indexes for.
+ */
+function nd_genotypes_drop_indexes($table_name) {
+
+  $delete_indexes = <<<'EOT'
+    DO
+      $$BEGIN
+        IF EXISTS (select true from pg_index i where i.indrelid = 'chado.TABLENAME'::regclass and i.indisprimary = false)
+        THEN
+          EXECUTE (
+            SELECT 'DROP INDEX ' || string_agg(indexrelid::regclass::text, ', ')
+            FROM pg_index  i
+              LEFT JOIN pg_depend d ON d.objid = i.indexrelid AND d.deptype = 'i'
+            WHERE i.indrelid = 'chado.TABLENAME'::regclass
+              AND d.objid IS NULL
+          );
+        END IF;
+      END$$;
+EOT;
+  $delete_indexes = str_replace('TABLENAME',$table_name, $delete_indexes);
+  return chado_query($delete_indexes);
+
+}

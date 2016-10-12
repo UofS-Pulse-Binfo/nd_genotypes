@@ -17,6 +17,7 @@ function nd_genotypes_update_mview_cache() {
       (SELECT type_id
         FROM {feature} f
         LEFT JOIN {mview_ndg_variants} v ON v.variant_id=f.feature_id
+        WHERE v.ndg_variants_id IS NOT NULL
         ORDER BY type_id
         LIMIT 1)
       UNION ALL
@@ -24,7 +25,7 @@ function nd_genotypes_update_mview_cache() {
           (SELECT type_id
             FROM {feature} f
             LEFT JOIN {mview_ndg_variants} v ON v.variant_id=f.feature_id
-            WHERE type_id > t.type_id
+            WHERE type_id > t.type_id AND v.ndg_variants_id IS NOT NULL
             ORDER BY type_id
             LIMIT 1)
         FROM t
@@ -194,7 +195,7 @@ function nd_genotypes_create_mview_ndg_variants_indexes($tablename = 'mview_ndg_
   );
   foreach ($indexes as $name_suffix => $details) {
     $index_name = str_replace('_','',$tablename) . '_' . $name_suffix;
-    chado_query("CREATE INDEX $index_name ON $tablename (" . implode(', ', $details['columns']) . ')');
+    chado_query("CREATE INDEX $index_name ON {".$tablename."} (" . implode(', ', $details['columns']) . ')');
   }
 
 }
@@ -358,7 +359,7 @@ function nd_genotypes_create_mview_ndg_calls_indexes($tablename = 'mview_ndg_cal
   );
   foreach ($indexes as $name_suffix => $details) {
     $index_name = str_replace('_','',$tablename) . '_' . $name_suffix;
-    chado_query("CREATE INDEX $index_name ON $tablename (" . implode(', ', $details['columns']) . ')');
+    chado_query("CREATE INDEX $index_name ON {".$tablename."} (" . implode(', ', $details['columns']) . ')');
   }
 
 }

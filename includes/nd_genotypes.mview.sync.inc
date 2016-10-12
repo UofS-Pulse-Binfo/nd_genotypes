@@ -141,22 +141,7 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
 
   // Drop all the indexes on the mview to make copying faster.
   print "\tDropping indexes on mview_ndg_calls...\n";
-  $delete_indexes = <<<'EOT'
-    DO
-      $$BEGIN
-        IF EXISTS (select true from pg_index i where i.indrelid = 'chado.mview_ndg_calls'::regclass and i.indisprimary = false)
-        THEN
-          EXECUTE (
-            SELECT 'DROP INDEX ' || string_agg(indexrelid::regclass::text, ', ')
-            FROM pg_index  i
-              LEFT JOIN pg_depend d ON d.objid = i.indexrelid AND d.deptype = 'i'
-            WHERE i.indrelid = 'chado.mview_ndg_calls'::regclass
-              AND d.objid IS NULL
-          );
-        END IF;
-      END$$;
-EOT;
-  chado_query($delete_indexes);
+  nd_genotypes_drop_indexes('mview_ndg_calls');
   print "\t\tComplete.\n";
 
   // We would like to chunk the dataset into hopefully reasonable pieces for updating
@@ -237,22 +222,7 @@ EOT;
 
   // Drop all the indexes on the mview to make copying faster.
   print "\tDropping indexes on mview_ndg_variants...\n";
-  $delete_indexes = <<<'EOT'
-    DO
-      $$BEGIN
-        IF EXISTS (select true from pg_index i where i.indrelid = 'chado.mview_ndg_variants'::regclass and i.indisprimary = false)
-        THEN
-          EXECUTE (
-            SELECT 'DROP INDEX ' || string_agg(indexrelid::regclass::text, ', ')
-            FROM pg_index  i
-              LEFT JOIN pg_depend d ON d.objid = i.indexrelid AND d.deptype = 'i'
-            WHERE i.indrelid = 'chado.mview_ndg_variants'::regclass
-              AND d.objid IS NULL
-          );
-        END IF;
-      END$$;
-EOT;
-  chado_query($delete_indexes);
+  nd_genotypes_drop_indexes('mview_ndg_variants');
   print "\t\tComplete.\n";
 
   // We would like to chunk the dataset into hopefully reasonable pieces for updating
