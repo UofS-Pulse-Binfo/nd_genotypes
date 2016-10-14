@@ -251,9 +251,16 @@ function multiple_organism_stock_value_callback(&$element, $input = FALSE, &$for
     if (!empty($input['new']['stock_name']) AND !empty($input['new']['organism_id'])) {
       $stock = tripal_get_stock(array('name' => $input['new']['stock_name'], 'organism_id' => $input['new']['organism_id']));
       if (!$stock) {
-        form_set_error($stub . '][new',
-          t('The germplasm you attempted to add to %name does not exist or the %subname is not unique for the specified %org.',
-            array('%subname' => $element['#name_title'], '%org' => $element['#organism_title'], '%name' => $element['#title'])));
+        // We would like to allow modules to customize this message
+        if (isset($element['#missing_stock_error_callback']) AND function_exists($element['#missing_stock_error_callback'])) {
+          form_set_error($stub . '][new', call_user_func($element['#missing_stock_error_callback'], $element, $input, 'new'));
+        }
+        // But if they don't want to we will be as helpful as possible :-).
+        else {
+          form_set_error($stub . '][new',
+            t('The germplasm (%stock) you attempted to add under %name does not exist or the %subname is not unique for the specified %org.',
+              array('%subname' => $element['#name_title'], '%org' => $element['#organism_title'], '%name' => $element['#title'], '%stock' => $input['new']['stock_name'])));
+        }
         $element['#nd_errors'] = TRUE;
       }
       // If we did find a stock we might as well save the stock_id for later.
@@ -285,9 +292,16 @@ function multiple_organism_stock_value_callback(&$element, $input = FALSE, &$for
       if (!empty($input['existing'][$k]['stock_name']) AND !empty($input['existing'][$k]['organism_id'])) {
         $stock = tripal_get_stock(array('name' => $input['existing'][$k]['stock_name'], 'organism_id' => $input['existing'][$k]['organism_id']));
         if (!$stock) {
-          form_set_error($stub . '][existing]['.$k,
-            t('The germplasm in the %name list does not exist or the %subname is not unique for the specified %org.',
-              array('%subname' => $element['#name_title'], '%org' => $element['#organism_title'], '%name' => $element['#title'])));
+          // We would like to allow modules to customize this message
+          if (isset($element['#missing_stock_error_callback']) AND function_exists($element['#missing_stock_error_callback'])) {
+            form_set_error($stub . '][existing]['.$k, call_user_func($element['#missing_stock_error_callback'], $element, $input, $k));
+          }
+          // But if they don't want to we will be as helpful as possible :-).
+          else {
+            form_set_error($stub . '][existing]['.$k,
+              t('The germplasm (%stock) in the %name list does not exist or the %subname is not unique for the specified %org.',
+                array('%subname' => $element['#name_title'], '%org' => $element['#organism_title'], '%name' => $element['#title'], '%stock' => $input['new']['stock_name'])));
+          }
           $element['#nd_errors'] = TRUE;
         }
         // If we did find a stock we might as well save the stock_id for later.

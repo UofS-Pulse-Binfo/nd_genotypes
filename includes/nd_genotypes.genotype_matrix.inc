@@ -55,6 +55,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
     '#added_description' => 'Specify the stock (and species of the stock) you want to display the genotypes of.',
     '#default_value' => (isset($defaults['germ'])) ? $defaults['germ'] : array(),
     '#name_autocomplete_path' => 'tripal_ajax/nd_genotypes/genotyped_germplasm/name_to_id/' . $genus . '/only',
+    '#missing_stock_error_callback' => 'nd_genotype_matrix_missing_stock_error_callback',
     //'#required' => TRUE,
   );
 
@@ -740,4 +741,50 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
     }
   }
 
+}
+
+/**
+ * Provide an error message for the multiple germplasm form element on the genotype matrix
+ * if an entered germplasm does not exist.
+ *
+ * @param $element
+ *   The form element definition.
+ * @param $input
+ *   The user entered input.
+ * @param $index
+ *   The index of the multiple stock element which produced this error.
+ *
+ * @return
+ *   A string to be given to form_set_error().
+ */
+function nd_genotype_matrix_missing_stock_error_callback($element, $input, $index) {
+  if ($index == 'new') {
+
+    $suggestions = chado_query('SELECT name FROM {stock} WHERE name~*:input AND type_id NOT IN (SELECT cvterm_id FROM {cvterm} WHERE name=:type) LIMIT 3',
+      array(':input' => $input['new']['stock_name'], ':type' => 'DNA'))->fetchCol();
+
+    if ($suggestions) {
+      return t('There are no registered genotypes for %name. Did you mean %suggestions?',
+        array('%name' => $input['new']['stock_name'], '%suggestions' => implode(', ', $suggestions)));
+    }
+    else {
+      return t('There are no registered genotypes for %name. Perhaps you should check your spelling and ensure you have selected the correct '.$element['#organism_title'].'.',
+        array('%name' => $input['new']['stock_name'], '%suggestions' => implode(', ', $suggestions)));
+    }
+  }
+  elseif (isset($input['existing'][$index])) {
+
+    $suggestions = chado_query('SELECT name FROM {stock} WHERE name~*:input AND type_id NOT IN (SELECT cvterm_id FROM {cvterm} WHERE name=:type) LIMIT 3',
+      array(':input' => $input['existing'][$index]['stock_name'], ':type' => 'DNA'))->fetchCol();
+
+    if ($suggestions) {
+      return t('There are no registered genotypes for %name. Did you mean %suggestions?',
+        array('%name' => $input['existing'][$index]['stock_name'], '%suggestions' => implode(', ', $suggestions)));
+    }
+    else {
+      return t('There are no registered genotypes for %name. Perhaps you should check your spelling and ensure you have selected the correct '.$element['#organism_title'].'.',
+        array('%name' => $input['existing'][$index]['stock_name'], '%suggestions' => implode(', ', $suggestions)));
+    }
+  }
+  return 'There are no registered genotypes for the germplasm you entered. Perhaps you should check your spelling and ensure you have selected the correct '.$element['#organism_title'].'.';
 }

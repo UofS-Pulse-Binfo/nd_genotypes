@@ -88,6 +88,8 @@ function nd_genotypes_update_mview_cache() {
   }
   variable_set('nd_genotypes_seq_backbones', serialize($b));
 
+  // Create the germplasm genotyped mview for use with autocomplete functionality.
+  nd_genotypes_create_mview_ndg_germplasm_genotyped();
 }
 
 /**
@@ -362,6 +364,81 @@ function nd_genotypes_create_mview_ndg_calls_indexes($tablename = 'mview_ndg_cal
     chado_query("CREATE INDEX $index_name ON {".$tablename."} (" . implode(', ', $details['columns']) . ')');
   }
 
+}
+
+/**
+ *
+ */
+function nd_genotypes_create_mview_ndg_germplasm_genotyped($table_name = 'mview_ndg_germplasm_genotypes') {
+
+  $schema = array(
+    'table' => $table_name,
+    'description' => 'A more compact way to store genotype calls.',
+    'fields' => array(
+      'germplasm_id' => array(
+        'description' => 'Links to the germplasm stock.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'germplasm_name' => array(
+        'description' => 'The name of the germplasm.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'organism_id' => array(
+        'description' => 'The organism the stock is from.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'organism_genus' => array(
+        'description' => 'The genus of the organism the stock is from.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('germplasm_id'),
+    'unique keys' => array(),
+    'foreign keys' => array(
+      'stock' => array(
+        'table' => 'stock',
+        'columns' => array(
+          'germplasm_id' => 'stock_id'
+        ),
+      ),
+    ),
+    'indexes' => array(
+      'ndg_germgenotyped_name' => array('germplasm_name'),
+      'ndg_germgenotyped_genus' => array('organism_genus'),
+    ),
+  );
+  $query = 'WITH RECURSIVE t AS (
+      (SELECT germplasm_id
+        FROM {mview_ndg_calls} m
+        ORDER BY germplasm_id
+        LIMIT 1)
+      UNION ALL
+      SELECT
+          (SELECT germplasm_id
+            FROM {mview_ndg_calls} m
+            WHERE germplasm_id > t.germplasm_id
+            ORDER BY germplasm_id
+            LIMIT 1)
+        FROM t
+        WHERE t.germplasm_id IS NOT NULL
+    )
+    SELECT t.germplasm_id, s.name as germplasm_name, s.organism_id, o.genus FROM t LEFT JOIN {stock} s ON s.stock_id=t.germplasm_id LEFT JOIN {organism} o ON o.organism_id=s.organism_id WHERE t.germplasm_id IS NOT NULL';
+
+  tripal_add_mview(
+    $table_name,
+    'nd_genotypes',
+    $schema,
+    $query,
+    'Provides a listing of all germplasm for which there are genotype calls.'
+  );
+  $mview_id = tripal_get_mview_id($table_name);
+  tripal_populate_mview($mview_id);
 }
 
 /**
