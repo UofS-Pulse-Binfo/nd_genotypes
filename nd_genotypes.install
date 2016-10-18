@@ -13,4 +13,17 @@ function nd_genotypes_install() {
   // Create both tables if they don't already exists.
   nd_genotypes_create_mview_ndg_variants($ndg_variants);
   nd_genotypes_create_mview_ndg_calls($ndg_call);
+
+  // Move our module up in the list priority-wise
+  // so our templates can override default tripal ones.
+  // First grab the weight of tripal_core.
+  $tripal_weight = db_query('SELECT weight FROM {system} WHERE name = :name',
+    array(':name' => 'tripal_core'))->fetchField();
+
+  // Next, update our weight to be one heavier, so it moves lower in the execution order.
+  db_query('UPDATE {system} SET weight = :weight WHERE name = :name',
+     array(':name' => 'nd_genotypes', ':weight' => $tripal_weight + 1));
+
+  // Give them some guidance!
+  drupal_set_message('In order to see the genotype and sequence pane on feature nodes, you have to set the type(s) used for variants and markers in the module settings. Click the configure link beside the module name.','warning');
 }

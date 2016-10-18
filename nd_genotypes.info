@@ -3,7 +3,7 @@ name = Natural Diversity Genotypes
 description = Provides an interface for genotypes and the experiments that generate them
 version = 7.x-2.x-1.0a
 core = 7.x
-configure = admin/tripal/extension/nd_genotypes
+configure = admin/tripal/extension/nd_genotypes/settings
 
 dependencies[] = tripal_feature
 dependencies[] = tripal_project
