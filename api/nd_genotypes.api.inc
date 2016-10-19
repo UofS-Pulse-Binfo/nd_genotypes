@@ -266,6 +266,7 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
   // specified in sequence details.
   if (isset($sequence_details['start']) AND isset($sequence_details['end'])) {
     $variants = nd_genotypes_get_variants_for_sequence($sequence_details['feature_name'], $sequence_details['start'], $sequence_details['end']);
+
     // Now we can mark-up the sequence with the alleles for each marker.
     foreach ($variants as $variant) {
       // Currently we only support single nucleotide alleles due to the added
@@ -341,28 +342,6 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
       );
   }
 
-  // Double check that the current variant/marker location is marked-up.
-  // Note: We can only do this if we know the position of the current variant/marker ;-).
-  if (isset($feature->featureloc->feature_id[0]->fmin)) {
-    $variant_loc = $feature->featureloc->feature_id[0]->fmin - $sequence_details['start'];
-
-    if (strpos($sequence[ $variant_loc ], '[') === FALSE) {
-      $ref_allele = strip_tags($sequence[ $variant_loc ]);
-      $code = '[' . $ref_allele . ']';
-
-      if ($feature->nid > 0) {
-        $sequence[ $variant_loc ] =
-          '<span class="variant variant-expanded" title="No alleles recorded.">'
-              . l($code, 'node/' . $feature->nid)
-          . '</span>';
-      }
-      else {
-        $sequence[ $variant_loc ] = '<span class="variant variant-expanded" title="No alleles recorded.">' . $code . '</span>';
-      }
-      drupal_set_message('We do not have an alternate allele recorded for the current variant/marker.','warning');
-    }
-  }
-
   return implode('', $sequence);
 }
 
@@ -380,66 +359,48 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
  *   of the array describes a variant including the alleles recorded for it.
  */
 function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end) {
-
-  $limit = '500';
-  $sql = "SELECT
-      v.variant_id,
-      v.variant_name,
-      cf.nid as variant_nid,
-      v.fmin as start,
-      v.fmax as end,
-      call.allele_call as allele
-    FROM {mview_ndg_calls} call
-    LEFT JOIN {mview_ndg_variants} v ON V.variant_id=call.variant_id
-    LEFT JOIN [chado_feature] cf ON cf.feature_id=v.variant_id
-    WHERE srcfeature_name=:backbone AND fmin >= :min
-    LIMIT ".$limit;
-  $resource = chado_query($sql, array(':backbone' => $srcfeature_name, ':min' => $start));
-
   $variants = array();
-  $r = $resource->fetchObject();
-  $offset = 0;
-  $times_checked = 1;
-  $continue = TRUE;
-  do {
 
-    if (!$r) {
-      $offset++;
-      $tmp_sql  = $sql . ' OFFSET '.($offset * $limit);
-      $resource = chado_query($tmp_sql, array(':backbone' => $srcfeature_name, ':min' => $start));
-      $times_checked++;
-    }
-    $r = $resource->fetchObject();
+  // First get a list of variants.
+  $sql = 'SELECT
+            v.variant_id,
+            v.variant_name,
+            cf.nid as variant_nid,
+            v.fmin as start,
+            v.fmax as end
+          FROM {mview_ndg_variants} v
+          LEFT JOIN [chado_feature] cf ON cf.feature_id=v.variant_id
+          WHERE srcfeature_name=:backbone AND fmin >= :min AND fmax <= :max';
+  $variants = chado_query($sql, array(':backbone' => $srcfeature_name, ':min' => $start, ':max' => $end))->fetchAllAssoc('variant_id');
 
-    // Add in the variant details.
-    // Note this will get reset for each allele a variant has due to the flat
-    // structure of the SQL results. As such make sure to assign each value
-    // so you don't reset the alleles array each time.
-    if ($r AND $r->end <= $end) {
-      $variants[$r->variant_id]['variant_id'] = $r->variant_id;
-      $variants[$r->variant_id]['variant_name'] = $r->variant_name;
-      $variants[$r->variant_id]['variant_nid'] = $r->variant_nid;
-      $variants[$r->variant_id]['start'] = $r->start;
-      $variants[$r->variant_id]['end'] = $r->end;
-      // Add in the current allele.
-      $variants[$r->variant_id]['alleles'][$r->allele]['allele'] = $r->allele;
-      if (isset($variants[$r->variant_id]['alleles'][$r->allele]['num_germplasm'])) {
-        $variants[$r->variant_id]['alleles'][$r->allele]['num_germplasm']++;
-      }
-      else {
-        $variants[$r->variant_id]['alleles'][$r->allele]['num_germplasm'] = 1;
-      }
+  // If there are no variants then return and empty array -obviously there won't be any calls.
+  if (empty($variants)) return $variants;
 
-      //Add in the single base nucleotides.
-      foreach (str_split($r->allele) as $n) {
-        $variants[$r->variant_id]['nucleotides'][$n] = $n;
-      }
+  // Now use that list fo get the allele distribution.
+  $sql = 'SELECT
+            variant_id,
+            allele_call as allele,
+            count(*) as num_germplasm
+          FROM unnest(ARRAY[' . implode(',', array_keys($variants)) . ']) variant_id
+          JOIN {mview_ndg_calls} call USING(variant_id)
+          GROUP BY variant_id, allele_call';
+  $resource = chado_query($sql);
+  foreach ($resource as $r) {
+
+    if (is_object($variants[$r->variant_id])) {
+      $variants[$r->variant_id] = (array) $variants[$r->variant_id];
     }
 
-    if (isset($r->end) AND $r->end >= $end) $continue = FALSE;
-    if ($times_checked >= 3) $continue = FALSE;
+    // Add in the current allele.
+    $variants[$r->variant_id]['alleles'][$r->allele]['allele'] = $r->allele;
+    $variants[$r->variant_id]['alleles'][$r->allele]['num_germplasm'] = $r->num_germplasm;
 
-  } while ($continue);
+    //Add in the single base nucleotides.
+    foreach (str_split($r->allele) as $n) {
+      $variants[$r->variant_id]['nucleotides'][$n] = $n;
+    }
+
+  }
 
   return $variants;
 }

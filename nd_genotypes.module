@@ -249,6 +249,28 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
     return;
   }
 
+  // First get a list of featurelocs where the srcfeature has sequence.
+  $variables['locations'] = chado_query('
+    SELECT l.featureloc_id, l.srcfeature_id, p.name as backbone_name, l.fmin, l.fmax, l.locgroup
+    FROM {featureloc} l
+    LEFT JOIN {feature} p ON p.feature_id=l.srcfeature_id
+    WHERE l.feature_id=:id AND p.residues IS NOT NULL
+    ORDER BY locgroup ASC, p.name ASC',
+    array(':id' => $variables['node']->feature->feature_id))->fetchAll();
+
+  // Then pick the one with locgroup 0 and display it by default.
+  $variables['current_location'] = reset($variables['locations']);
+  // Next, if the current location is set we would like to use that instead of the default ;-)
+  $q = drupal_get_query_parameters();
+  if (isset($q['seq-loc'])) {
+    foreach ($variables['locations'] as $k => $loc) {
+      $loc_string = $loc->backbone_name . ':' . $loc->fmin . '-' . $loc->fmax;
+      if ($loc_string == $q['seq-loc']) {
+        $variables['current_location'] = $variables['locations'][$k];
+      }
+    }
+  }
+
   $srcfeature = chado_query('
     SELECT
       f.feature_id,
@@ -262,8 +284,8 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
       LEFT JOIN {feature} f ON f.feature_id=fl.srcfeature_id
       LEFT JOIN {cvterm} cvt ON cvt.cvterm_id=f.type_id
       LEFT JOIN [chado_feature] cf ON cf.feature_id=f.feature_id
-    WHERE fl.feature_id=:id',
-  array(':id' => $variant_id))->fetchObject();
+    WHERE fl.feature_id=:id AND fl.srcfeature_id=:parent',
+  array(':id' => $variant_id, ':parent' => $variables['current_location']->srcfeature_id))->fetchObject();
 
   if (!$srcfeature OR empty($srcfeature->residues)) {
     $variables['sequence'] = '';

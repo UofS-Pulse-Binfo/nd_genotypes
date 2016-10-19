@@ -54,9 +54,39 @@ if (isset($sequence) AND !empty($sequence)) :
 
   <div class="tripal_feature-data-block-desc tripal-data-block-desc"></div>
 
+    <!-- Locations -->
+    <?php
+      if (sizeof($locations) == 1) {
+        print '<strong>Locations:</strong> ' . $locations[0]->backbone_name . ':' . $locations[0]->fmin . '-' . $locations[0]->fmax . '<br />';
+      }
+      else {
+        print '<strong>Locations:</strong><ul>';
+        $curr_locgroup = NULL;
+        $q = drupal_get_query_parameters();
+        foreach ($locations as $loc) {
+          if ($curr_locgroup != $loc->locgroup) {
+            if (!empty($cur_list)) {
+              print '<li>'.implode(', ', $cur_list).'</li>';
+            }
+            $curr_locgroup = $loc->locgroup;
+            $cur_list = array();
+          }
+          $loc = $loc->backbone_name . ':' . $loc->fmin . '-' . $loc->fmax;;
+          $q['seq-loc'] = $loc;
+          $url = url(current_path(), array('query' => $q));
+          $cur_list[] = l($loc, current_path(), array('query' => $q));
+        }
+        if (!empty($cur_list)) {
+          print '<li>'.implode(', ', $cur_list).'</li>';
+        }
+        print '</ul>';
+      }?>
+    <!-- Checkbox
+    <input type="checkbox" name="marked_up" value="1" checked> Show variants in sequence<br>-->
+    <br />
     <!-- Variant Marked-up Sequence -->
     <?php if (!empty($sequence_with_variants)) { ?>
-      <h3>Variant Marked-up Sequence</h3>
+      <strong>Variant Marked-up Sequence</strong>
       <?php print '<p>' . $marked_description . '</p>'; ?>
 
       <div id="tripal_feature-fasta-record">
@@ -69,7 +99,7 @@ if (isset($sequence) AND !empty($sequence)) :
     <?php } else { drupal_set_message(t('Unable to determine the Marked-up Sequence for this :type', array(':type' => $node->feature->type_id->name)), 'warning'); }?>
 
     <!-- Plain Sequence -->
-    <h3>FASTA Record</h3>
+    <strong>FASTA Record</strong>
     <?php print '<p>' . $fasta_description . '</p>'; ?>
 
     <div id="tripal_feature-fasta-record">
