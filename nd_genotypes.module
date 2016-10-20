@@ -66,6 +66,14 @@ function nd_genotypes_menu() {
     'weight' => 4
   );
 
+  // For ajax loading of sequences.
+  $items['node/%/ajax/sequences/%/%'] = array(
+    'page callback' => 'nd_genotypes_get_sequence_pane_ajax_callback',
+    'page arguments' => array(1, 4, 5),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('access chado_feature content'),
+  );
+
   if (chado_table_exists('mview_ndg_calls') AND chado_table_exists('mview_ndg_variants')) {
     // Add Marker x Germplasm Matrix links (1/organism synced)
     $sql = "
@@ -270,6 +278,14 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
       }
     }
   }
+  elseif (isset($variables['location'])) {
+    foreach ($variables['locations'] as $k => $loc) {
+      $loc_string = $loc->backbone_name . ':' . $loc->fmin . '-' . $loc->fmax;
+      if ($loc_string == $variables['location']) {
+        $variables['current_location'] = $variables['locations'][$k];
+      }
+    }
+  }
 
   $srcfeature = chado_query('
     SELECT
@@ -423,4 +439,36 @@ function nd_genotypes_lookup_germplasm_name_callback($genus, $string = "") {
   }
 
   drupal_json_output($matches);
+}
+
+/**
+ * Ajax Callback: Deliver the sequence pane via ajax to allow for seamless switching
+ * between locations.
+ */
+function nd_genotypes_get_sequence_pane_ajax_callback($nid, $location, $ajax) {
+
+  // First render the sequence content only.
+  $node = node_load($nid);
+  $content = theme('nd_genotypes_feature_sequence', array('node' => $node, 'location' => $location));
+
+  // If the use has ajax available then provide the content via agax!
+  if ($ajax == 'ajax') {
+
+    $commands = array();
+    // Ajax command to replace the #ajax-display element with the current time.
+    $commands[] = ajax_command_replace('#sequence-tripal-data-pane-content', $content);
+    // Add a visual "changed" marker to the '#ajax-display' element.
+    $commands[] = ajax_command_changed('#sequence-tripal-data-pane-content');
+
+    // Menu 'page callback' and #ajax['callback'] functions are supposed to
+    // return render arrays. If returning an Ajax commands array, it must be
+    // encapsulated in a render array structure.
+    ajax_deliver(array('#type' => 'ajax', '#commands' => $commands));
+  }
+  else {
+    // No ajax, just display the content.
+    return array(
+      '#markup' => $content,
+    );
+  }
 }

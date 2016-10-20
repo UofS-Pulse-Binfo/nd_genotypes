@@ -21,36 +21,36 @@
  */
 if (isset($sequence) AND !empty($sequence)) :
 ?>
+<div id="sequence-tripal-data-pane-content">
+  <style>
 
-<style>
+    /* Make the sequence look like it's on the terminal ;-). */
+    #tripal_feature-fasta-record {
+          font-family: Consolas, monaco, monospace;
+    }
+    #tripal_feature-sequence-residues {
+      width: 420px;
+      word-wrap: break-word;
+      margin: 0;
+      letter-spacing:3px;
+      line-height: 18px;
+      padding-top: 0;
+      margin-top: 0;
+      background-color: transparent;
+      text-align: justify;
+      font-size: 12px;
+    }
 
-  /* Make the sequence look like it's on the terminal ;-). */
-  #tripal_feature-fasta-record {
-        font-family: Consolas, monaco, monospace;
-  }
-  #tripal_feature-sequence-residues {
-    width: 420px;
-    word-wrap: break-word;
-    margin: 0;
-    letter-spacing:3px;
-    line-height: 18px;
-    padding-top: 0;
-    margin-top: 0;
-    background-color: transparent;
-    text-align: justify;
-    font-size: 12px;
-  }
-
-  /* Make sure the SNPs are noticeable */
-  .variant-marked-up-sequence .variant {
-    font-weight: bold;
-    font-size: 14px;
-    letter-spacing: 2px;
-  }
-  .variant-marked-up-sequence .variant-expanded a {
-    color: blue;
-  }
-</style>
+    /* Make sure the SNPs are noticeable */
+    .variant-marked-up-sequence .variant {
+      font-weight: bold;
+      font-size: 14px;
+      letter-spacing: 2px;
+    }
+    .variant-marked-up-sequence .variant-expanded a {
+      color: blue;
+    }
+  </style>
 
   <div class="tripal_feature-data-block-desc tripal-data-block-desc"></div>
 
@@ -73,8 +73,15 @@ if (isset($sequence) AND !empty($sequence)) :
           }
           $loc = $loc->backbone_name . ':' . $loc->fmin . '-' . $loc->fmax;;
           $q['seq-loc'] = $loc;
-          $url = url(current_path(), array('query' => $q));
-          $cur_list[] = l($loc, current_path(), array('query' => $q));
+          $link = array(
+            '#type' => 'link',
+            '#title' => t($loc),
+            '#href' => '/node/'.$node->nid.'/ajax/sequences/'.$loc.'/nojs',
+            '#ajax' => array(
+              'effect' => 'fade',
+            ),
+          );
+          $cur_list[] = drupal_render($link);
         }
         if (!empty($cur_list)) {
           print '<li>'.implode(', ', $cur_list).'</li>';
@@ -108,5 +115,5 @@ if (isset($sequence) AND !empty($sequence)) :
         <?php print $sequence; ?>
       </div>
     </div>
-
+</div>
 <?php endif; ?>
