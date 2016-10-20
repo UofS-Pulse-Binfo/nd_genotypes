@@ -50,6 +50,10 @@ if (isset($sequence) AND !empty($sequence)) :
     .variant-marked-up-sequence .variant-expanded a {
       color: blue;
     }
+    a:link.highlight-loc {
+      font-weight: bolder;
+      text-decoration: underline;
+    }
   </style>
 
   <div class="tripal_feature-data-block-desc tripal-data-block-desc"></div>
@@ -64,6 +68,8 @@ if (isset($sequence) AND !empty($sequence)) :
         $curr_locgroup = NULL;
         $q = drupal_get_query_parameters();
         foreach ($locations as $loc) {
+
+          // If this is the first member of a locgroup then I should print out the last one.
           if ($curr_locgroup != $loc->locgroup) {
             if (!empty($cur_list)) {
               print '<li>'.implode(', ', $cur_list).'</li>';
@@ -71,16 +77,25 @@ if (isset($sequence) AND !empty($sequence)) :
             $curr_locgroup = $loc->locgroup;
             $cur_list = array();
           }
-          $loc = $loc->backbone_name . ':' . $loc->fmin . '-' . $loc->fmax;;
+
+          // Generate an ajax link for this location.
+          $loc_name = $loc->backbone_name . ':' . $loc->fmin . '-' . $loc->fmax;
           $q['seq-loc'] = $loc;
           $link = array(
             '#type' => 'link',
-            '#title' => t($loc),
-            '#href' => '/node/'.$node->nid.'/ajax/sequences/'.$loc.'/nojs',
+            '#title' => t($loc_name),
+            '#href' => '/node/'.$node->nid.'/ajax/sequences/'.$loc_name.'/nojs',
             '#ajax' => array(
               'effect' => 'fade',
             ),
           );
+
+          // If this location is the currently displayed location then we want to
+          // highlight it.
+          if ($loc->featureloc_id == $current_location->featureloc_id) {
+            $link['#options']['attributes']['class'][] = 'highlight-loc';
+          }
+
           $cur_list[] = drupal_render($link);
         }
         if (!empty($cur_list)) {
