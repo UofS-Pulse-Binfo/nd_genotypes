@@ -247,8 +247,44 @@ function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
   if (isset($values['variant_name']) AND !empty($values['variant_name'])) {
     $values['variant_name'] = trim($values['variant_name']);
     $list = preg_split("/\s*(\r\n|\n|\r)\s*/", $values['variant_name']);
-    $query['variant_name'] = $list;
-    unset($values['variant_name']);
+
+    // Check if this list already exists.
+    $list_id = db_select('ndg_matrix_variant_user_lists','l')
+      ->fields('l', array('list_id'))
+      ->condition('l.list', json_encode($list), '=')
+      ->execute()
+      ->fetchField();
+
+    // If this is from an already saved list, don't re-save it!
+    if ($list_id) {
+      $query['variant_name_list'] = $list_id;
+      unset($values['variant_name']);
+      // Increase the counter for the number of times this list was used.
+      db_query('UPDATE {ndg_matrix_variant_user_lists} SET num_accessed = num_accessed + 1 WHERE list_id = :id AND created != :today',
+        array(':id' => $list_id, ':today' => date('Y-m-d')));
+    }
+    // Now, we should be careful to not store too many variant names in the URL
+    // because there is a length limit ;-).
+    // Thus, if we have 10 or less, we will use the URL
+    elseif (sizeof($list) <= 10) {
+      $query['variant_name'] = $list;
+      unset($values['variant_name']);
+    }
+    // Otherwise, we should store the names somewhere else.
+    // These names should be stored long term since the url containing their reference
+    // can be bookmarked and even published in publications. Thus we decided to store
+    // them in a database table. Specifically, public.ndg_matrix_variant_user_lists.
+    else {
+      $list_id = db_insert('ndg_matrix_variant_user_lists')
+        ->fields(array(
+          'list' => json_encode($list),
+          'num_accessed' => 1,
+          'created' => date('Y-m-d'),
+        ))
+        ->execute();
+      $query['variant_name_list'] = $list_id;
+      unset($values['variant_name']);
+    }
   }
 
   // Add the remaining simple arguements into the URL.
@@ -549,6 +585,17 @@ function nd_genotypes_process_query_parameters(&$vars) {
     $vars['query_args']['variant_name'] = $vars['q']['variant_name'];
     $vars['defaults']['variant_name'] = $vars['q']['variant_name'];
   }
+  // Stored as List.
+  // If there were more than 10 variant_names entered we will have stored it in the db
+  // instead of the URL.
+  if (isset($vars['q']['variant_name_list']) AND is_numeric($vars['q']['variant_name_list'])) {
+    $list_id = $vars['q']['variant_name_list'];
+    $list_json = db_query('SELECT list FROM {ndg_matrix_variant_user_lists} WHERE list_id=:id',
+      array(':id' => $list_id))->fetchField();
+    $list = json_decode($list_json);
+    $vars['query_args']['variant_name_list'] = $list;
+    $vars['defaults']['variant_name'] = $list;
+  }
 
   // Set the defaults for all other fields in the form.
   $fields = $vars['q'];
@@ -626,6 +673,12 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
     //$variant_args[':variant_names'] = $query_args['variant_name'];
     unset($query_args['variant_name']);
     $variant_name_filter = TRUE;
+  }
+  elseif (isset($query_args['variant_name_list'])) {
+    $list_json = db_query('SELECT list FROM {ndg_matrix_variant_user_lists} WHERE list_id=:id',
+      array(':id' => $query_args['variant_name_list']))->fetchField();
+    $list = json_decode($list_json);
+    $variant[] = "variant_name IN (VALUES('" . implode("'), ('", $list) . "'))";
   }
 
   // Polymorphic:

@@ -7,10 +7,16 @@
  * Implements hook_install().
  */
 function nd_genotypes_install() {
+
+  // Create the genotype_call table for storing genotypes in chado.
+  chado_create_custom_table(
+    'genotype_call',
+    nd_genotypes_genotype_call_schema_template()
+  );
+
+  // Create the materialized views.
   $ndg_variants = 'mview_ndg_variants';
   $ndg_call = 'mview_ndg_calls';
-
-  // Create both tables if they don't already exists.
   nd_genotypes_create_mview_ndg_variants($ndg_variants);
   nd_genotypes_create_mview_ndg_calls($ndg_call);
 
@@ -26,4 +32,43 @@ function nd_genotypes_install() {
 
   // Give them some guidance!
   drupal_set_message('In order to see the genotype and sequence pane on feature nodes, you have to set the type(s) used for variants and markers in the module settings. Click the configure link beside the module name.','warning');
+}
+
+/**
+ * Implements hook_schema().
+ */
+function nd_genotypes_schema() {
+  $schema = array();
+
+  $schema['ndg_matrix_variant_user_lists'] = array(
+    'description' => 'Stores user entered variant name lists for use the the genotype matrix.',
+    'fields' => array(
+      'list_id' => array(
+        'description' => 'The primary identifier for variant name list.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      ),
+      'list' => array(
+        'description' => 'An array of variant names.',
+        'pgsql_type' => 'jsonb',
+        'not null' => TRUE,
+      ),
+      'created' => array(
+        'description' => 'The date this list was first entered.',
+        'type' => 'varchar',
+        'pgsql_type' => 'date',
+      ),
+      'num_accessed' => array(
+        'description' => 'The number of times this list was accessed.',
+        'type' => 'int',
+        'default' => 1
+      ),
+    ),
+    'indexes' => array( ),
+    'unique keys' => array( ),
+    'primary key' => array('list_id'),
+  );
+
+  return $schema;
 }
