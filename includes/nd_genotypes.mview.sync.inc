@@ -172,7 +172,7 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
       gc.project_id,
       gc.genotype_id,
       a.description as allele_call,
-      gc.marker_data
+      gc.meta_data
     FROM {genotype_call} gc
       LEFT JOIN {feature} m ON m.feature_id=gc.marker_id
       LEFT JOIN {featureprop} mt ON mt.feature_id=m.feature_id AND mt.type_id IN (SELECT cvterm_id FROM cvterm WHERE name='marker_type')
@@ -184,7 +184,7 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
     ";
 
   $i = 0;
-
+  $total = sizeof($genotypes);
   foreach ($genotypes as $genotype_id) {
     $i++;
 
@@ -208,12 +208,12 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
           project_id,
           genotype_id,
           allele_call,
-          marker_data) FROM '/tmp/mview_ndg_calls.copy'")->rowCount();
+          meta_data) FROM '/tmp/mview_ndg_calls.copy'")->rowCount();
     print "\t\tFinished $result records.\n";
   }
 
   // Create the indexes you dropped earlier.
-  print "\t\Creating Indexes\n";
+  print "\tCreating Indexes\n";
   nd_genotypes_create_mview_ndg_calls_indexes($ndg_call);
 
   //-------------------------
@@ -264,11 +264,10 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
     WHERE call.variant_id BETWEEN :min AND :max
     ";
 
-  $i = 0;
   $total = $max - $min;
-  for ($min = $total_min; $min < $total_max; $min += $chunk_size) {
+  $min = $total_min;
+  for ($i=1; $i <= $num_chunks; $i++) {
     $max = $min + $chunk_size - 1;
-    $i++;
 
     print "\tWorking on $min to $max ($i of ".ceil($num_chunks).")...\n";
 
@@ -290,10 +289,12 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
       fmin,
       fmax) FROM '/tmp/mview_ndg_variants.copy.unique'")->rowCount();
     print "\t\tFinished $result records.\n";
+
+    $min += $chunk_size;
   }
 
   // Create the indexes you dropped earlier.
-  print "\t\Creating Indexes\n";
+  print "\tCreating Indexes\n";
   nd_genotypes_create_mview_ndg_variants_indexes();
 
   // Update the cached lists.

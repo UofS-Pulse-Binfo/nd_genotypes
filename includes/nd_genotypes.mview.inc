@@ -221,7 +221,7 @@ function nd_genotypes_create_mview_ndg_variants_indexes($tablename = 'mview_ndg_
  *  - project_id: the project_id of the project this call was generated as part of
  *  - genotype_id: the genotype_id of the resultant allele call
  *  - allele_call: the result of the marker assay (ie: AA)
- *  - marker_data: a json blon storing any quality information
+ *  - meta_data: a json blon storing any quality information
  */
 function nd_genotypes_create_mview_ndg_calls($tablename = 'mview_ndg_calls') {
 
