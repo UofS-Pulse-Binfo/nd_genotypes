@@ -64,30 +64,6 @@ function nd_genotypes_update_mview_cache() {
   }
   variable_set('nd_genotypes_marker_types', serialize($types));
 
-  // The backbone names (ie: Chr1, Chr2, etc.).
-  $resource = chado_query("
-    WITH RECURSIVE t AS (
-      (SELECT srcfeature_name
-        FROM {mview_ndg_variants}
-        ORDER BY srcfeature_name
-        LIMIT 1)
-      UNION ALL
-      SELECT
-          (SELECT srcfeature_name
-            FROM {mview_ndg_variants}
-            WHERE srcfeature_name > t.srcfeature_name
-            ORDER BY srcfeature_name
-            LIMIT 1)
-        FROM t
-        WHERE t.srcfeature_name IS NOT NULL
-    )
-    SELECT t.srcfeature_name FROM t WHERE t.srcfeature_name IS NOT NULL");
-  $b = array();
-  foreach ($resource as $r) {
-    $b[$r->srcfeature_name] = $r->srcfeature_name;
-  }
-  variable_set('nd_genotypes_seq_backbones', serialize($b));
-
   // Create the germplasm genotyped mview for use with autocomplete functionality.
   nd_genotypes_create_mview_ndg_germplasm_genotyped();
 }

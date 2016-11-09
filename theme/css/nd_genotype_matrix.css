@@ -39,27 +39,26 @@ input#edit-project-name {
 .seq-range-element {
   margin-right: 45px;
 }
-.seq-range-element .form-item label {
+.seq-range-element .form-item {
+  margin-bottom: 2px;
+}
+.seq-range-element .start-elements, .seq-range-element .end-elements {
+  display: inline-flex;
+  flex-direction: row;
+  width: 50%;
+}
+.seq-range-element .form-type-item {
   font-weight: normal;
   font-style: italic;
   padding-right: 10px;
+  width: 45px;
 }
-.seq-range-element .end-elements label {
-  padding-right: 25px;
-}
-.seq-range-element .start-elements, .seq-range-element .end-elements{
-  width: 50%;
-  display: inline-block;
-}
-.seq-range-element .end-elements {
-  text-align: right;
-}
-.seq-range-element select {
-  width: 28%;
-  height: 24px;
+.end-elements .form-type-item {
+  padding-left: 10px;
 }
 .seq-range-element input {
-  width: 48%;
+  display: block;
+  width: 90%;
 }
 
 /* Colour coding of alleles */

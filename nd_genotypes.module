@@ -66,6 +66,16 @@ function nd_genotypes_menu() {
     'weight' => 4
   );
 
+  // For autocomplete of sequence backbone names.
+  $items['tripal_ajax/nd_genotypes/genotyped_backbones/name_to_id/%/only'] = array(
+    'title' => 'Backbones Genotyped AJAX',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'nd_genotypes_lookup_backbone_name_callback',
+    'page arguments' => array(4),
+    'access arguments' => array('access content'),
+    'weight' => 4
+  );
+
   // For ajax loading of sequences.
   $items['node/%/ajax/sequences/%/%'] = array(
     'page callback' => 'nd_genotypes_get_sequence_pane_ajax_callback',
@@ -431,6 +441,27 @@ function nd_genotypes_lookup_germplasm_name_callback($genus, $string = "") {
       SELECT germplasm_name
       FROM {mview_ndg_germplasm_genotypes} m
       WHERE germplasm_name ~* :query
+      LIMIT 10
+    ', array(':query' => $string))->fetchCol();
+    foreach ($result as $name) {
+      $matches[$name] = $name;
+    }
+  }
+
+  drupal_json_output($matches);
+}
+
+/**
+ * Auto-complete: Look-up names of backbones genotyped.
+ */
+function nd_genotypes_lookup_backbone_name_callback($genus, $string = "") {
+  $matches = array();
+  if (!empty($genus) AND trim($string)) {
+    $result = chado_query('
+      SELECT srcfeature_name as name
+      FROM {mview_ndg_variants} m
+      WHERE srcfeature_name ~* :query
+      GROUP BY srcfeature_name
       LIMIT 10
     ', array(':query' => $string))->fetchCol();
     foreach ($result as $name) {

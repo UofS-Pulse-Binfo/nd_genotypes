@@ -41,9 +41,6 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
     }
   }
 
-  // Determine the select list for sequence backbone.
-  $seq_chr = unserialize(variable_get('nd_genotypes_seq_backbones', 'a:0:{}'));
-
   // Filter Form.
   //-------------------------
   $form['multiple_stocks'] = array(
@@ -69,41 +66,49 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
 
   $form['seq_range']['start'] = array(
     '#type' => 'markup',
-    '#prefix' => '<div class="start-elements container-inline">',
+    '#prefix' => '<div class="start-elements">',
     '#suffix' => '</div>',
   );
 
+  $form['seq_range']['start']['label'] = array(
+    '#type' => 'item',
+    '#markup' => 'From',
+  );
+
   $form['seq_range']['start']['backbone'] = array(
-    '#type' => 'select',
-    '#title' => 'From',
-    '#empty_option' => t('- Sequence -'),
-    '#options' => $seq_chr,
-    //'#default_value' => (isset($defaults['seq_range']['start']['backbone'])) ? $defaults['seq_range']['start']['backbone'] : NULL,
+    '#type' => 'textfield',
+    '#attributes' => array('placeholder' => 'Sequence Name'),
+    '#autocomplete_path' => 'tripal_ajax/nd_genotypes/genotyped_backbones/name_to_id/' . $genus . '/only',
+    '#default_value' => (isset($defaults['seq_range']['start']['backbone'])) ? $defaults['seq_range']['start']['backbone'] : NULL,
   );
 
   $form['seq_range']['start']['pos'] = array(
     '#type' => 'textfield',
-    '#attributes' => array('placeholder' => 'Start'),
+    '#attributes' => array('placeholder' => 'Start Position'),
     '#default_value' => (isset($defaults['seq_range']['start']['pos'])) ? $defaults['seq_range']['start']['pos']:  NULL,
   );
 
   $form['seq_range']['end'] = array(
     '#type' => 'markup',
-    '#prefix' => '<div class="end-elements container-inline">',
+    '#prefix' => '<div class="end-elements">',
     '#suffix' => '</div>',
   );
 
+  $form['seq_range']['end']['label'] = array(
+    '#type' => 'item',
+    '#markup' => 'to',
+  );
+
   $form['seq_range']['end']['backbone'] = array(
-    '#type' => 'select',
-    '#title' => 'to',
-    '#empty_option' => '- ' . t('Sequence') . ' -',
-    '#options' => $seq_chr,
+    '#type' => 'textfield',
+    '#attributes' => array('placeholder' => 'Sequence Name'),
+    '#autocomplete_path' => 'tripal_ajax/nd_genotypes/genotyped_backbones/name_to_id/' . $genus . '/only',
     '#default_value' => (isset($defaults['seq_range']['end']['backbone'])) ? $defaults['seq_range']['end']['backbone'] : NULL,
   );
 
   $form['seq_range']['end']['pos'] = array(
     '#type' => 'textfield',
-    '#attributes' => array('placeholder' => 'End'),
+    '#attributes' => array('placeholder' => 'End Position'),
     '#default_value' => (isset($defaults['seq_range']['end']['pos'])) ? $defaults['seq_range']['end']['pos']:  NULL
   );
 
