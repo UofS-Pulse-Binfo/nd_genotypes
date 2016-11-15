@@ -5,6 +5,54 @@
  */
 
 /**
+ * Execute a query referencing one of the ND Genotype MViews.
+ * This is required to ensure the correct hard-partition is queried so
+ * NEVER QUERY THE MVIEW DIRECTLY.
+ *
+ * @param $partition
+ *   The string representation of the partition to query.
+ *   Currently partitioning by genus is the only method supported.
+ * @param $query
+ *   The query to be executed. This should contain :placeholders for user submitted data
+ *   and have {curly braces} around chado table names.
+ * @param $variables
+ *   An array of user submitted variables to substitute in to the :placeholders in the query.
+ *   The keys should be the :placeholder.
+ */
+function ndg_mview_query($partition, $query, $variables = array()) {
+
+  $partition = strtolower($partition);
+
+  // Replace the mview table names with the qualified by genus actual table names.
+  $query = str_replace('mview_ndg_calls', 'mview_ndg_'.$partition.'_calls', $query);
+  $query = str_replace('mview_ndg_variants', 'mview_ndg_'.$partition.'_variants', $query);
+
+  // @todo: handle mview_ndg_germplasm_genotypes.
+
+  return chado_query($query, $variables);
+}
+
+/**
+ *
+ */
+function ndg_mview_tables_exist($partition) {
+  $exists = TRUE;
+
+  $partition = strtolower($partition);
+
+  $names = array(
+    'mview_ndg_'.$partition.'_calls',
+    'mview_ndg_'.$partition.'_variants',
+    'mview_ndg_germplasm_genotypes',
+  );
+  foreach ($names as $curr) {
+    $curr_exists = chado_table_exists($curr);
+    if (!curr_exists) return FALSE;
+  }
+  return TRUE;
+}
+
+/**
  * Determine the consensus call for a set of alleles.
  * Currently this is just based on the most frequent one.
  * @todo: Include quality information.
@@ -31,10 +79,10 @@ function nd_genotype_get_consensus_call($alleles) {
  * @return
  *   TRUE if there are genotypes available and FALSE otherwise
  */
-function tripal_germplasm_has_nd_genotypes($stock_id) {
+function tripal_germplasm_has_nd_genotypes($stock_id, $partition = 'All') {
 
   $query = "SELECT count(*) as nd_genotypes FROM {mview_ndg_calls} WHERE stock_id=:stock_id OR germplasm_id=:stock_id";
-  $result = chado_query($query, array(':stock_id' => $stock_id))->fetchField();
+  $result = ndg_mview_query($partition, $query, array(':stock_id' => $stock_id))->fetchField();
   if ($result > 0) {
     return TRUE;
   }
@@ -52,10 +100,10 @@ function tripal_germplasm_has_nd_genotypes($stock_id) {
  * @return
  *   TRUE if there are genotypes available and FALSE otherwise
  */
-function nd_genotypes_has_genotypes($feature_id) {
+function nd_genotypes_has_genotypes($feature_id, $partition = 'All') {
 
   $query = "SELECT count(*) as nd_genotypes FROM {mview_ndg_calls} WHERE variant_id=:id OR marker_id=:id";
-  $result = chado_query($query, array(':id' => $feature_id))->fetchField();
+  $result = ndg_mview_query($partition, $query, array(':id' => $feature_id))->fetchField();
   if ($result > 0) {
     return TRUE;
   }
@@ -151,7 +199,7 @@ function nd_genotypes_get_variant($marker_id, $id_only = FALSE) {
  * @return
  *   An array of allele objects.
  */
-function nd_genotypes_get_alleles_for_variant($variant_id) {
+function nd_genotypes_get_alleles_for_variant($variant_id, $partition = 'All') {
   $variant = array();
 
   $sql = "SELECT
@@ -166,7 +214,7 @@ function nd_genotypes_get_alleles_for_variant($variant_id) {
     LEFT JOIN {mview_ndg_variants} v ON v.variant_id=call.variant_id
   WHERE v.variant_id=:id
   GROUP BY v.variant_id, v.variant_name, v.fmin, v.fmax, call.marker_name, call.allele_call";
-  $resource = chado_query($sql, array(':id' => $variant_id))->fetchAll();
+  $resource = ndg_mview_query($partition, $sql, array(':id' => $variant_id))->fetchAll();
 
   foreach ($resource as $r) {
     $variant['variant_id'] = $r->variant_id;
@@ -213,7 +261,7 @@ function nd_genotypes_get_alleles_for_variant($variant_id) {
  * @return
  *   The actual marked-up sequence in string format. Includes HTML.
  */
-function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details, $feature_category = 'sequence') {
+function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details, $feature_category = 'sequence', $partition = 'All') {
 
   // First we need to get the sequence to be marked-up.
   // Note that we also set some defaults while we're at it such as the sequence
@@ -227,6 +275,7 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
     $sequence = str_split($feature->residues);
   }
   elseif ($feature_category != 'sequence') {
+    // @todo: where did this function go?
     $retrieved_sequence_details = nd_genotypes_get_variant_sequence($feature, $feature_category);
     if (!empty($retrieved_sequence_details['sequence'])) {
       $sequence_details['sequence'] = $retrieved_sequence_details['sequence'];
@@ -265,7 +314,7 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
   // Now get all the markers with their associated genotypes for the range
   // specified in sequence details.
   if (isset($sequence_details['start']) AND isset($sequence_details['end'])) {
-    $variants = nd_genotypes_get_variants_for_sequence($sequence_details['feature_name'], $sequence_details['start'], $sequence_details['end']);
+    $variants = nd_genotypes_get_variants_for_sequence($sequence_details['feature_name'], $sequence_details['start'], $sequence_details['end'], $partition);
 
     // Now we can mark-up the sequence with the alleles for each marker.
     foreach ($variants as $variant) {
@@ -358,7 +407,7 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
  *   An array of variants where the variant feature_id is the key and each member
  *   of the array describes a variant including the alleles recorded for it.
  */
-function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end) {
+function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end, $partition = 'All') {
   $variants = array();
 
   // First get a list of variants.
@@ -371,7 +420,7 @@ function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end) 
           FROM {mview_ndg_variants} v
           LEFT JOIN [chado_feature] cf ON cf.feature_id=v.variant_id
           WHERE srcfeature_name=:backbone AND fmin >= :min AND fmax <= :max';
-  $variants = chado_query($sql, array(':backbone' => $srcfeature_name, ':min' => $start, ':max' => $end))->fetchAllAssoc('variant_id');
+  $variants = ndg_mview_query($partition, $sql, array(':backbone' => $srcfeature_name, ':min' => $start, ':max' => $end))->fetchAllAssoc('variant_id');
 
   // If there are no variants then return and empty array -obviously there won't be any calls.
   if (empty($variants)) return $variants;
@@ -384,7 +433,7 @@ function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end) 
           FROM unnest(ARRAY[' . implode(',', array_keys($variants)) . ']) variant_id
           JOIN {mview_ndg_calls} call USING(variant_id)
           GROUP BY variant_id, allele_call';
-  $resource = chado_query($sql);
+  $resource = ndg_mview_query($partition, $sql);
   foreach ($resource as $r) {
 
     if (is_object($variants[$r->variant_id])) {

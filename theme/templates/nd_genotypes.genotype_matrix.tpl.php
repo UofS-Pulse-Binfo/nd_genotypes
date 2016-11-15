@@ -166,7 +166,7 @@ if ($num_rows < 100) {
 <div id="genotype-matrix-<?php print $genus;?>">
   <div class="filter-form">
     <?php
-      $form = drupal_get_form('nd_genotypes_matrix_filter_form', array('genus' => $genus, 'defaults' => $defaults));
+      $form = drupal_get_form('nd_genotypes_matrix_filter_form', array('genus' => $genus, 'partition' => $partition, 'defaults' => $defaults));
       print drupal_render($form);
     ?>
   </div>

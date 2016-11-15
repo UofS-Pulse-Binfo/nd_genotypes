@@ -23,6 +23,7 @@
 function nd_genotypes_matrix_filter_form($form, &$form_state) {
   $genus = $form_state['build_info']['args'][0]['genus'];
   $defaults = $form_state['build_info']['args'][0]['defaults'];
+  $partition = $form_state['build_info']['args'][0]['partition'];
   $total_num_rows = 100;
 
   if (!$genus) { drupal_set_message('The link/URL must contain the genus of the organism you would like genotypes for.','error'); return ''; }
@@ -51,7 +52,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
     '#name_title' => 'Germplasm/Stock Name',
     '#added_description' => 'Specify the stock (and species of the stock) you want to display the genotypes of.',
     '#default_value' => (isset($defaults['germ'])) ? $defaults['germ'] : array(),
-    '#name_autocomplete_path' => 'tripal_ajax/nd_genotypes/genotyped_germplasm/name_to_id/' . $genus . '/only',
+    '#name_autocomplete_path' => 'tripal_ajax/nd_genotypes/genotyped_germplasm/name_to_id/' . $partition . '/only',
     '#missing_stock_error_callback' => 'nd_genotype_matrix_missing_stock_error_callback',
     //'#required' => TRUE,
   );
@@ -78,7 +79,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
   $form['seq_range']['start']['backbone'] = array(
     '#type' => 'textfield',
     '#attributes' => array('placeholder' => 'Sequence Name'),
-    '#autocomplete_path' => 'tripal_ajax/nd_genotypes/genotyped_backbones/name_to_id/' . $genus . '/only',
+    '#autocomplete_path' => 'tripal_ajax/nd_genotypes/genotyped_backbones/name_to_id/' . $partition . '/only',
     '#default_value' => (isset($defaults['seq_range']['start']['backbone'])) ? $defaults['seq_range']['start']['backbone'] : NULL,
   );
 
@@ -102,7 +103,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
   $form['seq_range']['end']['backbone'] = array(
     '#type' => 'textfield',
     '#attributes' => array('placeholder' => 'Sequence Name'),
-    '#autocomplete_path' => 'tripal_ajax/nd_genotypes/genotyped_backbones/name_to_id/' . $genus . '/only',
+    '#autocomplete_path' => 'tripal_ajax/nd_genotypes/genotyped_backbones/name_to_id/' . $partition . '/only',
     '#default_value' => (isset($defaults['seq_range']['end']['backbone'])) ? $defaults['seq_range']['end']['backbone'] : NULL,
   );
 
@@ -771,7 +772,7 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   }
 
   $args = array_merge($call_args, $variant_args);
-  $resource = chado_query($sql, $args);
+  $resource = ndg_mview_query($vars['partition'], $sql, $args);
 
   //dpm(array('sql' => $sql, 'args' => $args),'Variant Query');
   $ids = array(); //Keep track of variant_ids to grab calls for.
@@ -789,11 +790,11 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   // Now grab the allele calls.
   if ($ids) {
     $sql = "SELECT variant_id, germplasm_id, allele_call \n"
-          ."FROM unnest(ARRAY[" . implode(',',$ids) . "]) variant_id\n"
-          ."JOIN chado.mview_ndg_calls call USING(variant_id)\n"
+          ."FROM unnest(ARRAY[" . implode(',',$ids) . "]) variant_id \n"
+          ."JOIN {mview_ndg_calls} call USING(variant_id) \n"
           ."WHERE " . implode("\n  AND ",$call) . "\n";
     //dpm(array('sql' => $sql, 'args' => $call_args), 'Call Query');
-    $resource = db_query($sql, $call_args);
+    $resource = ndg_mview_query($vars['partition'], $sql, $call_args);
     foreach($resource as $r) {
       $vars['data'][$r->variant_id][$r->germplasm_id][] = $r->allele_call;
     }
