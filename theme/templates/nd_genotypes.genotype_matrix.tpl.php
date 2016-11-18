@@ -43,7 +43,7 @@ if (isset($variants)) {
       'class' => array('position','backbone')
     );
     $table['rows'][$row_id]['fmin'] = array(
-      'data' => $v->fmin,
+      'data' => $v->fmin + 1, // convert from 0-indexed chado to 1-indexed.
       'class' => array('position', 'start')
     );
     $table['rows'][$row_id]['fmax'] = array(
