@@ -84,16 +84,21 @@ function nd_genotypes_menu() {
     'access arguments' => array('access chado_feature content'),
   );
 
-  if (chado_table_exists('mview_ndg_calls') AND chado_table_exists('mview_ndg_variants')) {
-    // Add Marker x Germplasm Matrix links (1/organism synced)
-    $sql = "
-      SELECT *
-      FROM [chado_organism] CO
-        INNER JOIN {organism} O ON O.organism_id = CO.organism_id
-      ORDER BY O.genus, O.species
-    ";
-    $orgs = chado_query($sql);
-    foreach ($orgs as $organism) {
+  // Add Marker x Germplasm Matrix links (1/organism synced)
+  $sql = "
+    SELECT *
+    FROM [chado_organism] CO
+      INNER JOIN {organism} O ON O.organism_id = CO.organism_id
+    ORDER BY O.genus, O.species
+  ";
+  $orgs = chado_query($sql);
+  foreach ($orgs as $organism) {
+
+    // @PARTITION: We use the partition to determine if the mview tables are available
+    // for this organism before making the page available.
+    $partition = $organism->genus;
+    if (ndg_mview_tables_exist($partition)) {
+
       $items['chado/genotype/' . $organism->genus] = array(
         'title' => $organism->genus . ' Genotypes',
         'description' => 'Marker by Germplasm Genotypes Search for ' . $organism->genus . ' species.',
@@ -115,6 +120,7 @@ function nd_genotypes_menu() {
       );
     }
   }
+
 
   return $items;
 }
@@ -324,7 +330,7 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
       f.name,
       f.uniquename,
       (fmin::int-250) as substring_start,
-      substring(residues from fmin::int-250 for 500) as residues,
+      substring(residues from fmin::int+1-250 for 500) as residues,
       cf.nid,
       cvt.name as type_name
     FROM {featureloc} fl
@@ -458,7 +464,7 @@ function nd_genotypes_preprocess_nd_genotypes_feature_genotypes(&$variables) {
  */
 function nd_genotypes_lookup_germplasm_name_callback($partition, $string = "") {
   $matches = array();
-  if (!empty($genus) AND trim($string)) {
+  if (!empty($partition) AND trim($string)) {
     $result = ndg_mview_query($partition, '
       SELECT germplasm_name
       FROM {mview_ndg_germplasm_genotypes} m
@@ -479,7 +485,7 @@ function nd_genotypes_lookup_germplasm_name_callback($partition, $string = "") {
 function nd_genotypes_lookup_backbone_name_callback($partition, $string = "") {
   $matches = array();
   if (!empty($partition) AND trim($string)) {
-    $result = ndg_mview_query($genus, '
+    $result = ndg_mview_query($partition, '
       SELECT srcfeature_name as name
       FROM {mview_ndg_variants} m
       WHERE srcfeature_name ~* :query
