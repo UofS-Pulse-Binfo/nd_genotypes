@@ -47,7 +47,7 @@ function ndg_mview_tables_exist($partition) {
   );
   foreach ($names as $curr) {
     $curr_exists = chado_table_exists($curr);
-    if (!curr_exists) return FALSE;
+    if (!$curr_exists) return FALSE;
   }
   return TRUE;
 }

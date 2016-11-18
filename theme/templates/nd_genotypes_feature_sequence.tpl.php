@@ -61,7 +61,12 @@ if (isset($sequence) AND !empty($sequence)) :
     <!-- Locations -->
     <?php
       if (sizeof($locations) == 1) {
-        print '<strong>Locations:</strong> ' . $locations[0]->backbone_name . ':' . $locations[0]->fmin . '-' . $locations[0]->fmax . '<br />';
+        $loc = $locations[0];
+        $loc_name = $loc->backbone_name . ': ' . ($loc->fmin + 1) . '-' . $loc->fmax;
+        if (abs($loc->fmin - $loc->fmax) == 1) {
+          $loc_name = $loc->backbone_name . ': ' . $loc->fmax;
+        }
+        print '<strong>Locations:</strong> ' . $loc_name . '<br />';
       }
       else {
         print '<strong>Locations:</strong><ul>';
@@ -79,12 +84,16 @@ if (isset($sequence) AND !empty($sequence)) :
           }
 
           // Generate an ajax link for this location.
-          $loc_name = $loc->backbone_name . ':' . $loc->fmin . '-' . $loc->fmax;
+          $loc_code = $loc->backbone_name . ':' . $loc->fmin . '-' . $loc->fmax;
+          $loc_name = $loc->backbone_name . ': ' . ($loc->fmin + 1) . '-' . $loc->fmax;
+          if (abs($loc->fmin - $loc->fmax) == 1) {
+            $loc_name = $loc->backbone_name . ': ' . $loc->fmax;
+          }
           $q['seq-loc'] = $loc;
           $link = array(
             '#type' => 'link',
             '#title' => t($loc_name),
-            '#href' => '/node/'.$node->nid.'/ajax/sequences/'.$loc_name.'/nojs',
+            '#href' => '/node/'.$node->nid.'/ajax/sequences/'.$loc_code.'/nojs',
             '#ajax' => array(
               'effect' => 'fade',
             ),

@@ -250,11 +250,11 @@ function nd_genotypes_node_view($node, $view_mode, $langcode) {
           unset($node->content['tripal_feature_seqence']);
         }
 
-       // Add the two genotype specific panes: Genotypes and Sequence.
-       $node->content['nd_genotypes_feature_genotypes'] = array(
+        // Add the two genotype specific panes: Genotypes and Sequence.
+        $node->content['nd_genotypes_feature_genotypes'] = array(
           '#theme' => 'nd_genotypes_feature_genotypes',
           '#node' => $node,
-          '#tripal_toc_id'    => 'genotypes',
+          '#tripal_toc_id'    => 'NDgenotypes',
           '#tripal_toc_title' => 'Genotypes',
         );
         // Sequence mark-up page
