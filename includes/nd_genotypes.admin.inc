@@ -23,6 +23,11 @@ function nd_genotypes_admin_settings($form, $form_state) {
     '#title' => 'Storage Method',
   );
 
+  $form['storage']['note'] = array(
+    '#type' => 'markup',
+    '#markup' => '<div class="messages warning">This module currently only supports Method #2: Genotype Call Custom table.</div>',
+  );
+
   $form['storage']['storage_method'] = array(
     '#type' => 'select',
     '#title' => 'Storage Method',
@@ -33,7 +38,8 @@ function nd_genotypes_admin_settings($form, $form_state) {
       'stock_genotype' => 'Genotype Stock table',
       'custom' => 'Custom',
     ),
-    '#default_value' => variable_get('nd_genotype_storage_method', 'nd_exp'),
+    '#default_value' => 'genotype_call',
+    '#disabled' => TRUE,
   );
 
   $form['storage']['save'] = array(
@@ -234,39 +240,6 @@ function nd_genotypes_admin_sync_mviews($form, $form_state) {
     '#name' => 'sync_mviews',
     '#value' => 'Sync'
   );
-
-/*
-  $form['import'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'Import Genotype Experiments',
-    '#description' => '<p>Genotype experiments often contain a lot of data, therefore,
-      it is expected that you will load the data using the '
-      . l('Tripal Bulk Loader', '') .' rather than trying to enter it manually.
-      As such a Bulk Loading template has been provided to aid you in loading
-      your marker by genotype matrix data (where columns contain the genotypes
-      for a given sample and rows indicate which marker was assayed).</p>
-      <p>This template should have been created for you when you installed this
-      module but if not or if you would like to revert any changes you\'ve made
-      then click the "Update Bulk Loader Template" button below.</p>
-      <p>To upload your data, ' .l('create a Bulk Loading Job', '')
-      . ' with the template being "ND Genotype: Generic Genotype Experiments". Once you create the job, you
-      will need to describe your data file. Each "Constant Set" refers to
-      a single column in your data file and you will need to indicate the uniquename
-      of the stock those genotypes belong to and the column number (both in
-      "Allele Call" and "Unique Name (Generated)" where the first column is "1").
-      Once you have enetered all this data (all fields are required) then you
-      can submit the job for loading and run it on the command-line like you
-      would any other tripal job (using drush trp-run-jobs).</p>',
-    '#collapsible' => TRUE,
-    '#collapsed' => FALSE
-  );
-
-  $form['import']['update_template'] = array(
-    '#type' => 'submit',
-    '#name' => 'update_template',
-    '#value' => 'Update Bulk Loader Template'
-  );
-*/
 
   return $form;
 }

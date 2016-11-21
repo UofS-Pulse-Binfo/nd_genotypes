@@ -5,103 +5,7 @@
  */
 
 /**
- * Method 1: Nd Experiment Tables.
- */
-function nd_genotypes_update_mview_for_nd_exp($job_id) {
-  $ndg_variants = 'mview_ndg_variants';
-  $ndg_call = 'mview_ndg_calls';
-
-  // Create both tables if they don't already exists.
-  nd_genotypes_create_mview_ndg_variants($ndg_variants);
-  nd_genotypes_create_mview_ndg_calls($ndg_call);
-
-  // And clear them if they do already exist.
-  chado_query("TRUNCATE {".$ndg_variants."}");
-  chado_query("TRUNCATE {".$ndg_call."}");
-
-  // First, populate the mview_ndg_calls table.
-  // This is basically a materialized version of the genotype_call table itself :-).
-  $query = "
-    SELECT
-      v.feature_id as variant_id,
-      m.feature_id as marker_id,
-      m.name as marker_name,
-      mt.value as marker_type,
-      s.stock_id as stock_id,
-      s.name as stock_name,
-      germ.stock_id as germplasm_id,
-      germ.name as germplasm_name,
-      ndp.project_id as project_id,
-      g.genotype_id as genotype_id,
-      g.description as allele_call
-    FROM {nd_experiment_genotype} ndg
-      LEFT JOIN {nd_experiment} exp ON ndg.nd_experiment_id=exp.nd_experiment_id
-      LEFT JOIN {genotype} g ON g.genotype_id=ndg.genotype_id
-      LEFT JOIN {feature_genotype} fg ON fg.genotype_id=g.genotype_id
-      LEFT JOIN {feature} m ON m.feature_id=fg.feature_id
-      LEFT JOIN {featureprop} mt ON mt.feature_id=m.feature_id
-        AND mt.type_id IN (SELECT cvterm_id FROM cvterm WHERE name='marker_type')
-      LEFT JOIN {feature_relationship} fr ON fr.subject_id=m.feature_id
-        AND fr.type_id IN (SELECT cvterm_id FROM cvterm WHERE name='is_marker_of')
-      LEFT JOIN {feature} v ON v.feature_id=fr.object_id
-      LEFT JOIN {nd_experiment_stock} nds ON nds.nd_experiment_id=ndg.nd_experiment_id
-      LEFT JOIN {stock} s ON s.stock_id=nds.stock_id
-      LEFT JOIN {stock_relationship} sr ON sr.subject_id=s.stock_id
-        AND sr.type_id IN (SELECT cvterm_id FROM cvterm WHERE name='is_extracted_from')
-      LEFT JOIN {stock germ} ON germ.stock_id=sr.object_id
-      LEFT JOIN {nd_experiment_project} ndp ON ndp.nd_experiment_id=ndg.nd_experiment_id
-      WHERE exp.nd_experiment_id IS NOT NULL AND ndp.nd_experiment_id IS NOT NULL
-        AND germ.stock_id IS NOT NULL AND s.stock_id IS NOT NULL
-      ORDER BY v.feature_id ASC, m.feature_id ASC, s.stock_id ASC
-    LIMIT 20000
-    ";
-  chado_query("
-    INSERT INTO {".$ndg_call."} (
-      variant_id,
-      marker_id,
-      marker_name,
-      marker_type,
-      stock_id,
-      stock_name,
-      germplasm_id,
-      germplasm_name,
-      project_id,
-      genotype_id,
-      allele_call)
-    " . $query);
-
-  // Now, calculate the variant list.
-  // @TODO: Restrict locations to a given assembly.
-  $query = "
-    SELECT
-      call.variant_id,
-      v.name as variant_name,
-      loc.srcfeature_id as srcfeature_id,
-      b.name as srcfeature_name,
-      loc.fmin,
-      loc.fmax
-    FROM {mview_ndg_calls} call
-      LEFT JOIN {feature} v ON v.feature_id=call.variant_id
-      LEFT JOIN {featureloc} loc ON loc.feature_id=call.variant_id
-      LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
-    GROUP BY call.variant_id, v.name, loc.srcfeature_id, b.name, loc.fmin, loc.fmax
-  ";
-  chado_query("
-    INSERT INTO {".$ndg_variants."} (
-      variant_id,
-      variant_name,
-      srcfeature_id,
-      srcfeature_name,
-      fmin,
-      fmax)
-    " . $query);
-
-  // Update the cached lists.
-  nd_genotypes_update_mview_cache();
-}
-
-/**
- * Method 2: Genotype Call Custom Table.
+ * Storage Method 2: Genotype Call Custom Table.
  *
  * Genotype_call custom table:
  *   - genotype_call_id: primary key for this table,
@@ -300,11 +204,4 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
   // Update the cached lists.
   print "\nUpdating cached lists used for select boxes and what-not\n";
   nd_genotypes_update_mview_cache();
-}
-
-/**
- * Method 3: Genotype Stock Table.
- */
-function nd_genotypes_update_mview_for_stock_genotype($job_id) {
-  drupal_set_message('This storage method is not currently supported.', 'error');
 }
