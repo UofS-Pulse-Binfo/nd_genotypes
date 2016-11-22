@@ -28,6 +28,8 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
 
   if (!$genus) { drupal_set_message('The link/URL must contain the genus of the organism you would like genotypes for.','error'); return ''; }
 
+  $partition = strtolower($partition);
+
   // Form select list options.
   //-------------------------
   // Determine the select box for species.
@@ -134,7 +136,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
     '#title' => 'Variant Type',
     '#description' => 'The types of variants you would like to see genotypes for (e.g. indels only).',
     '#empty_option' => '- ' . t('Choose One to Filter') . ' -',
-    '#options' => unserialize(variable_get('nd_genotypes_variant_types', 'a:0:{}')),
+    '#options' => unserialize(variable_get('nd_genotypes_'.$partition.'_variant_types', 'a:0:{}')),
     '#default_value' => (isset($defaults['variant_type'])) ? $defaults['variant_type'] : NULL,
   );
 
@@ -143,7 +145,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
     '#title' => 'Marker Type',
     '#description' => 'The types of markers you would like to see genotypes for (e.g. exome capture).',
     '#empty_option' => '- ' . t('Choose One to Filter') . ' -',
-    '#options' => unserialize(variable_get('nd_genotypes_marker_types', NULL)),
+    '#options' => unserialize(variable_get('nd_genotypes_'.$partition.'_marker_types', NULL)),
     '#default_value' => (isset($defaults['marker_type'])) ? $defaults['marker_type'] : NULL,
   );*/
 

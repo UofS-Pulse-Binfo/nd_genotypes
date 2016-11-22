@@ -467,10 +467,10 @@ function nd_genotypes_lookup_germplasm_name_callback($partition, $string = "") {
   if (!empty($partition) AND trim($string)) {
     $result = ndg_mview_query($partition, '
       SELECT germplasm_name
-      FROM {mview_ndg_germplasm_genotypes} m
-      WHERE germplasm_name ~* :query
+      FROM {mview_ndg_germplasm_genotyped} m
+      WHERE germplasm_name ~* :query AND partition = :partition
       LIMIT 10
-    ', array(':query' => $string))->fetchCol();
+    ', array(':query' => $string, ':partition' => $partition))->fetchCol();
     foreach ($result as $name) {
       $matches[$name] = $name;
     }
