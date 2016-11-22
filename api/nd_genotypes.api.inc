@@ -27,7 +27,7 @@ function ndg_mview_query($partition, $query, $variables = array()) {
   $query = str_replace('mview_ndg_calls', 'mview_ndg_'.$partition.'_calls', $query);
   $query = str_replace('mview_ndg_variants', 'mview_ndg_'.$partition.'_variants', $query);
 
-  // @todo: handle mview_ndg_germplasm_genotypes.
+  // @todo: handle mview_ndg_germplasm_genotyped.
 
   return chado_query($query, $variables);
 }
@@ -43,7 +43,7 @@ function ndg_mview_tables_exist($partition) {
   $names = array(
     'mview_ndg_'.$partition.'_calls',
     'mview_ndg_'.$partition.'_variants',
-    'mview_ndg_germplasm_genotypes',
+    'mview_ndg_germplasm_genotyped',
   );
   foreach ($names as $curr) {
     $curr_exists = chado_table_exists($curr);

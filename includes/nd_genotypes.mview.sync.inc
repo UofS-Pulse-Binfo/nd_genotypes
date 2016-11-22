@@ -258,7 +258,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
 }
 
 /**
- * Update mview_ndg_germplasm_genotypes Materialized view.
+ * Update mview_ndg_germplasm_genotyped Materialized view.
  *
  * @param $partition
  *   The partition to update the materialized view of.
