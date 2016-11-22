@@ -8,7 +8,8 @@ function nd_genotypes_update_mview($partitions, $job_id) {
 
   print "Updating the materialized views for the following partitions: " . implode(', ', $partitions) . ".\n\n";
 
-  $percent_increment = floor((100 / sizeof($partitions)) / 4);
+  $num_processes = (sizeof($partitions) * 4) + 1;
+  $percent_increment = floor(100 / $num_processes);
 
   // For each partition...
   $current_percent = 0;
@@ -44,6 +45,13 @@ function nd_genotypes_update_mview($partitions, $job_id) {
 
   }
 
+  // Summarize.
+  nd_genotypes_summarize_mviews();
+  $current_percent += $percent_increment;
+  db_query('UPDATE {tripal_jobs} SET progress=:percent WHERE job_id=:id',
+    array(':percent' => $current_percent, ':id' => $job_id));
+
+  // Ensure complete.
   db_query('UPDATE {tripal_jobs} SET progress=:percent WHERE job_id=:id',
     array(':percent' => 100, ':id' => $job_id));
 }
@@ -316,13 +324,10 @@ function nd_genotypes_update_mview_cache($partition, $print = FALSE) {
   $ndg_variants = 'mview_ndg_'.$partition.'_variants';
   $ndg_calls = 'mview_ndg_'.$partition.'_calls';
 
-  if ($print) {
-    print "    - Determining the types of variants...\n";
-  }
-
   // The types of variants (e.g. SNP, MNP, Indel) with the key being the type_id.
   // @todo this should be based off the mview_ndg_variants which will also
   // ensure it is filtered to partition.
+  if ($print) print "    - Determining the types of variants...\n";
   $resource = chado_query("
     WITH RECURSIVE t AS (
       (SELECT type_id
@@ -349,12 +354,9 @@ function nd_genotypes_update_mview_cache($partition, $print = FALSE) {
   }
   variable_set('nd_genotypes_'.$partition.'_variant_types', serialize($types));
 
-  if ($print) {
-    print "    - Determining the types of markers...\n";
-  }
-
   // The types of markers (e.g. GBS, Exome Capture) as stored in the featureprop table.
   // Already filtered to partition since it pulls from calls.
+  if ($print) print "    - Determining the types of markers...\n";
   $resource = ndg_mview_query($partition, "
     WITH RECURSIVE t AS (
       (SELECT marker_type
@@ -379,4 +381,85 @@ function nd_genotypes_update_mview_cache($partition, $print = FALSE) {
   }
   variable_set('nd_genotypes_'.$partition.'_marker_types', serialize($types));
 
+}
+
+/**
+ * Summarize the materialized views.
+ *
+ * This information is used on the admin pages.
+ */
+function nd_genotypes_summarize_mviews($print = FALSE) {
+
+  if ($print) print "    - Creating the table if it doesn't already exist...\n";
+  nd_genotypes_create_mview_summary();
+
+  // And clear them if they do already exist.
+  if ($print) print "    - Truncating mview_ndg_summary...\n";
+  chado_query("TRUNCATE {mview_ndg_summary}");
+
+  if ($print) print "    - Determining the partitions sync'd...\n";
+  $resource = ndg_mview_query($partition, "
+    WITH RECURSIVE t AS (
+      (SELECT partition
+        FROM {mview_ndg_germplasm_genotyped}
+        ORDER BY partition
+        LIMIT 1)
+      UNION ALL
+      SELECT
+          (SELECT partition
+            FROM {mview_ndg_germplasm_genotyped}
+            WHERE partition > t.partition
+            ORDER BY partition
+            LIMIT 1)
+        FROM t
+        WHERE t.partition IS NOT NULL
+    )
+    SELECT t.partition FROM t WHERE t.partition IS NOT NULL");
+  $partitions = array();
+  foreach ($resource as $r) {
+    $partitions[$r->partition] = $r->partition;
+  }
+  variable_set('nd_genotypes_partitions', serialize($partitions));
+
+  foreach ($partitions as $partition) {
+
+    if ($print) print "    - Summarizing $partition...\n";
+
+    // Number of Genotype Calls.
+    chado_query('
+      INSERT INTO {mview_ndg_summary} (stat_id, stat_name, stat_unit, partition, value)
+      SELECT :stat_id, :stat_name, :stat_unit, :partition, count(*) as value
+        FROM {mview_ndg_'.$partition.'_calls}',
+      array(
+        ':stat_id' => 'num_calls',
+        ':stat_name' => 'Number of Genotype Calls',
+        ':stat_unit' => 'count',
+        ':partition' => $partition
+      ));
+
+    // Number of Variants.
+    chado_query('
+      INSERT INTO {mview_ndg_summary} (stat_id, stat_name, stat_unit, partition, value)
+      SELECT :stat_id, :stat_name, :stat_unit, :partition, count(*) as value
+        FROM (SELECT variant_id FROM {mview_ndg_'.$partition.'_variants} GROUP BY variant_id) as variants',
+      array(
+        ':stat_id' => 'num_variants',
+        ':stat_name' => 'Number of Variants',
+        ':stat_unit' => 'count',
+        ':partition' => $partition
+      ));
+
+    // Number of Germplasm Genotyped.
+    chado_query('
+      INSERT INTO {mview_ndg_summary} (stat_id, stat_name, stat_unit, partition, value)
+      SELECT :stat_id, :stat_name, :stat_unit, :partition, count(*) as value
+        FROM {mview_ndg_germplasm_genotyped}
+        WHERE partition=:partition',
+      array(
+        ':stat_id' => 'num_germplasm',
+        ':stat_name' => 'Number of Germplasm',
+        ':stat_unit' => 'count',
+        ':partition' => $partition
+      ));
+  }
 }

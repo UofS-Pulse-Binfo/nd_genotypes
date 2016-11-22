@@ -282,7 +282,18 @@ function nd_genotypes_create_mview_ndg_calls_indexes($tablename = 'mview_ndg_cal
 }
 
 /**
+ * A listing of all the germplasm genotyped per partition.
  *
+ * @param $tablename
+ *   The name of the table. At this point there is no reason to change this as partitions
+ *   are handled within the same table.
+ *
+ * Columns:
+ *  - germplasm_id: the stock_id of the germplasm genotyped.
+ *  - germplasm_name: the stock.name
+ *  - organism_id: the foreign key to the organism of this germplasm
+ *  - organism_genus: the genus of this germplasm
+ *  - partition: the partition this germplasm's genotypic calls are recorded in
  */
 function nd_genotypes_create_mview_ndg_germplasm_genotyped($table_name = 'mview_ndg_germplasm_genotyped') {
 
@@ -334,6 +345,65 @@ function nd_genotypes_create_mview_ndg_germplasm_genotyped($table_name = 'mview_
       'ndg_germgenotyped_genus' => array('organism_genus'),
       'ndg_germgenotyped_partition' => array('partition'),
     ),
+  );
+
+  chado_create_custom_table( $table_name, $schema );
+
+}
+
+/**
+ * A table listing summary statistics for genotypes handled by this module.
+ *
+ * @param $tablename
+ *   The name of the table. At this point there is no reason to change this as partitions
+ *   are handled within the same table.
+ *
+ * Columns:
+ *  - stat_name: The human-readable name of the summary statistic recorded in this row (e.g. Number of Genotypic Calls).
+ *  - stat_id: The machine name of the summary statistic recorded in this row (e.g. num_calls).
+ *  - stat_unit: The unit of the statistic (e.g. count).
+ *  - partition: The partition this summary statistic applies to.
+ *  - value: The value of the statistic.
+ */
+function nd_genotypes_create_mview_summary($table_name = 'mview_ndg_summary') {
+
+  $schema = array(
+    'table' => $table_name,
+    'description' => 'A summary of the genotypes in the various mviews.',
+    'fields' => array(
+      'stat_name' => array(
+        'description' => 'The human-readable name of the summary statistic recorded in this row (e.g. Number of Genotypic Calls).',
+        'type' => 'text',
+        'not null' => TRUE,
+      ),
+      'stat_id' => array(
+        'description' => 'The machine name of the summary statistic recorded in this row (e.g. num_calls).',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'stat_unit' => array(
+        'description' => 'The unit of the statistic (e.g. count).',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'partition' => array(
+        'description' => 'The partition this summary statistic applies to.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'value' => array(
+        'description' => 'The value of the statistic.',
+        'type' => 'int',
+        'not null' => TRUE,
+      )
+    ),
+    'primary key' => array('stat_id', 'partition'),
+    'unique keys' => array(),
+    'foreign keys' => array(),
+    'indexes' => array(),
   );
 
   chado_create_custom_table( $table_name, $schema );

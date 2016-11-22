@@ -8,9 +8,28 @@
  * Listing Launchpad
  */
 function nd_genotypes_admin_landing_page() {
- $output = '';
+  $output = '';
 
- return $output;
+  $output .= "<p>The following table summarizes the data currently sync'd by this module. NOTE: Partitions without any data will not be listed.</p>";
+
+  // Simply display the summary table.
+  $table = array('header' => array('stat_name' => ' '), 'rows' => array());
+  $stats = chado_query('SELECT * FROM {mview_ndg_summary}');
+  foreach ($stats as $stat) {
+    $table['header'][ $stat->partition ] = ucwords($stat->partition);
+
+    if (!isset($table['rows'][ $stat->stat_id ])) {
+      $table['rows'][ $stat->stat_id ] = array(
+        $stat->stat_id => $stat->stat_name
+      );
+    }
+
+    $table['rows'][ $stat->stat_id ][ $stat->partition ] = number_format($stat->value);
+  }
+
+  $output .= theme('table', $table);
+
+  return $output;
 }
 
 /**
