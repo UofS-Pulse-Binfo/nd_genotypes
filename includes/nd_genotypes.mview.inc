@@ -7,68 +7,6 @@
  */
 
 /**
- * Update cached information after the materialized view has been updated.
- */
-function nd_genotypes_update_mview_cache() {
-
-  // The types of variants (e.g. SNP, MNP, Indel) with the key being the type_id.
-  $resource = chado_query('
-    WITH RECURSIVE t AS (
-      (SELECT type_id
-        FROM {feature} f
-        LEFT JOIN {mview_ndg_variants} v ON v.variant_id=f.feature_id
-        WHERE v.ndg_variants_id IS NOT NULL
-        ORDER BY type_id
-        LIMIT 1)
-      UNION ALL
-      SELECT
-          (SELECT type_id
-            FROM {feature} f
-            LEFT JOIN {mview_ndg_variants} v ON v.variant_id=f.feature_id
-            WHERE type_id > t.type_id AND v.ndg_variants_id IS NOT NULL
-            ORDER BY type_id
-            LIMIT 1)
-        FROM t
-        WHERE t.type_id IS NOT NULL
-    )
-    SELECT t.type_id, cvt.name as type_name FROM t LEFT JOIN {cvterm} cvt ON cvt.cvterm_id=t.type_id WHERE t.type_id IS NOT NULL');
-  $types = array();
-  foreach ($resource as $r) {
-    $types[$r->type_id] = $r->type_name;
-  }
-  variable_set('nd_genotypes_variant_types', serialize($types));
-
-  // The types of markers (e.g. GBS, Exome Capture) as stored in the featureprop table.
-  $marker_type = chado_query("SELECT cvterm_id FROM {cvterm} WHERE name='marker_type'")->fetchField();
-  $resource = chado_query("
-    WITH RECURSIVE t AS (
-      (SELECT value
-        FROM chado.featureprop
-        ORDER BY value
-        LIMIT 1)
-      UNION ALL
-      SELECT
-          (SELECT value
-            FROM chado.featureprop
-            WHERE value > t.value
-            ORDER BY value
-            LIMIT 1)
-        FROM t
-        WHERE t.value IS NOT NULL
-    )
-    SELECT t.value FROM t WHERE (SELECT type_id FROM chado.featureprop WHERE featureprop.value=t.value LIMIT 1)=:marker_type AND t.value IS NOT NULL",
-    array(':marker_type' => $marker_type));
-  $types = array();
-  foreach ($resource as $r) {
-    $types[$r->value] = $r->value;
-  }
-  variable_set('nd_genotypes_marker_types', serialize($types));
-
-  // Create the germplasm genotyped mview for use with autocomplete functionality.
-  nd_genotypes_create_mview_ndg_germplasm_genotyped();
-}
-
-/**
  * A listing of all the variants sorted by location. If a variant is in more than
  * one location then it will be repeated in the listing.
  *
@@ -346,7 +284,7 @@ function nd_genotypes_create_mview_ndg_calls_indexes($tablename = 'mview_ndg_cal
 /**
  *
  */
-function nd_genotypes_create_mview_ndg_germplasm_genotyped($table_name = 'mview_ndg_germplasm_genotypes') {
+function nd_genotypes_create_mview_ndg_germplasm_genotyped($table_name = 'mview_ndg_germplasm_genotyped') {
 
   $schema = array(
     'table' => $table_name,
@@ -374,6 +312,12 @@ function nd_genotypes_create_mview_ndg_germplasm_genotyped($table_name = 'mview_
         'length' => 255,
         'not null' => TRUE,
       ),
+      'partition' => array(
+        'description' => 'The partition the germplasm has calls in.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
     ),
     'primary key' => array('germplasm_id'),
     'unique keys' => array(),
@@ -388,34 +332,12 @@ function nd_genotypes_create_mview_ndg_germplasm_genotyped($table_name = 'mview_
     'indexes' => array(
       'ndg_germgenotyped_name' => array('germplasm_name'),
       'ndg_germgenotyped_genus' => array('organism_genus'),
+      'ndg_germgenotyped_partition' => array('partition'),
     ),
   );
-  $query = 'WITH RECURSIVE t AS (
-      (SELECT germplasm_id
-        FROM {mview_ndg_calls} m
-        ORDER BY germplasm_id
-        LIMIT 1)
-      UNION ALL
-      SELECT
-          (SELECT germplasm_id
-            FROM {mview_ndg_calls} m
-            WHERE germplasm_id > t.germplasm_id
-            ORDER BY germplasm_id
-            LIMIT 1)
-        FROM t
-        WHERE t.germplasm_id IS NOT NULL
-    )
-    SELECT t.germplasm_id, s.name as germplasm_name, s.organism_id, o.genus FROM t LEFT JOIN {stock} s ON s.stock_id=t.germplasm_id LEFT JOIN {organism} o ON o.organism_id=s.organism_id WHERE t.germplasm_id IS NOT NULL';
 
-  tripal_add_mview(
-    $table_name,
-    'nd_genotypes',
-    $schema,
-    $query,
-    'Provides a listing of all germplasm for which there are genotype calls.'
-  );
-  $mview_id = tripal_get_mview_id($table_name);
-  tripal_populate_mview($mview_id);
+  chado_create_custom_table( $table_name, $schema );
+
 }
 
 /**

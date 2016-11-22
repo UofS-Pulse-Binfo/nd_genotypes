@@ -4,49 +4,77 @@
  * Provides functionality for sync'ing data to the materialized views.
  */
 
+function nd_genotypes_update_mview($partitions, $job_id) {
+
+  print "Updating the materialized views for the following partitions: " . implode(', ', $partitions) . ".\n\n";
+
+  $percent_increment = floor((100 / sizeof($partitions)) / 4);
+
+  // For each partition...
+  $current_percent = 0;
+  foreach ($partitions as $partition) {
+    print "Partition: $partition...\n";
+
+    $partition = strtolower($partition);
+
+    print "   Sync'ing genotypes to the mview_ndg_calls mview...\n";
+    nd_genotypes_update_mview_ndg_calls($partition, $job_id);
+    $current_percent += $percent_increment;
+    db_query('UPDATE {tripal_jobs} SET progress=:percent WHERE job_id=:id',
+      array(':percent' => $current_percent, ':id' => $job_id));
+
+    print "   Sync'ing genotypes to the mview_ndg_variants mview...\n";
+    nd_genotypes_update_mview_ndg_variants($partition, $job_id);
+    $current_percent += $percent_increment;
+    db_query('UPDATE {tripal_jobs} SET progress=:percent WHERE job_id=:id',
+      array(':percent' => $current_percent, ':id' => $job_id));
+
+    print "   Sync'ing genotypes to the mview_ndg_germplasm_genotyped mview...\n";
+    nd_genotypes_update_mview_ndg_germplasm_genotyped($partition, $job_id);
+    $current_percent += $percent_increment;
+    db_query('UPDATE {tripal_jobs} SET progress=:percent WHERE job_id=:id',
+      array(':percent' => $current_percent, ':id' => $job_id));
+
+    // Update the cached lists.
+    print "   Updating cached lists used for select boxes and what-not\n";
+    nd_genotypes_update_mview_cache($partition, TRUE);
+    $current_percent += $percent_increment;
+    db_query('UPDATE {tripal_jobs} SET progress=:percent WHERE job_id=:id',
+      array(':percent' => $current_percent, ':id' => $job_id));
+
+  }
+
+  db_query('UPDATE {tripal_jobs} SET progress=:percent WHERE job_id=:id',
+    array(':percent' => 100, ':id' => $job_id));
+}
+
 /**
- * Storage Method 2: Genotype Call Custom Table.
+ * Update mview_ndg_calls Materialized view.
  *
- * Genotype_call custom table:
- *   - genotype_call_id: primary key for this table,
- *   - variant_id: the feature_id of the variant,
- *   - marker_id: the feature_id of the marker,
- *   - genotype_id: the genotype_id of the allele call for the given marker/stock combination
- *   - project_id: the project_id of the over-aching project
- *   - stock_id: the stock_id of the germplasm assayed
- *   - meta_data: JSONB blob to store meta-data
+ * @param $partition
+ *   The partition to update the materialized view of.
+ * @param $job_id
+ *   The id of the tripal job whose status should be updated.
  *
- * Approach:
- *  1) using a single query to populate the entire table
- *  2) iterate over that table
- *      a) refining the consensus call and
- *      b) filling in the marker details.
  * Notice that we will attempt to create the table if it doesn't already exist.
  */
-function nd_genotypes_update_mview_for_genotype_call($job_id) {
-  $ndg_variants = 'mview_ndg_variants';
-  $ndg_call = 'mview_ndg_calls';
+function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
 
-  // Create both tables if they don't already exists.
-  print "\nCreating $ndg_variants if it doesn't already exist...\n";
-  nd_genotypes_create_mview_ndg_variants($ndg_variants);
-  print "Creating $ndg_call if it doesn't already exist...\n";
-  nd_genotypes_create_mview_ndg_calls($ndg_call);
+  // Determine the name of the mview table in this partition.
+  $table_name = 'mview_ndg_'.$partition.'_calls';
 
-  // And clear them if they do already exist.
-  print "\nTruncating $ndg_variants...\n";
-  chado_query("TRUNCATE {".$ndg_variants."}");
-  print "Truncating $ndg_call...\n";
-  chado_query("TRUNCATE {".$ndg_call."}");
+  // Create the table if it doesn't already exist.
+  print "    - Creating $table_name if it doesn't already exist...\n";
+  nd_genotypes_create_mview_ndg_calls($table_name);
 
-  //-------------------------
-  // mview_ndg_calls
-  print "\nSync'ing genotypes to the mview_ndg_calls mview...\n";
+  // And Clear it if it does exist.
+  print "    - Truncating $table_name...\n";
+  chado_query("TRUNCATE {".$table_name."}");
 
   // Drop all the indexes on the mview to make copying faster.
-  print "\tDropping indexes on mview_ndg_calls...\n";
-  nd_genotypes_drop_indexes('mview_ndg_calls');
-  print "\t\tComplete.\n";
+  print "    - Dropping indexes on $table_name...\n";
+  nd_genotypes_drop_indexes($table_name);
+  print "       - Complete.\n";
 
   // We would like to chunk the dataset into hopefully reasonable pieces for updating
   // the materialized view. However, we would also like to avoid sorting first since
@@ -59,7 +87,7 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
   // For this approach we first need to get the list of genotype_ids to use for chunk
   // delimiters.
   $genotypes = chado_query('SELECT genotype_id FROM {genotype}')->fetchCol();
-  print "\tDetermined there should be " . sizeof($genotypes) . " chunks.\n";
+  print "    - Determined there should be " . sizeof($genotypes) . " chunks.\n";
 
   // Now, populate the mview_ndg_calls table for each genotype/allele.
   // This is basically a materialized version of the genotype_call table itself :-).
@@ -81,26 +109,29 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
       LEFT JOIN {feature} m ON m.feature_id=gc.marker_id
       LEFT JOIN {featureprop} mt ON mt.feature_id=m.feature_id AND mt.type_id IN (SELECT cvterm_id FROM cvterm WHERE name='marker_type')
       LEFT JOIN {stock} s ON s.stock_id=gc.stock_id
+      LEFT JOIN {organism} o ON o.organism_id=s.organism_id
       LEFT JOIN {stock}_relationship sr ON sr.subject_id=s.stock_id AND sr.type_id IN (SELECT cvterm_id FROM cvterm WHERE name='is_extracted_from')
       LEFT JOIN {stock} g ON g.stock_id=sr.object_id
       LEFT JOIN {genotype} a ON a.genotype_id=gc.genotype_id
-    WHERE gc.genotype_id=:id
+    WHERE gc.genotype_id=:id AND LOWER(o.genus)=LOWER(:partition)
     ";
+  // @PARTITION We assume partitions are by genus here...
 
   $i = 0;
   $total = sizeof($genotypes);
   foreach ($genotypes as $genotype_id) {
     $i++;
 
-    print "\tWorking on genotype_id=$genotype_id ($i of $total)...\n";
+    print "    - Working on genotype_id=$genotype_id ($i of $total)...\n";
 
     // Copy it to a file.
-    print "\t\tCopying to file...\n";
-    $result = chado_query("COPY (" . $query . ") TO '/tmp/mview_ndg_calls.copy'", array(':id' => $genotype_id))->rowCount();
+    print "       - Copying to file...\n";
+    $result = chado_query("COPY (" . $query . ") TO '/tmp/mview_ndg_calls.copy'",
+      array(':id' => $genotype_id, ':partition' => $partition))->rowCount();
 
     // Then copy it back into the mview.
-    print "\t\tCopying it into the mview...\n";
-    $result = chado_query("COPY {".$ndg_call."} (
+    print "       - Copying it into the mview...\n";
+    $result = chado_query("COPY {".$table_name."} (
           variant_id,
           marker_id,
           marker_name,
@@ -113,21 +144,43 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
           genotype_id,
           allele_call,
           meta_data) FROM '/tmp/mview_ndg_calls.copy'")->rowCount();
-    print "\t\tFinished $result records.\n";
+    print "       - Finished $result records.\n";
   }
 
   // Create the indexes you dropped earlier.
-  print "\tCreating Indexes\n";
-  nd_genotypes_create_mview_ndg_calls_indexes($ndg_call);
+  print "    - Creating Indexes\n";
+  nd_genotypes_create_mview_ndg_calls_indexes($table_name);
 
-  //-------------------------
-  // mview_ndg_variants
-  print "\nSync'ing genotypes to the mview_ndg_variants mview...\n";
+}
+
+/**
+ * Update mview_ndg_calls Materialized view.
+ *
+ * @param $partition
+ *   The partition to update the materialized view of.
+ * @param $job_id
+ *   The id of the tripal job whose status should be updated.
+ *
+ * Notice that we will attempt to create the table if it doesn't already exist.
+ */
+function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
+
+  // Determine the name of the mview table in this partition.
+  $table_name = 'mview_ndg_'.$partition.'_variants';
+  $ndg_calls_name = 'mview_ndg_'.$partition.'_calls';
+
+  // Create both tables if they don't already exists.
+  print "    - Creating $table_name if it doesn't already exist...\n";
+  nd_genotypes_create_mview_ndg_variants($table_name);
+
+  // And clear them if they do already exist.
+  print "    - Truncating $table_name...\n";
+  chado_query("TRUNCATE {".$table_name."}");
 
   // Drop all the indexes on the mview to make copying faster.
-  print "\tDropping indexes on mview_ndg_variants...\n";
-  nd_genotypes_drop_indexes('mview_ndg_variants');
-  print "\t\tComplete.\n";
+  print "    - Dropping indexes on $table_name...\n";
+  nd_genotypes_drop_indexes($table_name);
+  print "       - Complete.\n";
 
   // We would like to chunk the dataset into hopefully reasonable pieces for updating
   // the materialized view. However, we would also like to avoid sorting first since
@@ -139,8 +192,8 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
   // which we forsee being the bulk of the data.
   // For this approach we first need to get the list of genotype_ids to use for chunk
   // delimiters.
-  $total_min = chado_query('SELECT min(variant_id) FROM {mview_ndg_calls}')->fetchField();
-  $total_max = chado_query('SELECT max(variant_id) FROM {mview_ndg_calls}')->fetchField();
+  $total_min = chado_query("SELECT min(variant_id) FROM {$ndg_calls_name}")->fetchField();
+  $total_max = chado_query("SELECT max(variant_id) FROM {$ndg_calls_name}")->fetchField();
   // Seems relatively performant at 50 million.
   $chunk_size = 500000;
   $num_chunks = 1;
@@ -149,10 +202,12 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
    $num_chunks = ($total_max-$total_min) / $chunk_size;
   }
 
-  print "\tDetermined there should be " . ceil($num_chunks) . " chunks.\n";
+  print "    - Determined there should be " . ceil($num_chunks) . " chunks.\n";
 
   // Now, populate the mview_ndg_variants table for each genotype/allele
   // based on the mview_ndg_calls table :-).
+  // Because this only pulls from the calls which are already filtered to the given partition
+  // we don't need to use the partition here.
   $query = "
     SELECT
       call.variant_id,
@@ -161,7 +216,7 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
       b.name as srcfeature_name,
       loc.fmin,
       loc.fmax
-    FROM {mview_ndg_calls} call
+    FROM {$ndg_calls_name} call
       LEFT JOIN {feature} v ON v.feature_id=call.variant_id
       LEFT JOIN {featureloc} loc ON loc.feature_id=call.variant_id
       LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
@@ -173,35 +228,155 @@ function nd_genotypes_update_mview_for_genotype_call($job_id) {
   for ($i=1; $i <= $num_chunks; $i++) {
     $max = $min + $chunk_size - 1;
 
-    print "\tWorking on $min to $max ($i of ".ceil($num_chunks).")...\n";
+    print "    - Working on $min to $max ($i of ".ceil($num_chunks).")...\n";
 
     // Copy it to a file.
-    print "\t\tCopying to file...\n";
+    print "       - Copying to file...\n";
     $result = chado_query("COPY (" . $query . ") TO '/tmp/mview_ndg_variants.copy'", array(':min' => $min, ':max' => $max))->rowCount();
 
     // Then we have to collapse it.
-    print "\t\tCollapsing it to unique variants...\n";
+    print "       - Collapsing it to unique variants...\n";
     system('sort --unique --output /tmp/mview_ndg_variants.copy.unique /tmp/mview_ndg_variants.copy');
 
     // Then copy it back into the mview.
-    print "\t\tCopying it into the mview...\n";
-    $result = chado_query("COPY {".$ndg_variants."} (
+    print "       - Copying it into the mview...\n";
+    $result = chado_query("COPY {".$table_name."} (
       variant_id,
       variant_name,
       srcfeature_id,
       srcfeature_name,
       fmin,
       fmax) FROM '/tmp/mview_ndg_variants.copy.unique'")->rowCount();
-    print "\t\tFinished $result records.\n";
+    print "       - Finished $result records.\n";
 
     $min += $chunk_size;
   }
 
   // Create the indexes you dropped earlier.
-  print "\tCreating Indexes\n";
-  nd_genotypes_create_mview_ndg_variants_indexes();
+  print "    - Creating Indexes\n";
+  nd_genotypes_create_mview_ndg_variants_indexes($table_name);
+}
 
-  // Update the cached lists.
-  print "\nUpdating cached lists used for select boxes and what-not\n";
-  nd_genotypes_update_mview_cache();
+/**
+ * Update mview_ndg_germplasm_genotypes Materialized view.
+ *
+ * @param $partition
+ *   The partition to update the materialized view of.
+ * @param $job_id
+ *   The id of the tripal job whose status should be updated.
+ *
+ * Notice that we will attempt to create the table if it doesn't already exist.
+ */
+function nd_genotypes_update_mview_ndg_germplasm_genotyped($partition, $job_id) {
+
+  $table_name = 'mview_ndg_germplasm_genotyped';
+  $ndg_calls_name = 'mview_ndg_'.$partition.'_calls';
+
+  // Create both tables if they don't already exists.
+  print "    - Creating $table_name if it doesn't already exist...\n";
+  nd_genotypes_create_mview_ndg_germplasm_genotyped($table_name);
+
+  // And clear them if they do already exist.
+  print "    - Removing records related to this partition ($partition)...\n";
+  chado_query("DELETE FROM {".$table_name."} WHERE partition = :partition",
+    array(':partition' => $partition));
+
+  // Again, since this pulls from the calls which are already filtered to partition,
+  // we don't have to worry about partition again here.
+  $query = "WITH RECURSIVE t AS (
+      (SELECT germplasm_id
+        FROM {mview_ndg_calls} m
+        ORDER BY germplasm_id
+        LIMIT 1)
+      UNION ALL
+      SELECT
+          (SELECT germplasm_id
+            FROM {mview_ndg_calls} m
+            WHERE germplasm_id > t.germplasm_id
+            ORDER BY germplasm_id
+            LIMIT 1)
+        FROM t
+        WHERE t.germplasm_id IS NOT NULL
+    )
+    SELECT t.germplasm_id, s.name as germplasm_name, s.organism_id, o.genus, :partition
+      FROM t
+      LEFT JOIN {stock} s ON s.stock_id=t.germplasm_id
+      LEFT JOIN {organism} o ON o.organism_id=s.organism_id
+      WHERE t.germplasm_id IS NOT NULL";
+    $insert_query = 'INSERT INTO {' . $table_name . '} (germplasm_id, germplasm_name, organism_id, organism_genus, partition) ' . $query;
+    ndg_mview_query($partition, $insert_query, array(':partition' => $partition));
+
+}
+
+/**
+ * Update cached information after the materialized view has been updated.
+ */
+function nd_genotypes_update_mview_cache($partition, $print = FALSE) {
+
+  $ndg_variants = 'mview_ndg_'.$partition.'_variants';
+  $ndg_calls = 'mview_ndg_'.$partition.'_calls';
+
+  if ($print) {
+    print "    - Determining the types of variants...\n";
+  }
+
+  // The types of variants (e.g. SNP, MNP, Indel) with the key being the type_id.
+  // @todo this should be based off the mview_ndg_variants which will also
+  // ensure it is filtered to partition.
+  $resource = chado_query("
+    WITH RECURSIVE t AS (
+      (SELECT type_id
+        FROM {feature} f
+        LEFT JOIN {$ndg_variants} v ON v.variant_id=f.feature_id
+        WHERE v.ndg_variants_id IS NOT NULL
+        ORDER BY type_id
+        LIMIT 1)
+      UNION ALL
+      SELECT
+          (SELECT type_id
+            FROM {feature} f
+            LEFT JOIN {$ndg_variants} v ON v.variant_id=f.feature_id
+            WHERE type_id > t.type_id AND v.ndg_variants_id IS NOT NULL
+            ORDER BY type_id
+            LIMIT 1)
+        FROM t
+        WHERE t.type_id IS NOT NULL
+    )
+    SELECT t.type_id, cvt.name as type_name FROM t LEFT JOIN {cvterm} cvt ON cvt.cvterm_id=t.type_id WHERE t.type_id IS NOT NULL");
+  $types = array();
+  foreach ($resource as $r) {
+    $types[$r->type_id] = $r->type_name;
+  }
+  variable_set('nd_genotypes_'.$partition.'_variant_types', serialize($types));
+
+  if ($print) {
+    print "    - Determining the types of markers...\n";
+  }
+
+  // The types of markers (e.g. GBS, Exome Capture) as stored in the featureprop table.
+  // Already filtered to partition since it pulls from calls.
+  $resource = ndg_mview_query($partition, "
+    WITH RECURSIVE t AS (
+      (SELECT marker_type
+        FROM {mview_ndg_calls}
+        ORDER BY marker_type
+        LIMIT 1)
+      UNION ALL
+      SELECT
+          (SELECT marker_type
+            FROM {mview_ndg_calls}
+            WHERE marker_type > t.marker_type
+            ORDER BY marker_type
+            LIMIT 1)
+        FROM t
+        WHERE t.marker_type IS NOT NULL
+    )
+    SELECT t.marker_type FROM t WHERE t.marker_type IS NOT NULL",
+    array(':marker_type' => $marker_type));
+  $types = array();
+  foreach ($resource as $r) {
+    $types[$r->marker_type] = $r->marker_type;
+  }
+  variable_set('nd_genotypes_'.$partition.'_marker_types', serialize($types));
+
 }
