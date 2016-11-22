@@ -221,18 +221,25 @@ function nd_genotypes_admin_sync_mviews($form, $form_state) {
     '#collapsed' => FALSE
   );
 
-  $form['mviews']['storage_method'] = array(
-    '#type' => 'select',
-    '#title' => 'Storage Method',
-    '#description' => 'This is the method you are using to store your genotypic data. You can change it on the "Settings" tab.',
-    '#options' => array(
-      'nd_exp' => 'Natural Diversity Experiment',
-      'genotype_call' => 'Genotype Call Custom Table',
-      'stock_genotype' => 'Genotype Stock table',
-      'custom' => 'Custom',
-    ),
-    '#default_value' => variable_get('nd_genotype_storage_method', 'nd_exp'),
-    '#disabled' => TRUE,
+  $sql = "
+    SELECT *
+    FROM [chado_organism] CO
+      INNER JOIN {organism} O ON O.organism_id = CO.organism_id
+    ORDER BY O.genus, O.species
+  ";
+  $orgs = chado_query($sql);
+  $partitions = array();
+  foreach ($orgs as $organism) {
+    // @PARTITION: Setting the partitions that can be sync'd.
+    $partitions[$organism->genus] = $organism->genus;
+  }
+  $partitions['ALL'] = 'ALL';
+
+  $form['mviews']['partition'] = array(
+    '#type' => 'checkboxes',
+    '#title' => 'Partition(s)',
+    '#description' => 'Select which partition(s) you would like to sync data for or select <em>"ALL"</em> to sync all partitions.',
+    '#options' => $partitions,
   );
 
   $form['mviews']['populate_mviews'] = array(
@@ -251,31 +258,29 @@ function nd_genotypes_admin_sync_mviews_submit($form, $form_state) {
 
   if ($form_state['triggering_element']['#name'] == 'sync_mviews') {
 
-    // If they chose a custom way to store their data then we can't help them :-(.
-    if ($form_state['values']['storage_method'] == 'custom') {
-      drupal_set_message('Unfortunatly we cannot update the materialized view if you saved your data differently then the supported methods. We suggest you cureate your own script to update the materialize view as you will still get all the functionality provided by this module if you do.', 'warning');
+    // Determine the partitions to sync.
+    if (!empty($form_state['values']['partition']['ALL'])) {
+      $keys = array_keys($form_state['values']['partition']);
+      $partitions = array_combine($keys, $keys);
+      unset($partitions['ALL']);
     }
-    // Create a Tripal job for syncing the materialized view.
     else {
+      $partitions = array_filter($form_state['values']['partition']);
+    }
 
-      $name = '';
-      $function = '';
-      switch($form_state['values']['storage_method']) {
-        case 'nd_exp':
-          $name = "Update ND Materialized View. Method: Natural Diversity Experiment tables";
-          $function = 'nd_genotypes_update_mview_for_nd_exp';
-          break;
-        case 'genotype_call':
-          $name = "Update ND Materialized View. Method: Genotype Call Custom table";
-          $function = 'nd_genotypes_update_mview_for_genotype_call';
-          break;
-        case 'stock_genotype':
-          $name = "Update ND Materialized View. Method: Genotype Stock table";
-          $function = 'nd_genotypes_update_mview_for_stock_genotype';
-          break;
-      }
+    // Create a Tripal job for syncing the materialized view.
+    if (!empty($partitions)) {
       global $user;
-      tripal_add_job($name, 'nd_genotypes', $function, array(), $user->uid);
+      tripal_add_job(
+        'Update ND Genotypes MView for '.implode(', ',$partitions),
+        'nd_genotypes',
+        'nd_genotypes_update_mview',
+        array('partitions' => $partitions),
+        $user->uid
+      );
+    }
+    else {
+      drupal_set_message("No partitions are being sync'd. Please choose the partitions you would like to sync or select 'All' to sync all partitions.", 'warning');
     }
   }
 
