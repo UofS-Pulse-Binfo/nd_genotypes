@@ -224,7 +224,8 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
       loc.srcfeature_id as srcfeature_id,
       b.name as srcfeature_name,
       loc.fmin,
-      loc.fmax
+      loc.fmax,
+      json_build_object('strand', loc.strand, 'variant_type_id', cvt.cvterm_id, 'featureloc_id', loc.featureloc_id) as meta_data
     FROM {$ndg_calls_name} call
       LEFT JOIN {feature} v ON v.feature_id=call.variant_id
       LEFT JOIN {cvterm} cvt ON v.type_id=cvt.cvterm_id
@@ -257,7 +258,9 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
       srcfeature_id,
       srcfeature_name,
       fmin,
-      fmax) FROM '/tmp/mview_ndg_variants.copy.unique'")->rowCount();
+      fmax,
+      meta_data)
+      FROM '/tmp/mview_ndg_variants.copy.unique'")->rowCount();
     print "       - Finished $result records.\n";
 
     $min += $chunk_size;
