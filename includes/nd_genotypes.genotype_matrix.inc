@@ -491,7 +491,7 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
 
   // Variant Type:
   if (isset($query_args['variant_type'])) {
-    $variant[] = 'EXISTS (SELECT true FROM {feature} f WHERE type_id=:variant_type AND f.feature_id=v.variant_id)';
+    $variant[] = 'variant_type=:variant_type';
     $variant_args[':variant_type'] = $query_args['variant_type'];
     unset($query_args['variant_type']);
   }

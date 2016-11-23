@@ -220,12 +220,14 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
     SELECT
       call.variant_id,
       v.name as variant_name,
+      cvt.name as variant_type,
       loc.srcfeature_id as srcfeature_id,
       b.name as srcfeature_name,
       loc.fmin,
       loc.fmax
     FROM {$ndg_calls_name} call
       LEFT JOIN {feature} v ON v.feature_id=call.variant_id
+      LEFT JOIN {cvterm} cvt ON v.type_id=cvt.cvterm_id
       LEFT JOIN {featureloc} loc ON loc.feature_id=call.variant_id
       LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
     WHERE call.variant_id BETWEEN :min AND :max
@@ -251,6 +253,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
     $result = chado_query("COPY {".$table_name."} (
       variant_id,
       variant_name,
+      variant_type,
       srcfeature_id,
       srcfeature_name,
       fmin,
@@ -328,29 +331,25 @@ function nd_genotypes_update_mview_cache($partition, $print = FALSE) {
   // @todo this should be based off the mview_ndg_variants which will also
   // ensure it is filtered to partition.
   if ($print) print "    - Determining the types of variants...\n";
-  $resource = chado_query("
+  $resource = ndg_mview_query($partition, "
     WITH RECURSIVE t AS (
-      (SELECT type_id
-        FROM {feature} f
-        LEFT JOIN {$ndg_variants} v ON v.variant_id=f.feature_id
-        WHERE v.ndg_variants_id IS NOT NULL
-        ORDER BY type_id
+      (SELECT variant_type
+        FROM {mview_ndg_variants}
+        ORDER BY variant_type
         LIMIT 1)
       UNION ALL
       SELECT
-          (SELECT type_id
-            FROM {feature} f
-            LEFT JOIN {$ndg_variants} v ON v.variant_id=f.feature_id
-            WHERE type_id > t.type_id AND v.ndg_variants_id IS NOT NULL
-            ORDER BY type_id
+          (SELECT variant_type
+            FROM {mview_ndg_variants}
+            WHERE variant_type > t.variant_type
+            ORDER BY variant_type
             LIMIT 1)
         FROM t
-        WHERE t.type_id IS NOT NULL
+        WHERE t.variant_type IS NOT NULL
     )
-    SELECT t.type_id, cvt.name as type_name FROM t LEFT JOIN {cvterm} cvt ON cvt.cvterm_id=t.type_id WHERE t.type_id IS NOT NULL");
-  $types = array();
+    SELECT t.variant_type FROM t WHERE t.variant_type IS NOT NULL");  $types = array();
   foreach ($resource as $r) {
-    $types[$r->type_id] = $r->type_name;
+    $types[$r->variant_type] = $r->variant_type;
   }
   variable_set('nd_genotypes_'.$partition.'_variant_types', serialize($types));
 
@@ -373,8 +372,7 @@ function nd_genotypes_update_mview_cache($partition, $print = FALSE) {
         FROM t
         WHERE t.marker_type IS NOT NULL
     )
-    SELECT t.marker_type FROM t WHERE t.marker_type IS NOT NULL",
-    array(':marker_type' => $marker_type));
+    SELECT t.marker_type FROM t WHERE t.marker_type IS NOT NULL");
   $types = array();
   foreach ($resource as $r) {
     $types[$r->marker_type] = $r->marker_type;

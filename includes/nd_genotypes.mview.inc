@@ -41,6 +41,11 @@ function nd_genotypes_create_mview_ndg_variants($tablename = 'mview_ndg_variants
         'length' => 255,
         'not null' => TRUE,
       ),
+      'variant_type' => array(
+        'description' => 'The type of variant (e.g. SNP, MNP, Indel).',
+        'type' => 'varchar',
+        'length' => 255,
+      ),
       'srcfeature_id' => array(
         'description' => 'Links to the feature the variant is located on. Ideally this is the chromosome.',
         'type' => 'int',
@@ -57,6 +62,10 @@ function nd_genotypes_create_mview_ndg_variants($tablename = 'mview_ndg_variants
       'fmax' => array(
         'descrption' => 'End position on the scrfeature as described by the featureloc table.',
         'type' => 'int',
+      ),
+      'meta_data' => array(
+        'pgsql_type' => 'jsonb',
+        'views_type' => 'text',
       ),
       'ndg_variants_id' => array(
         'type' => 'serial',
