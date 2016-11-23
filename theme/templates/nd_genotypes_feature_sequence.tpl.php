@@ -39,6 +39,7 @@ if (isset($sequence) AND !empty($sequence)) :
       background-color: transparent;
       text-align: justify;
       font-size: 12px;
+      padding-left: 15px;
     }
 
     /* Make sure the SNPs are noticeable */
@@ -119,6 +120,13 @@ if (isset($sequence) AND !empty($sequence)) :
     <?php if (!empty($sequence_with_variants)) { ?>
       <strong>Variant Marked-up Sequence</strong>
       <?php print '<p>' . $marked_description . '</p>'; ?>
+
+      <?php
+      if (!empty($current_location->strand) AND ($current_location->strand != $sequence_range['strand'])) {
+        $type = $node->feature->type_id->name;
+        print '<div class="messages warning">The current '.$type.' is being displayed on the forward strand of '.$sequence_range['feature_name'].' despite aligning to the negative strand. As such, we have complemented the original calls to reflect the sequence orientation.</div>';
+      }
+      ?>
 
       <div id="tripal_feature-fasta-record">
         <div id="tripal_feature-sequence-header"><?php print $fasta_header; ?></div>

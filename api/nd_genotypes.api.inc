@@ -333,6 +333,20 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
           $variant_loc = $variant['start'] - $sequence_details['start'];
         }
 
+        // Since we are showing the calls on a sequence, we need to check that the strand
+        // that the calls were made on matches the one we're showing them on so we don't
+        // get the case where the Ref: G and the SNP is T/C making it look like there
+        // are 3 alleles when there isn't. Thus, complement the alleles if the strands
+        // don't match.
+        if (!empty($variant['meta_data']->strand) AND $variant['meta_data']->strand != $sequence_details['strand']) {
+          // First complement the nucleotides that will be used in the marked-up sequence.
+          $variant['nucleotides'] = nd_genotypes_complement_calls($variant['nucleotides']);
+          // And then complement the calls as they will appear in the tooltip.
+          foreach ($variant['alleles'] as $nucleotide => $info) {
+            $variant['alleles'][$nucleotide]['allele'] = nd_genotypes_complement_calls($variant['alleles'][$nucleotide]['allele']);
+          }
+        }
+
         // Add the reference nucleotide to the nucleotides assayed.
         $ref_allele = strip_tags($sequence[ $variant_loc ]);
         $variant['nucleotides'][$ref_allele] = $ref_allele;
@@ -416,11 +430,13 @@ function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end, 
             v.variant_name,
             cf.nid as variant_nid,
             v.fmin as start,
-            v.fmax as end
+            v.fmax as end,
+            v.meta_data
           FROM {mview_ndg_variants} v
           LEFT JOIN [chado_feature] cf ON cf.feature_id=v.variant_id
           WHERE srcfeature_name=:backbone AND fmin >= :min AND fmax <= :max';
-  $variants = ndg_mview_query($partition, $sql, array(':backbone' => $srcfeature_name, ':min' => $start, ':max' => $end))->fetchAllAssoc('variant_id');
+  $variants = ndg_mview_query($partition, $sql,
+    array(':backbone' => $srcfeature_name, ':min' => $start, ':max' => $end))->fetchAllAssoc('variant_id');
 
   // If there are no variants then return and empty array -obviously there won't be any calls.
   if (empty($variants)) return $variants;
@@ -438,6 +454,7 @@ function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end, 
 
     if (is_object($variants[$r->variant_id])) {
       $variants[$r->variant_id] = (array) $variants[$r->variant_id];
+      $variants[$r->variant_id]['meta_data'] = json_decode($variants[$r->variant_id]['meta_data']);
     }
 
     // Add in the current allele.
@@ -452,6 +469,43 @@ function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end, 
   }
 
   return $variants;
+}
+
+/**
+ * Complement nucleotides.
+ *
+ * @param $calls
+ *   Either 1) an array of calls to be complemented or 2) a single call to be complemented.
+ * @return
+ *   The complemented call or calls.
+ */
+function nd_genotypes_complement_calls($calls) {
+
+  $complement = array(
+    'A' => 'T',
+    'T' => 'A',
+    'C' => 'G',
+    'G' => 'C',
+  );
+
+  // If I have an array of calls them complement each one.
+  if (is_array($calls)) {
+    $comp_calls = array();
+    foreach ($calls as $allele) {
+      if (isset($complement[$allele])) {
+        $comp = $complement[$allele];
+        $comp_calls[ $comp ] = $comp;
+      }
+    }
+
+    return $comp_calls;
+  }
+  // Otherwise, if I have a single allele, complement it.
+  elseif (is_string($calls) AND isset($complement[$calls])) {
+    return $complement[$calls];
+  }
+
+  return $calls;
 }
 
 /**

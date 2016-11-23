@@ -296,7 +296,7 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
 
   // First get a list of featurelocs where the srcfeature has sequence.
   $variables['locations'] = chado_query('
-    SELECT l.featureloc_id, l.srcfeature_id, p.name as backbone_name, l.fmin, l.fmax, l.locgroup
+    SELECT l.featureloc_id, l.srcfeature_id, p.name as backbone_name, l.fmin, l.fmax, l.locgroup, l.strand as strand
     FROM {featureloc} l
     LEFT JOIN {feature} p ON p.feature_id=l.srcfeature_id
     WHERE l.feature_id=:id AND p.residues IS NOT NULL
@@ -366,6 +366,7 @@ function nd_genotypes_preprocess_nd_genotypes_feature_sequence(&$variables) {
         'length' => $max_sequence_length,
         'full_sequence' => FALSE,
         'variant_id' => $variant_id,
+        'strand' => 1, // assume the positive strand.
       );
    }
    else {
