@@ -203,24 +203,20 @@ function nd_genotypes_get_alleles_for_variant($variant_id, $partition = 'All') {
   $variant = array();
 
   $sql = "SELECT
-    v.variant_id,
-    v.variant_name,
-    v.fmin as start,
-    v.fmax as end,
+    call.variant_id,
+    v.name as variant_name,
     call.marker_name,
     call.allele_call as allele,
     count(*) as num_germplasm
   FROM {mview_ndg_calls} call
-    LEFT JOIN {mview_ndg_variants} v ON v.variant_id=call.variant_id
-  WHERE v.variant_id=:id
-  GROUP BY v.variant_id, v.variant_name, v.fmin, v.fmax, call.marker_name, call.allele_call";
+    LEFT JOIN {feature} v ON v.feature_id=call.variant_id
+  WHERE call.variant_id=:id
+  GROUP BY call.variant_id, v.name, call.marker_name, call.allele_call";
   $resource = ndg_mview_query($partition, $sql, array(':id' => $variant_id))->fetchAll();
 
   foreach ($resource as $r) {
     $variant['variant_id'] = $r->variant_id;
     $variant['variant_name'] = $r->variant_name;
-    $variant['start'] = $r->start;
-    $variant['end'] = $r->end;
 
     // Add in the current allele.
     if (isset($variant['alleles'][$r->allele])) {
