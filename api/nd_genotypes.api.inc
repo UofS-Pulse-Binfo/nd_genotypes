@@ -438,13 +438,27 @@ function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end, 
   if (empty($variants)) return $variants;
 
   // Now use that list fo get the allele distribution.
-  $sql = 'SELECT
-            variant_id,
-            allele_call as allele,
-            count(*) as num_germplasm
-          FROM unnest(ARRAY[' . implode(',', array_keys($variants)) . ']) variant_id
-          JOIN {mview_ndg_calls} call USING(variant_id)
-          GROUP BY variant_id, allele_call';
+  // If there is only a single variant then we need to use a different query to ensure
+  // that chado_query doesn't expand ARRAY[####] as a drupal table.
+  if (sizeof($variants) == 1) {
+    $sql = 'SELECT
+              variant_id,
+              allele_call as allele,
+              count(*) as num_germplasm
+            FROM {mview_ndg_calls} call
+            WHERE variant_id='.key($variants).'
+            GROUP BY variant_id, allele_call';
+  }
+  else {
+    $sql = 'SELECT
+              variant_id,
+              allele_call as allele,
+              count(*) as num_germplasm
+            FROM unnest(ARRAY[' . implode(',', array_keys($variants)) . ']) variant_id
+            JOIN {mview_ndg_calls} call USING(variant_id)
+            GROUP BY variant_id, allele_call';
+  }
+
   $resource = ndg_mview_query($partition, $sql);
   foreach ($resource as $r) {
 
