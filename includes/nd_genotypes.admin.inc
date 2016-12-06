@@ -242,8 +242,7 @@ function nd_genotypes_admin_sync_mviews($form, $form_state) {
 
   $sql = "
     SELECT *
-    FROM [chado_organism] CO
-      INNER JOIN {organism} O ON O.organism_id = CO.organism_id
+    FROM {organism} O
     ORDER BY O.genus, O.species
   ";
   $orgs = chado_query($sql);
