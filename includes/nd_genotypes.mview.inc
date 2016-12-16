@@ -32,7 +32,8 @@ function nd_genotypes_create_mview_ndg_variants($tablename = 'mview_ndg_variants
     'fields' => array(
       'variant_id' => array(
         'description' => 'Links to the feature describing the loci with variation.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
         'not null' => TRUE,
       ),
       'variant_name' => array(
@@ -48,7 +49,8 @@ function nd_genotypes_create_mview_ndg_variants($tablename = 'mview_ndg_variants
       ),
       'srcfeature_id' => array(
         'description' => 'Links to the feature the variant is located on. Ideally this is the chromosome.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
       ),
       'srcfeature_name' => array(
         'description' => 'The name of the srcfeature; hopefully the name of the chromosome.',
@@ -57,18 +59,21 @@ function nd_genotypes_create_mview_ndg_variants($tablename = 'mview_ndg_variants
       ),
       'fmin' => array(
         'descrption' => 'Start position on the scrfeature as described by the featureloc table.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
       ),
       'fmax' => array(
         'descrption' => 'End position on the scrfeature as described by the featureloc table.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
       ),
       'meta_data' => array(
         'pgsql_type' => 'jsonb',
         'views_type' => 'text',
       ),
       'ndg_variants_id' => array(
-        'type' => 'serial',
+        'pgsql_type' => 'bigserial',
+        'views_type' => 'int',
       ),
     ),
     'primary key' => array('ndg_variants_id'),
@@ -86,6 +91,7 @@ function nd_genotypes_create_mview_ndg_variants($tablename = 'mview_ndg_variants
   );
 
   chado_create_custom_table( $tablename, $schema );
+
 }
 
 /**
@@ -153,12 +159,14 @@ function nd_genotypes_create_mview_ndg_calls($tablename = 'mview_ndg_calls') {
     'fields' => array(
       'variant_id' => array(
         'description' => 'The feature_id of the loci with variation.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
         'not null' => TRUE,
       ),
       'marker_id' => array(
         'description' => 'The feature_id of the marker.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
         'not null' => TRUE,
       ),
       'marker_name' => array(
@@ -175,7 +183,8 @@ function nd_genotypes_create_mview_ndg_calls($tablename = 'mview_ndg_calls') {
       ),
       'stock_id' => array(
         'description' => 'Links to the DNA stock assayed by the marker.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
         'not null' => TRUE,
       ),
       'stock_name' => array(
@@ -186,7 +195,8 @@ function nd_genotypes_create_mview_ndg_calls($tablename = 'mview_ndg_calls') {
       ),
       'germplasm_id' => array(
         'description' => 'Links to the parent germplasm the DNA was extracted from.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
         'not null' => TRUE,
       ),
       'germplasm_name' => array(
@@ -197,12 +207,14 @@ function nd_genotypes_create_mview_ndg_calls($tablename = 'mview_ndg_calls') {
       ),
       'project_id' => array(
         'description' => 'The project_id of the project the marker was assayed as part of.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
         'not null' => TRUE,
       ),
       'genotype_id' => array(
         'description' => 'The genotype_id of the resultant allele call.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
         'not null' => TRUE,
       ),
       'allele_call' => array(
@@ -216,7 +228,8 @@ function nd_genotypes_create_mview_ndg_calls($tablename = 'mview_ndg_calls') {
         'views_type' => 'text',
       ),
       'ndg_call_id' => array(
-        'type' => 'serial',
+        'pgsql_type' => 'bigserial',
+        'views_type' => 'int',
       ),
     ),
     'primary key' => array('ndg_call_id'),
@@ -323,7 +336,8 @@ function nd_genotypes_create_mview_ndg_germplasm_genotyped($table_name = 'mview_
       ),
       'organism_id' => array(
         'description' => 'The organism the stock is from.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
         'not null' => TRUE,
       ),
       'organism_genus' => array(
@@ -405,7 +419,8 @@ function nd_genotypes_create_mview_summary($table_name = 'mview_ndg_summary') {
       ),
       'value' => array(
         'description' => 'The value of the statistic.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
         'not null' => TRUE,
       )
     ),
@@ -428,31 +443,37 @@ function nd_genotypes_genotype_call_schema_template() {
     'description' => 'A more compact way to store genotype calls.',
     'fields' => array(
       'genotype_call_id' => array(
-        'type' => 'serial',
+        'pgsql_type' => 'bigserial',
+        'views_type' => 'int',
       ),
       'variant_id' => array(
         'description' => 'Links to the feature describing the loci with variation.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
         'not null' => TRUE,
       ),
       'marker_id' => array(
         'description' => 'Links to the feature describing the marker.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
         'not null' => TRUE,
       ),
       'genotype_id' => array(
         'description' => 'Links to the allele call.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
         'not null' => TRUE,
       ),
       'project_id' => array(
         'description' => 'Links to the project grouping calls from a single analysis.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
         'not null' => TRUE,
       ),
       'stock_id' => array(
         'description' => 'Links to the DNA stock assayed by the marker.',
-        'type' => 'int',
+        'pgsql_type' => 'bigint',
+        'views_type' => 'int',
         'not null' => TRUE,
       ),
       'meta_data' => array(
