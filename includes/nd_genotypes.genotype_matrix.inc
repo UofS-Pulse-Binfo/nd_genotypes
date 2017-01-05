@@ -574,24 +574,33 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   }
 
   // Order and Limit.
+  // First determine sort columns.
+  if (isset($query_args['sort']) AND $query_args['sort'] == 'variant_name') {
+    $order = array('variant_name', 'srcfeature_name', 'fmin');
+  }
+  else {
+    $order = array('srcfeature_name', 'fmin');
+  }
+  // Then add in the sort order and limit.
   if (isset($query_args['page']) AND is_numeric($query_args['page']) AND $query_args['page'] != 1) {
     // Normal pages (ie: 1, 2, 3, etc).
     if ($query_args['page'] > 1 ) {
-      $sql .= "\nORDER BY srcfeature_name ASC, fmin ASC \n";
+      // For example, "\nORDER BY srcfeature_name ASC, fmin ASC \n"
+      $sql .= "\nORDER BY " . implode(' ASC, ', $order) . " ASC \n";
       $sql .= "OFFSET " . (100 * ($query_args['page'] - 1)) . " LIMIT 100";
     }
     // Negative page numbers mean we are counting backwards from the last page...
     else {
-      $sql .= "\nORDER BY srcfeature_name DESC, fmin DESC \n";
+      $sql .= "\nORDER BY " . implode(' DESC, ', $order) . " DESC \n";
       $sql .= "OFFSET " . (100 * abs($query_args['page'])) . " LIMIT 100";
     }
   }
   elseif (isset($query_args['page']) AND $query_args['page'] == 'last') {
-    $sql .= "\nORDER BY srcfeature_name DESC, fmin DESC \n";
+    $sql .= "\nORDER BY " . implode(' DESC, ', $order) . " DESC \n";
     $sql .= "LIMIT 100";
   }
   else {
-    $sql .= "\nORDER BY srcfeature_name ASC, fmin ASC \n";
+    $sql .= "\nORDER BY " . implode(' ASC, ', $order) . " ASC \n";
     $sql .= "LIMIT 100";
   }
 

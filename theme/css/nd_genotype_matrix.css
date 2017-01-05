@@ -89,3 +89,18 @@ td.genotype.C, td.genotype.CC {
   position: relative;
   top: -36px;
 }
+
+/* Style the Download/Sort links */
+.matrix-controls {
+  position: relative;
+  top: 10px;
+  height: 21px;
+}
+.matrix-sort {
+  float: right;
+  margin-right: 5px;
+}
+.matrix-sort a.current {
+  text-decoration: underline;
+  font-weight: bold;
+}

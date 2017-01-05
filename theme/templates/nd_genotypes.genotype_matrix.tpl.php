@@ -186,9 +186,35 @@ if ($num_rows < 100) {
   <?php } else { ?>
 
 
-    <!--<div class="matrix-download">Download:
-      <?php print l('CSV', 'chado/genotype/'.$genus.'/csv', array('query' => drupal_get_query_parameters(), 'attributes' => array('target' => '_blank'))); ?>
-    </div>-->
+    <div class="matrix-controls">
+      <!--<span class="matrix-download">Download:
+        <?php print l('CSV', 'chado/genotype/'.$genus.'/csv', array('query' => drupal_get_query_parameters(), 'attributes' => array('target' => '_blank'))); ?>
+      </span>-->
+      <span class="matrix-sort">
+        Sort by
+        <?php
+          $query_args = drupal_get_query_parameters();
+          $links = array(
+            'location' => array('title' => 'Location', 'class' => array()),
+            'variant_name' => array('title' => 'Variant Name', 'class' => array()),
+          );
+          $i = 0;
+          foreach ($links as $k => $l) {
+            $i++;
+            if (isset($query_args['sort']) AND $query_args['sort'] == $k) {
+              $l['class'][] = 'current';
+            }
+            elseif (!isset($query_args['sort']) AND $k == 'location') {
+              $l['class'][] = 'current';
+            }
+            print l($l['title'], 'chado/genotype/'.$genus, array('query' => array_merge($query_args, array('sort' => $k)), 'attributes' => array('class' => $l['class'])));
+            if ($i != sizeof($links)) {
+              print ', ';
+            }
+          }
+        ?>
+      </span>
+    </div>
     <div class="matrix-proper">
       <?php print theme('table', $table); ?>
     </div>
