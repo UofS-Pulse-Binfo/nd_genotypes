@@ -255,6 +255,7 @@ function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
   if (isset($values['variant_name']) AND !empty($values['variant_name'])) {
     $values['variant_name'] = trim($values['variant_name']);
     $list = preg_split("/\s*(\r\n|\n|\r)\s*/", $values['variant_name']);
+    $query['sort'] = 'variant_name';
 
     // Check if this list already exists.
     $list_id = db_select('ndg_matrix_variant_user_lists','l')
