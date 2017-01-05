@@ -17,50 +17,87 @@ $missing_list['variants'] = (isset($defaults['variant_name'])) ? array_combine($
 
 // Generate the table rows.
 $l_options = array('attributes' => array( 'target' => '_blank' ));
+$flip = array('even' => 'odd', 'odd' => 'even');
 $num_rows = 0;
 $first_row = $last_row = array();
+$row_num = 0;
+$striping = 'odd';
+$current_variant = array('name' => NULL);
 if (isset($variants)) {
   foreach($variants as $row_id => $v) {
+    $row_num++;
 
-    // First initialize the row with empty values.
-    $table['rows'][$row_id] = $template_row;
-
-    // Then fill in the core information.
-    if ($v->nid) {
-      $table['rows'][$row_id]['variant_name'] = array(
-        'data' => l($v->variant_name, 'node/'.$v->nid, $l_options),
-        'class' => array('variant_name')
-      );
+    // merge rows if the variant name is the name.
+    $is_merge = FALSE;
+    if ($v->variant_name == $current_variant['name']) {
+      $current_variant['count']++;
+      $is_merge = TRUE;
+      $merge_top_row = $current_variant['first'];
     }
     else {
-      $table['rows'][$row_id]['variant_name'] = array(
-        'data' => $v->variant_name,
-        'class' => array('variant_name')
+      $current_variant = array(
+        'name' => $v->variant_name,
+        'first' => $row_id,
+        'count' => 1,
       );
+      $striping = $flip[$striping];
     }
-    $table['rows'][$row_id]['srcfeature_name'] = array(
+
+    // First initialize the row with empty values.
+    $table['rows'][$row_id] = array(
+      'data' => $template_row,
+      'no_striping' => TRUE,
+      'class' => array($striping)
+    );
+
+    // Then fill in the core information.
+    if (!$is_merge) {
+      if ($v->nid) {
+        $table['rows'][$row_id]['data']['variant_name'] = array(
+          'data' => l($v->variant_name, 'node/'.$v->nid, $l_options),
+          'class' => array('variant_name')
+        );
+      }
+      else {
+        $table['rows'][$row_id]['data']['variant_name'] = array(
+          'data' => $v->variant_name,
+          'class' => array('variant_name')
+        );
+      }
+    }
+    else {
+      unset($table['rows'][$row_id]['data']['variant_name']);
+      $table['rows'][$merge_top_row]['data']['variant_name']['rowspan'] = $current_variant['count'];
+    }
+    $table['rows'][$row_id]['data']['srcfeature_name'] = array(
       'data' => $v->srcfeature_name,
       'class' => array('position','backbone')
     );
-    $table['rows'][$row_id]['fmin'] = array(
+    $table['rows'][$row_id]['data']['fmin'] = array(
       'data' => $v->fmin + 1, // convert from 0-indexed chado to 1-indexed.
       'class' => array('position', 'start')
     );
-    $table['rows'][$row_id]['fmax'] = array(
+    $table['rows'][$row_id]['data']['fmax'] = array(
       'data' => $v->fmax,
       'class' => array('position','end')
     );
 
-    if (isset($data[$v->variant_id])) {
+    if (isset($data[$v->variant_id]) AND !$is_merge) {
       foreach ($data[$v->variant_id] as $germplasm_id => $alleles) {
         if (isset($germplasm[ $germplasm_id ]) AND is_array($alleles)) {
 
           $consensus_allele = nd_genotype_get_consensus_call($alleles);
-          $table['rows'][$row_id][$germplasm_id] = array(
+          $table['rows'][$row_id]['data'][$germplasm_id] = array(
             'data' => $consensus_allele,
             'class' => array('germplasm', $germplasm[ $germplasm_id ]['class'], 'genotype', $consensus_allele)
           );
         }
+      }
+    }
+    elseif ($is_merge) {
+      foreach ($query_args['germplasm_id'] as $germplasm_id) {
+        unset($table['rows'][$row_id]['data'][$germplasm_id]);
+        $table['rows'][$merge_top_row]['data'][$germplasm_id]['rowspan'] = $current_variant['count'];
       }
     }
 
