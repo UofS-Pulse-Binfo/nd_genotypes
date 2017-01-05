@@ -38,15 +38,16 @@ function nd_genotypes_register_trpdownload_type() {
  * @param $job_id
  *   The ID of the tripal job executing this function ;-).
  */
-function trpdownload_genotype_matrix_download_generate_csv_file($variables, $job_id = NULL) {
+function trpdownload_genotype_matrix_download_generate_csv_file($vars, $job_id = NULL) {
 
   // First, process the query parameters passed to the download to determine the query.
-  nd_genotypes_process_query_parameters($variables);
+  nd_genotypes_process_query_parameters($vars);
 
   // Create the file and ready it for writting to.
-  $filepath = variable_get('trpdownload_fullpath', '') . $variables['filename'];
+  $filepath = variable_get('trpdownload_fullpath', '') . $vars['filename'];
   drush_print("File: " . $filepath);
-  $FILE = fopen($filepath, 'w') or die ('Unable to create file to write to');
+  $FILE = fopen($filepath, 'w') or die ("Unable to create file to write to.\n");
+
 
   // Write the header to the file.
   $header = array();
@@ -65,46 +66,8 @@ function trpdownload_genotype_matrix_download_generate_csv_file($variables, $job
   drush_print('Total Lines: '.$total_lines);
   */
 
-  $resource = chado_query($query, $variables['query']['args']);
-  $row = array();
-  $current_variant = NULL;
-  $cur_line = 0;
-  foreach ($resource as $r) {
-    $cur_line++;
-
-    // Output the progress.
-    /*
-    $cur_line++;
-    $percent = $cur_line/$total_lines * 100;
-    if ($percent%5 == 0) {
-      drush_print(round($percent,2).'% Complete.');
-      db_query('UPDATE {tripal_jobs} SET progress=:percent WHERE job_id=:id',
-        array(':percent' => round($percent), ':id' => $job_id));
-    }
-    */
-
-    // If this is not the variant we were working on... then we must be done the last one!
-    // Print and move on ;-).
-    if ($r->variant_id != $current_variant) {
-
-      // Print the last row.
-      if (!empty($row)) {
-        fputcsv($FILE, $row);
-      }
-
-      // Start this row.
-      $row = $variables['template_row'];
-      $current_variant = $r->variant_id;
-    }
-
-    // Add the current genotype to the row.
-    $row['variant_name'] = $r->variant_name;
-    $row['srcfeature_name'] = $r->srcfeature_name;
-    $row['fmin'] = $r->fmin;
-    $row['fmax'] = $r->fmax;
-    $row[$r->germplasm_id] = $r->consensus_allele;
-
-  }
+  // @todo find a way to efficiently page through the results since this may be the full
+  // SNP set...
 
   fclose($FILE);
 }
