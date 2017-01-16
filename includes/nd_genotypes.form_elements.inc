@@ -99,18 +99,6 @@ function expand_multiple_organism_stock ($element) {
         '#prefix' => '<span class="remove no-button">',
         '#suffix' => '</span>'
       );
-      /*
-      $img = theme_image(array(
-        'path' => drupal_get_path('module','cross_manage').'/theme/images/remove-button-x.png',
-        'title' => 'Remove this parent from the Crossing Block.',
-        'alt' => 'Remove Parent',
-      'attributes' => array('class' => 'remove-icon')
-      ));
-      $form['parents'][$pid]['action'] = array(
-        '#type' => 'markup',
-        '#markup' =>  l($img . 'remove', 'node/'.$parents[$i]->nid.'/edit', array('html' => TRUE, 'attributes' => array('target' => '_blank'))),
-      );
-      */
     }
   }
 
@@ -218,10 +206,12 @@ function multiple_organism_stock_value_callback(&$element, $input = FALSE, &$for
   }
 
   // Remove a germplasm.
-  $to_remove = array_search('-', $form_state['input']);
-  if ($to_remove AND preg_match('/remove-(\d+)/', $to_remove, $matches)) {
-    if (isset($input['existing'][$matches[1]])) {
-      unset($input['existing'][$matches[1]]);
+  foreach ($input['existing'] as $k => $v) {
+    $remove = 'remove-' . $k;
+    // We should remove a germplasm if the associated remove button was pressed.
+    // This button should be named 'remove-[row key]'.
+    if (isset($form_state['input'][$remove]) AND $form_state['input'][$remove] === $remove) {
+      unset($input['existing'][$k]);
     }
   }
 
