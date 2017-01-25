@@ -19,9 +19,10 @@
  *   An array of user submitted variables to substitute in to the :placeholders in the query.
  *   The keys should be the :placeholder.
  */
-function ndg_mview_query($partition, $query, $variables = array()) {
+function ndg_mview_query($partition, $query, $variables = array(), $options = array()) {
 
   $partition = strtolower($partition);
+  $options['return_query'] = (isset($options['return_query'])) ? $options['return_query'] : FALSE;
 
   // Replace the mview table names with the qualified by genus actual table names.
   $query = str_replace('mview_ndg_calls', 'mview_ndg_'.$partition.'_calls', $query);
@@ -29,7 +30,12 @@ function ndg_mview_query($partition, $query, $variables = array()) {
 
   // @todo: handle mview_ndg_germplasm_genotyped.
 
-  return chado_query($query, $variables);
+  if ($options['return_query']) {
+    return $query;
+  }
+  else {
+    return chado_query($query, $variables);
+  }
 }
 
 /**

@@ -224,9 +224,13 @@ if ($num_rows < 100) {
 
 
     <div class="matrix-controls">
-      <!--<span class="matrix-download">Download:
-        <?php print l('CSV', 'chado/genotype/'.$genus.'/csv', array('query' => drupal_get_query_parameters(), 'attributes' => array('target' => '_blank'))); ?>
-      </span>-->
+      <span class="matrix-download">Download:
+        <?php
+          $q = drupal_get_query_parameters();
+          $q['partition'] = $partition;
+          print l('CSV', 'chado/genotype/'.$genus.'/csv', array('query' => $q, 'attributes' => array('target' => '_blank')));
+        ?>
+      </span>
       <span class="matrix-sort">
         Sort by
         <?php
