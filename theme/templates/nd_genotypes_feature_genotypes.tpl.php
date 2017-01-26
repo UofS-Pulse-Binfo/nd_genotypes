@@ -6,13 +6,13 @@
 if (($type == 'marker' OR $type == 'variant') AND $no_genotypes === FALSE) :
 
 $matrix_url = url(
-  'chado/genotype/Lens',
+  'chado/genotype/' . $node->nd_partition,
   array(
     'query' => array('variant_name' => array( $variant['variant_name'] )),
   )
 );
 $variant_url = url(
-  'feature/Lens/culinaris/SNP/Chr1p9425',
+  'node/' . $variant['variant_nid'],
   array(
     'query' => array('pane' => 'genotypes'),
   )
@@ -24,7 +24,7 @@ $variant_url = url(
     padding: 50px 20px;
   }
   .arc.not-the-focus {
-    mix-blend-mode: screen; //screen; //color-dodge;
+    mix-blend-mode: screen;
   }
 </style>
 

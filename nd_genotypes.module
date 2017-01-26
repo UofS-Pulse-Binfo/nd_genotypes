@@ -421,6 +421,7 @@ function nd_genotypes_preprocess_nd_genotypes_feature_genotypes(&$variables) {
   }
 
   $variables['variant'] = nd_genotypes_get_alleles_for_variant($variant_id, $variables['node']->nd_partition);
+  $variables['variant']['variant_nid'] = chado_get_nid_from_id('feature', $variables['variant']['variant_id']);
 
   // Check if there are arn't genotypes and
   // if not, tell the template so she can not add the Genotypes pane.
