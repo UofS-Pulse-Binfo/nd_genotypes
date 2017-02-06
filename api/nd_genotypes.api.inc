@@ -59,6 +59,48 @@ function ndg_mview_tables_exist($partition) {
 }
 
 /**
+ * Uses drush to safely copy data quickly. ONLY USE IN TRIPAL JOBS!!
+ *
+ * PostgreSQL COPY is extremely effective at copying/inserting large amount of data. This
+ * modules uses it to create materialized views to cache queries for faster data access.
+ * However, using chado_query('COPY...') poses many security risks in a web setting.
+ * We use drush sql-connect to take advantage of our sync process taking place within a
+ * Tripal job.
+ *
+ * @param $copy_command
+ *   The full PostgreSQL copy command to be executed.
+ */
+function ndg_remote_chado_copy($copy_command, $args = array()) {
+
+  // Prefix the tables with their correct schema.
+  // Chado tables should be enclosed in curly brackets (ie: {feature} )
+  // and Drupal tables should be enclosed in square brackets (ie: [tripal_jobs] ).
+  $chado_schema_name = tripal_get_schema_name('chado');
+  $drupal_schema_name = tripal_get_schema_name('drupal');
+  $copy_command = preg_replace('/\{(.*?)\}/', $chado_schema_name.'.$1', $copy_command);
+  $copy_command = preg_replace('/\[(\w+)\]/', $drupal_schema_name.'.$1', $copy_command);
+
+  // Substitute any arguements for placeholders.
+  foreach ($args as $k => $v) {
+    if (is_string($v)) {
+      $args[$k] = "'" . $v . "'";
+    }
+  }
+  $copy_command = strtr($copy_command, $args);
+
+  // Allow the same hooks that act on chado_query to act on this query.
+  drupal_alter('chado_query', $copy_command, $args);
+
+  // Generate the command-line form of the copy command.
+  $connection_string = `drush sql-connect`;
+  $connection_string = trim($connection_string);
+  $command = $connection_string . ' -c "\\' . $copy_command . '"';
+
+  // Execute the command.
+  return `$command`;
+}
+
+/**
  * Determine the consensus call for a set of alleles.
  * Currently this is just based on the most frequent one.
  * @todo: Include quality information.

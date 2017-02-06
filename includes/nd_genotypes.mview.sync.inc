@@ -115,10 +115,10 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
       gc.meta_data
     FROM {genotype_call} gc
       LEFT JOIN {feature} m ON m.feature_id=gc.marker_id
-      LEFT JOIN {featureprop} mt ON mt.feature_id=m.feature_id AND mt.type_id IN (SELECT cvterm_id FROM cvterm WHERE name='marker_type')
+      LEFT JOIN {featureprop} mt ON mt.feature_id=m.feature_id AND mt.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='marker_type')
       LEFT JOIN {stock} s ON s.stock_id=gc.stock_id
       LEFT JOIN {organism} o ON o.organism_id=s.organism_id
-      LEFT JOIN {stock}_relationship sr ON sr.subject_id=s.stock_id AND sr.type_id IN (SELECT cvterm_id FROM cvterm WHERE name='is_extracted_from')
+      LEFT JOIN {stock}_relationship sr ON sr.subject_id=s.stock_id AND sr.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='is_extracted_from')
       LEFT JOIN {stock} g ON g.stock_id=sr.object_id
       LEFT JOIN {genotype} a ON a.genotype_id=gc.genotype_id
     WHERE gc.genotype_id=:id AND LOWER(o.genus)=LOWER(:partition)
@@ -134,12 +134,12 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
 
     // Copy it to a file.
     print "       - Copying to file...\n";
-    $result = chado_query("COPY (" . $query . ") TO '/tmp/mview_ndg_calls.copy'",
-      array(':id' => $genotype_id, ':partition' => $partition))->rowCount();
+    $result = ndg_remote_chado_copy("COPY (" . $query . ") TO '/tmp/mview_ndg_calls.copy'",
+      array(':id' => $genotype_id, ':partition' => $partition));
 
     // Then copy it back into the mview.
     print "       - Copying it into the mview...\n";
-    $result = chado_query("COPY {".$table_name."} (
+    $result = ndg_remote_chado_copy("COPY {".$table_name."} (
           variant_id,
           marker_id,
           marker_name,
@@ -151,7 +151,7 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
           project_id,
           genotype_id,
           allele_call,
-          meta_data) FROM '/tmp/mview_ndg_calls.copy'")->rowCount();
+          meta_data) FROM '/tmp/mview_ndg_calls.copy'");
     print "       - Finished $result records.\n";
   }
 
@@ -200,8 +200,8 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
   // which we forsee being the bulk of the data.
   // For this approach we first need to get the list of genotype_ids to use for chunk
   // delimiters.
-  $total_min = chado_query("SELECT min(variant_id) FROM {$ndg_calls_name}")->fetchField();
-  $total_max = chado_query("SELECT max(variant_id) FROM {$ndg_calls_name}")->fetchField();
+  $total_min = chado_query("SELECT min(variant_id) FROM {".$ndg_calls_name."}")->fetchField();
+  $total_max = chado_query("SELECT max(variant_id) FROM {".$ndg_calls_name."}")->fetchField();
   // Seems relatively performant at 50 million.
   $chunk_size = 500000;
   $num_chunks = 1;
@@ -226,7 +226,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
       loc.fmin,
       loc.fmax,
       json_build_object('strand', loc.strand, 'variant_type_id', cvt.cvterm_id, 'featureloc_id', loc.featureloc_id) as meta_data
-    FROM {$ndg_calls_name} call
+    FROM {".$ndg_calls_name."} call
       LEFT JOIN {feature} v ON v.feature_id=call.variant_id
       LEFT JOIN {cvterm} cvt ON v.type_id=cvt.cvterm_id
       LEFT JOIN {featureloc} loc ON loc.feature_id=call.variant_id
@@ -243,7 +243,14 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
 
     // Copy it to a file.
     print "       - Copying to file...\n";
-    $result = chado_query("COPY (" . $query . ") TO '/tmp/mview_ndg_variants.copy'", array(':min' => $min, ':max' => $max))->rowCount();
+    $result = ndg_remote_chado_copy("COPY (" . $query . ") TO '/tmp/mview_ndg_variants.copy'", array(':min' => $min, ':max' => $max));
+
+    if (!file_exists('/tmp/mview_ndg_variants.copy')) {
+      drush_log('No variants selected by: '
+        . str_replace(array(':min', ':max'), array($min, $max), str_replace(array('{','}'), array('chado.',''), $query)),
+        'warning');
+      continue;
+    }
 
     // Then we have to collapse it.
     print "       - Collapsing it to unique variants...\n";
@@ -251,7 +258,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
 
     // Then copy it back into the mview.
     print "       - Copying it into the mview...\n";
-    $result = chado_query("COPY {".$table_name."} (
+    $result = ndg_remote_chado_copy("COPY {".$table_name."} (
       variant_id,
       variant_name,
       variant_type,
@@ -260,7 +267,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
       fmin,
       fmax,
       meta_data)
-      FROM '/tmp/mview_ndg_variants.copy.unique'")->rowCount();
+      FROM '/tmp/mview_ndg_variants.copy.unique'");
     print "       - Finished $result records.\n";
 
     $min += $chunk_size;
