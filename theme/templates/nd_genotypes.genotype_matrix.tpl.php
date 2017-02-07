@@ -225,11 +225,18 @@ if ($num_rows < 100) {
 
     <div class="matrix-controls">
       <span class="matrix-download">Download:
-        <?php
+<?php   if (user_access('download nd_genotype_matrix')) {
           $q = drupal_get_query_parameters();
           $q['partition'] = $partition;
           print l('CSV', 'chado/genotype/'.$genus.'/csv', array('query' => $q, 'attributes' => array('target' => '_blank')));
-        ?>
+        }
+        elseif (user_is_anonymous()) {
+          print "<em>Requires log in</em>";
+        }
+        else {
+          print "<em>Requires Permission</em>";
+        }
+?>
       </span>
       <span class="matrix-sort">
         Sort by
