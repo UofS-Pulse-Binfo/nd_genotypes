@@ -207,6 +207,7 @@ function trpdownload_genotype_matrix_download_generate_csv_file($vars, $job_id =
   while ($results = chado_query('FETCH FORWARD 1000 FROM '.$cursor_name)) {
 
     $some_results = FALSE;
+    $last_percent = NULL;
     foreach ($results as $r) {
       $some_results = TRUE;
 
@@ -223,7 +224,6 @@ function trpdownload_genotype_matrix_download_generate_csv_file($vars, $job_id =
           $num_rows_exported++;
 
           // Update progress if we've reached an increment.
-          // @TODO Not actually updating??
           $percent = round(($num_rows_exported/$total_rows)*100);
           if ( (($percent % 5) == 0) AND ($percent != 100) AND ($percent != $last_percent)) {
             print $percent . '%...';
@@ -248,6 +248,12 @@ function trpdownload_genotype_matrix_download_generate_csv_file($vars, $job_id =
     }
 
     if (!$some_results) { break; }
+  }
+
+  // print the last row.
+  if (!empty($row)) {
+    fputcsv($FILE, $row);
+    $num_rows_exported++;
   }
 
   // Finally, complete.
