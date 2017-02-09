@@ -16,6 +16,9 @@ Drupal.behaviors.ndGenotypesFeaturePieChart = {
     var color = d3.scale.ordinal()
         .range(["#A3AF51", "#35424C", "#5D6F06", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
 
+    // Remove previous canvas if existing.
+    d3.select("#nd-genotypes-pie-chart").selectAll("svg").remove();
+
     // Create the SNG canvas.
     var svg = d3.select("#nd-genotypes-pie-chart").append("svg")
         .attr("width", width)
