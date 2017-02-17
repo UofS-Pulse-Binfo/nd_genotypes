@@ -145,14 +145,14 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
     '#default_value' => (isset($defaults['variant_type'])) ? $defaults['variant_type'] : NULL,
   );
 
-/*$form['marker_type'] = array(
+  $form['marker_type'] = array(
     '#type' => 'select',
     '#title' => 'Marker Type',
     '#description' => 'The types of markers you would like to see genotypes for (e.g. exome capture).',
     '#empty_option' => '- ' . t('Choose One to Filter') . ' -',
     '#options' => unserialize(variable_get('nd_genotypes_'.$partition.'_marker_types', NULL)),
     '#default_value' => (isset($defaults['marker_type'])) ? $defaults['marker_type'] : NULL,
-  );*/
+  );
 
   if (!isset($defaults['germlist'])) $defaults['germlist'] = array();
   $form['polymorphic'] = array(
@@ -571,6 +571,12 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   if (isset($query_args['project_id'])) {
     $call[] = 'project_id = :project_id';
     $call_args['project_id'] = $query_args['project_id'];
+  }
+
+  // Marker Type:
+  if (isset($query_args['marker_type'])) {
+    $call[] = 'marker_type = :marker_type';
+    $call_args[':marker_type'] = $query_args['marker_type'];
   }
 
   // Now determine the query for the variants.
