@@ -76,6 +76,15 @@ function nd_genotypes_menu() {
     'weight' => 4
   );
 
+  // For autocomplete of project names.
+  $items['tripal_ajax/nd_genotypes/project/name'] = array(
+    'title' => 'Projects AJAX',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'nd_genotypes_lookup_project_name_callback',
+    'access arguments' => array('access content'),
+    'weight' => 4
+  );
+
   // For ajax loading of sequences.
   $items['node/%/ajax/sequences/%/%'] = array(
     'page callback' => 'nd_genotypes_get_sequence_pane_ajax_callback',
@@ -509,6 +518,26 @@ function nd_genotypes_lookup_backbone_name_callback($partition, $string = "") {
       FROM {mview_ndg_variants} m
       WHERE srcfeature_name ~* :query
       GROUP BY srcfeature_name
+      LIMIT 10
+    ', array(':query' => $string))->fetchCol();
+    foreach ($result as $name) {
+      $matches[$name] = $name;
+    }
+  }
+
+  drupal_json_output($matches);
+}
+
+/**
+ * Auto-complete: Look-up names of  projects.
+ */
+function nd_genotypes_lookup_project_name_callback($string = '') {
+  $matches = array();
+  if (trim($string)) {
+    $result = chado_query('
+      SELECT name
+      FROM {project} p
+      WHERE name ~* :query
       LIMIT 10
     ', array(':query' => $string))->fetchCol();
     foreach ($result as $name) {

@@ -123,13 +123,18 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
     '#default_value' => (isset($defaults['variant_name'])) ? implode("\n",$defaults['variant_name']) : '',
   );
 
-/*$form['project_name'] = array(
+  $project_name = '';
+  if (isset($defaults['project_id'])) {
+    $project_name = chado_query('SELECT name FROM {project} WHERE project_id=:id',
+      array(':id' => $defaults['project_id']))->fetchField();
+  }
+  $form['project_name'] = array(
     '#type' => 'textfield',
     '#title' => 'Project Name',
     '#description' => 'The name of the project you want to restrict genotypes to.',
-    //'#autocomplete' @todo this should be an autocomplete.
-    '#default_value' => (isset($defaults['project_name'])) ? $defaults['project_name'] : '',
-  );*/
+    '#autocomplete_path' => 'tripal_ajax/nd_genotypes/project/name',
+    '#default_value' => $project_name,
+  );
 
   $form['variant_type'] = array(
     '#type' => 'select',
@@ -172,7 +177,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
 /**
  * Validate the options.
  */
-function nd_genotypes_matrix_filter_form_validate($form, $form_state) {
+function nd_genotypes_matrix_filter_form_validate($form, &$form_state) {
 
   // -- Genome Range
   foreach (array('start','end') as $field) {
@@ -206,6 +211,18 @@ function nd_genotypes_matrix_filter_form_validate($form, $form_state) {
   }
   if (strpos($form_state['values']['variant_name'], "\t") !== false) {
     drupal_set_message("We have detected a tab in your variant name filter. Note that to search for more than one variant each name should be on it's own line, not separated by tabs.", 'warning');
+  }
+
+  // Check project exists.
+  if (isset($form_state['values']['project_name']) AND !empty($form_state['values']['project_name'])) {
+    $project_id = chado_query('SELECT project_id FROM {project} WHERE name=:name',
+       array(':name' => $form_state['values']['project_name']))->fetchField();
+    if (!$project_id) {
+      form_set_error('project_name', 'Project "<em>'.$form_state['values']['project_name'].'</em>" doesn\'t exist.');
+    }
+    else {
+      $form_state['values']['project_id'] = $project_id;
+    }
   }
 }
 
@@ -294,6 +311,16 @@ function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
       $query['variant_name_list'] = $list_id;
       unset($values['variant_name']);
     }
+  }
+
+  // Remove project_name if we already have project_id. Otherwise look it up.
+  if (isset($values['project_name']) AND isset($values['project_id'])) {
+    unset($values['project_name']);
+  }
+
+  // Remove polymorphic filter if it's empty.
+  if ($values['polymorphic']['first'] == '<NONE>' AND $values['polymorphic']['second'] == '<NONE>') {
+    unset($values['polymorphic']);
   }
 
   // Add the remaining simple arguements into the URL.
@@ -538,6 +565,12 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   }
   else {
     return FALSE;
+  }
+
+  // Project:
+  if (isset($query_args['project_id'])) {
+    $call[] = 'project_id = :project_id';
+    $call_args['project_id'] = $query_args['project_id'];
   }
 
   // Now determine the query for the variants.

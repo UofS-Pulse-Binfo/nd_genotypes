@@ -295,6 +295,11 @@ function nd_genotypes_create_mview_ndg_calls_indexes($tablename = 'mview_ndg_cal
     'germplasm_id' => array(
       'columns' => array('germplasm_id')
     ),
+    // CREATE INDEX ndgcalls_project_id ON mview_ndg_calls (project_id);
+    // Used for the genotype matrix when restricting to projects.
+    'germplasm_id' => array(
+      'columns' => array('germplasm_id')
+    ),
   );
   foreach ($indexes as $name_suffix => $details) {
     $index_name = str_replace('_','',$tablename) . '_' . $name_suffix;
