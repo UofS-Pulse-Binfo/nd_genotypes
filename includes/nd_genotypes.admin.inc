@@ -186,6 +186,58 @@ function nd_genotypes_admin_settings($form, $form_state) {
     '#default_value' => variable_get('nd_genotypes_rel_position', NULL)
   );
 
+  $form['cvterms']['project'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Projects',
+    '#description' => 'Projects are used to group all genotype calls from a single project and/or analysis.<br />',
+  );
+
+  $form['cvterms']['project']['follow_project_rels'] = array(
+    '#type' => 'checkbox',
+    '#title' => 'Follow Project Relationships',
+    '#description' => 'If checked, the genotype matrix project filter will expand to sub-projects of the selected project.',
+    '#default_value' => variable_get('ndg_follow_project_rels', FALSE),
+  );
+
+  // Get vocab terms for project relationship types.
+  $default_cv = tripal_get_default_cv('project_relationship', 'type_id');
+  if (!empty($default_cv)) {
+    $project_reltypes = tripal_get_cvterm_select_options($default_cv->cv_id);
+  }
+  else {
+    tripal_set_message(
+      'There is not a default vocabulary set for Project Relationship Types. Please set one
+      using the <a href="@url">vocabulary defaults configuration page</a>.',
+      TRIPAL_WARNING,
+      array('@url' => url('admin/tripal/chado/tripal_cv/defaults'))
+    );
+    $project_reltypes = array();
+  }
+
+  $form['cvterms']['project']['subproject_type_id'] = array(
+    '#type' => 'select',
+    '#title' => 'Sub-Project Relationship Type',
+    '#description' => 'Indicate the type of relationship connecting your projects to their sub-projects.',
+    '#options' => $project_reltypes,
+    '#default_value' => variable_get('nd_genotypes_subproject_rel_type_id', 0)
+  );
+
+  $form['cvterms']['project']['subproject_position'] = array(
+    '#type' => 'radios',
+    '#title' => 'Parent Project Position',
+    '#description' => 'Since relationships are specified as Subject Type Object
+      if you read it like a sentence (ie: Master Project is_parent_project_of SubProject or
+      SubProject is_subproject_of Master Project), the parent project can be either the subject or
+      object based on the type you used. As such, we need to know which position
+      the parent project is in the relationship in order to follow it. Please select
+      the position of your parent project based on the relationship type provided.',
+    '#options' => array(
+      'subject' => '<strong>Subject</strong> (Master Project is_parent_project_of SubProject)',
+      'object' => '<strong>Object</strong> (SubProject is_subproject_of Master Project)'
+    ),
+    '#default_value' => variable_get('nd_genotypes_subproject_rel_position', NULL)
+  );
+
   $form['cvterms']['submit'] = array(
     '#type' => 'submit',
     '#value' => 'Set Terms',
@@ -223,6 +275,10 @@ function nd_genotypes_admin_settings_cvterms_submit($form, $form_state) {
   variable_set('nd_genotypes_rel_type_id', $form_state['values']['marker_reltype']);
   variable_set('nd_genotypes_rel_type_name', $reltypes[ $form_state['values']['marker_reltype'] ]);
   variable_set('nd_genotypes_rel_position', $form_state['values']['marker_relposition']);
+
+  variable_set('ndg_follow_project_rels', $form_state['values']['follow_project_rels']);
+  variable_set('nd_genotypes_subproject_rel_type_id', $form_state['values']['subproject_type_id']);
+  variable_set('nd_genotypes_subproject_rel_position', $form_state['values']['subproject_position']);
 }
 
 /**
