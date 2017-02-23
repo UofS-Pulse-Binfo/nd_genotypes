@@ -125,8 +125,14 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
 
   $project_name = '';
   if (isset($defaults['project_id'])) {
+    if (is_array($defaults['project_id'])) {
+      $project_id = $defaults['project_id'][0];
+    }
+    else {
+      $project_id = $defaults['project_id'];
+    }
     $project_name = chado_query('SELECT name FROM {project} WHERE project_id=:id',
-      array(':id' => $defaults['project_id']))->fetchField();
+      array(':id' => $project_id))->fetchField();
   }
   $form['project_name'] = array(
     '#type' => 'textfield',
@@ -221,7 +227,7 @@ function nd_genotypes_matrix_filter_form_validate($form, &$form_state) {
       form_set_error('project_name', 'Project "<em>'.$form_state['values']['project_name'].'</em>" doesn\'t exist.');
     }
     else {
-      $form_state['values']['project_id'] = $project_id;
+      $form_state['values']['project_id'] = array($project_id);
     }
   }
 }
@@ -313,9 +319,29 @@ function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
     }
   }
 
-  // Remove project_name if we already have project_id. Otherwise look it up.
+  // Remove project_name if we already have project_id.
   if (isset($values['project_name']) AND isset($values['project_id'])) {
     unset($values['project_name']);
+  }
+
+  // Look up subprojects if we have a project entered and the admin has chosen to do so.
+  if (isset($values['project_id']) AND variable_get('ndg_follow_project_rels', FALSE)) {
+    $type = variable_get('nd_genotypes_subproject_rel_type_id', 0);
+    $position = variable_get('nd_genotypes_subproject_rel_position', NULL);
+    if ($type AND $position) {
+      if ($position == 'subject') {
+        $sql = 'SELECT object_project_id FROM {project_relationship} WHERE subject_project_id=:parent_project_id';
+      }
+      else {
+        $sql = 'SELECT subject_project_id FROM {project_relationship} WHERE object_project_id=:parent_project_id';
+      }
+      $addt_project_ids = chado_query($sql, array(':parent_project_id' => $values['project_id'][0]))->fetchCol();
+
+      // Now add them to the list of projects.
+      if (is_array($addt_project_ids)) {
+        $values['project_id'] = array_merge($values['project_id'], $addt_project_ids);
+      }
+    }
   }
 
   // Remove polymorphic filter if it's empty.
@@ -372,6 +398,11 @@ function nd_genotypes_process_query_parameters(&$vars) {
   // --Germplasm.
   if (isset($vars['q']['germplasm'])) {
     foreach ($vars['q']['germplasm'] as $germ_id) {
+
+      if (!is_numeric($germ_id)) {
+        drupal_set_message('Incorrect format for germplasm_id: <em>'.$germ_id.'</em>. This germplasm has been removed from the search.','error');
+        continue;
+      }
 
       // retrieve more details.
       $s = chado_query('SELECT name, organism_id FROM {stock} WHERE stock_id=:id',
@@ -568,9 +599,14 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   }
 
   // Project:
-  if (isset($query_args['project_id'])) {
-    $call[] = 'project_id = :project_id';
-    $call_args['project_id'] = $query_args['project_id'];
+  if (isset($query_args['project_id']) AND !empty($query_args['project_id'])) {
+    if (sizeof($query_args['project_id']) == 1) {
+      $call[] = 'project_id = :project_id';
+    }
+    else {
+      $call[] = 'project_id IN (:project_id)';
+    }
+    $call_args[':project_id'] = $query_args['project_id'];
   }
 
   // Marker Type:
