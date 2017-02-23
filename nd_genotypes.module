@@ -474,17 +474,22 @@ function nd_genotypes_preprocess_nd_genotypes_feature_genotypes(&$variables) {
       $data[] = $tmp;
     }
   }
-  $variables['js_data'] = $data;
-  drupal_add_js(array('nd_genotypes' => array('genotypes' => $data)), 'setting');
 
-  drupal_add_js('http://d3js.org/d3.v3.js');
-  if ($variables['type'] == 'marker') {
-    drupal_add_js(drupal_get_path('module','nd_genotypes').'/theme/js/genotypeFeatureSinglePieChart.js');
+  if (!empty($data)) {
+    $variables['js_data'] = $data;
+    drupal_add_js(array('nd_genotypes' => array('genotypes' => $data)), 'setting');
+
+    drupal_add_js('http://d3js.org/d3.v3.js');
+    if ($variables['type'] == 'marker') {
+      drupal_add_js(drupal_get_path('module','nd_genotypes').'/theme/js/genotypeFeatureSinglePieChart.js');
+    }
+    else {
+      drupal_add_js(drupal_get_path('module','nd_genotypes').'/theme/js/genotypeFeatureMultiPieChart.js');
+    }
   }
   else {
-    drupal_add_js(drupal_get_path('module','nd_genotypes').'/theme/js/genotypeFeatureMultiPieChart.js');
+    $variables['no_genotypes'] = TRUE;
   }
-
 }
 
 /**
