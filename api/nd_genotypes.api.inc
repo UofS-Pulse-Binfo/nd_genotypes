@@ -285,6 +285,9 @@ function nd_genotypes_get_alleles_for_variant($variant_id, $partition = 'All') {
     }
   }
 
+  // Finally sort the marker alleles array by key.
+  ksort($variant['marker_alleles']);
+
   return $variant;
 }
 

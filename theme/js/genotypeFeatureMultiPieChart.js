@@ -86,7 +86,15 @@ Drupal.behaviors.ndGenotypesFeaturePieChart = {
 
       g.append("path")
           .attr("d", arc)
-          .style("fill", function(d) { return color(d.data.label); })
+          .style("fill", function(d) {
+            // If we have a single nucleotide then make it bi-allelic when choosing the colour.
+            if (d.data.label.length == 1) {
+              return color(d.data.label + d.data.label);
+            }
+            else {
+              return color(d.data.label);
+            }
+          })
           .append("svg:title")
             .text(function(d) { return _data.label + ': ' + d.data.label + ' (' + d.data.num + ' calls)'; });
 
