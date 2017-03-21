@@ -30,6 +30,8 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
 
   $partition = strtolower($partition);
 
+  drupal_set_title("$genus Genotypes");
+
   // Form select list options.
   //-------------------------
   // Determine the select box for species.
@@ -46,7 +48,17 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
 
   // Filter Form.
   //-------------------------
-  $form['multiple_stocks'] = array(
+  // STAGE #1
+  $form['s1'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Choose germplasm you are interested in.',
+    '#description' => 'Simply enter the name of one germplasm (e.g. CDC Redberry) of interest below and then click the green plus (+) button. You can enter any number of germplasm you are interested in and each will be added to the matrix as they are entered.',
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#prefix' => '<span class="stages stage1">1</span>',
+  );
+
+  $form['s1']['multiple_stocks'] = array(
     '#type' => 'multiple_organism_stock',
     '#title' => 'Germplasm',
     '#organism_title' => 'Source Species',
@@ -59,63 +71,96 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
     //'#required' => TRUE,
   );
 
+  if (!isset($defaults['germlist'])) $defaults['germlist'] = array();
+  $form['s1']['polymorphic'] = array(
+    '#type' => 'pairwise_compare_germplasm',
+    '#title' => 'Polymorphic Variants',
+    '#options' => array(
+      'first' => $defaults['germlist'],
+      'second' => $defaults['germlist']
+    ),
+    '#default_value' => (isset($defaults['polymorphic'])) ? $defaults['polymorphic'] : NULL,
+    '#description' => 'Restrict the variants to those that have different allele calls for the selected germplasm.',
+  );
+  if (sizeof($defaults['germlist']) == 0) $form['s1']['polymorphic']['#disabled'] = TRUE;
+
+  // STAGE #2
+  $form['s2'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Restrict to the region of the genome. (optional)',
+    '#description' => 'If applicable, we recommend you filter to a given region of the genome to make the genotype set more managable.',
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#prefix' => '<span class="stages stage2">2</span>',
+  );
+
   $description = 'The range of the genome you would like to display variants from. If you enter just the start or just the end position then all variants before or after that location, respectively, will be displayed.';
-  $form['seq_range'] = array(
+  $form['s2']['seq_range'] = array(
     '#type' => 'markup',
     '#tree' => TRUE,
     '#prefix' => '<div class="seq-range-element form-item"><label>Genome Range</label>',
     '#suffix' => '<div class="description">' . $description . '</div></div>',
   );
 
-  $form['seq_range']['start'] = array(
+  $form['s2']['seq_range']['start'] = array(
     '#type' => 'markup',
     '#prefix' => '<div class="start-elements">',
     '#suffix' => '</div>',
   );
 
-  $form['seq_range']['start']['label'] = array(
+  $form['s2']['seq_range']['start']['label'] = array(
     '#type' => 'item',
     '#markup' => 'From',
   );
 
-  $form['seq_range']['start']['backbone'] = array(
+  $form['s2']['seq_range']['start']['backbone'] = array(
     '#type' => 'textfield',
     '#attributes' => array('placeholder' => 'Sequence Name'),
     '#autocomplete_path' => 'tripal_ajax/nd_genotypes/genotyped_backbones/name_to_id/' . $partition . '/only',
     '#default_value' => (isset($defaults['seq_range']['start']['backbone'])) ? $defaults['seq_range']['start']['backbone'] : NULL,
   );
 
-  $form['seq_range']['start']['pos'] = array(
+  $form['s2']['seq_range']['start']['pos'] = array(
     '#type' => 'textfield',
     '#attributes' => array('placeholder' => 'Start Position'),
     '#default_value' => (isset($defaults['seq_range']['start']['pos'])) ? $defaults['seq_range']['start']['pos']:  NULL,
   );
 
-  $form['seq_range']['end'] = array(
+  $form['s2']['seq_range']['end'] = array(
     '#type' => 'markup',
     '#prefix' => '<div class="end-elements">',
     '#suffix' => '</div>',
   );
 
-  $form['seq_range']['end']['label'] = array(
+  $form['s2']['seq_range']['end']['label'] = array(
     '#type' => 'item',
     '#markup' => 'to',
   );
 
-  $form['seq_range']['end']['backbone'] = array(
+  $form['s2']['seq_range']['end']['backbone'] = array(
     '#type' => 'textfield',
     '#attributes' => array('placeholder' => 'Sequence Name'),
     '#autocomplete_path' => 'tripal_ajax/nd_genotypes/genotyped_backbones/name_to_id/' . $partition . '/only',
     '#default_value' => (isset($defaults['seq_range']['end']['backbone'])) ? $defaults['seq_range']['end']['backbone'] : NULL,
   );
 
-  $form['seq_range']['end']['pos'] = array(
+  $form['s2']['seq_range']['end']['pos'] = array(
     '#type' => 'textfield',
     '#attributes' => array('placeholder' => 'End Position'),
     '#default_value' => (isset($defaults['seq_range']['end']['pos'])) ? $defaults['seq_range']['end']['pos']:  NULL
   );
 
-  $form['variant_name'] = array(
+  // STAGE #3
+  $form['s3'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Additional Filter criteria. (optional)',
+    '#description' => 'We recommend you fill out as many of the following optional filters as possible to narrow the genotype set to those you are most interested in.',
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#prefix' => '<span class="stages stage3">3</span>',
+  );
+
+  $form['s3']['variant_name'] = array(
     '#type' => 'textarea',
     '#title' => 'Variant Name(s)',
     '#description' => 'A list of variant names you wish to see genotypes for with one variant per line.',
@@ -134,7 +179,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
     $project_name = chado_query('SELECT name FROM {project} WHERE project_id=:id',
       array(':id' => $project_id))->fetchField();
   }
-  $form['project_name'] = array(
+  $form['s3']['project_name'] = array(
     '#type' => 'textfield',
     '#title' => 'Project Name',
     '#description' => 'The name of the project you want to restrict genotypes to.',
@@ -142,7 +187,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
     '#default_value' => $project_name,
   );
 
-  $form['variant_type'] = array(
+  $form['s3']['variant_type'] = array(
     '#type' => 'select',
     '#title' => 'Variant Type',
     '#description' => 'The types of variants you would like to see genotypes for (e.g. indels only).',
@@ -151,25 +196,13 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
     '#default_value' => (isset($defaults['variant_type'])) ? $defaults['variant_type'] : NULL,
   );
 
-  $form['marker_type'] = array(
+  $form['s3']['marker_type'] = array(
     '#type' => 'select',
     '#title' => 'Marker Type',
     '#description' => 'The types of markers you would like to see genotypes for (e.g. exome capture).',
     '#empty_option' => '- ' . t('Choose One to Filter') . ' -',
     '#options' => unserialize(variable_get('nd_genotypes_'.$partition.'_marker_types', NULL)),
     '#default_value' => (isset($defaults['marker_type'])) ? $defaults['marker_type'] : NULL,
-  );
-
-  if (!isset($defaults['germlist'])) $defaults['germlist'] = array();
-  $form['polymorphic'] = array(
-    '#type' => 'pairwise_compare_germplasm',
-    '#title' => 'Polymorphic Variants',
-    '#options' => array(
-      'first' => $defaults['germlist'],
-      'second' => $defaults['germlist']
-    ),
-    '#default_value' => (isset($defaults['polymorphic'])) ? $defaults['polymorphic'] : NULL,
-    '#description' => 'Restrict the variants to those that have different allele calls for the selected germplasm.',
   );
 
   $form['submit'] = array(

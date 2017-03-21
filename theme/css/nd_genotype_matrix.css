@@ -19,6 +19,23 @@ td.germplasm {
   text-align: center;
 }
 
+/* Fieldset Styling */
+span.stages {
+  width: 45px;
+  float: left;
+  position: relative;
+  top: -5px;
+  padding-right: 5px;
+  font-size: 32px;
+  line-height: 1;
+  font-weight: bold;
+  text-align: right;
+  color: #314355;
+}
+#edit-submit {
+  margin-left: 45px;
+}
+
 /* Element Styling */
 .form-textarea-wrapper {
   margin-right: 45px;
