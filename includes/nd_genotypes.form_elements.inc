@@ -177,19 +177,9 @@ function theme_multiple_organism_stock ($vars) {
  * entered into the form element making validation easier.
  *
  * One thing to keep in mind is that the value callback is called both when the form
- * is submitted and when the form is rendered. To avoid excessive validation, we keep
- * of whether the callback is being called on submit (we should validate) or render
- * (we've already validated since the user last had access).
+ * is submitted and when the form is rendered. 
  */
 function multiple_organism_stock_value_callback(&$element, $input = FALSE, &$form_state) {
-
-  // If the element has already been validated then it has also been processed.
-  // As such there is no need to do so again.
-  if(isset($element['#nd_validated']) AND $element['#nd_validated'] === TRUE) return $input;
-
-  // We set this flag here even though we haven't yet validated the data in order to
-  // ensure it gets set even if validation fails.
-  $element['#nd_validated'] = TRUE;
 
   // Set some defaults.
   multiple_organism_stock_set_element_defaults($element);
@@ -210,7 +200,9 @@ function multiple_organism_stock_value_callback(&$element, $input = FALSE, &$for
     $remove = 'remove-' . $k;
     // We should remove a germplasm if the associated remove button was pressed.
     // This button should be named 'remove-[row key]'.
-    if (isset($form_state['input'][$remove]) AND $form_state['input'][$remove] === $remove) {
+    // While Chrome saves the name of the button, Firefox does not. Both seem 
+    // to save [name of button]_y so we'll check for that instead.
+    if (isset($form_state['input'][$remove.'_y'])) {
       unset($input['existing'][$k]);
     }
   }
@@ -220,16 +212,10 @@ function multiple_organism_stock_value_callback(&$element, $input = FALSE, &$for
 
   $stub = implode('][',$element['#parents']);
 
-  // If the add button was pressed...
-  if(isset($form_state['input']['add'])) {
+  // If the user entered a stock name in the last row.
+  if(!empty($input['new']['stock_name'])) {
 
-    // then both the name and organism should have been provided.
-    if (empty($input['new']['stock_name'])) {
-      form_set_error($stub . '][new][stock_name',
-        t('The %subname is required when adding germplasm to the %name list.',
-          array('%subname' => $element['#name_title'], '%name' => $element['#title'])));
-      $element['#nd_errors'] = TRUE;
-    }
+    // then the organism should have been provided.
     if (empty($input['new']['organism_id'])) {
       form_set_error($stub . '][new][organism_id',
         t('The %subname is required when adding germplasm to the %name list.',
@@ -308,8 +294,8 @@ function multiple_organism_stock_value_callback(&$element, $input = FALSE, &$for
   // And then finish processing the values!
   //-----------------------------------
 
-  // Add a germplasm.
-  if(isset($form_state['input']['add'])) {
+  // Add a germplasm?
+  if (isset($input['new']['stock_id']) AND !empty($input['new']['stock_id'])) {
     if (!isset($input['existing'])) {
       $input['existing'] = array();
     }
