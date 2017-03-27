@@ -224,7 +224,7 @@ if ($num_rows < 100) {
 
 
     <div class="matrix-controls">
-      <span class="matrix-download">Download:
+      <span class="matrix-download matrix-section">Download:
 <?php   if (user_access('download nd_genotype_matrix')) {
           $q = drupal_get_query_parameters();
           $q['partition'] = $partition;
@@ -238,7 +238,29 @@ if ($num_rows < 100) {
         }
 ?>
       </span>
-      <span class="matrix-sort">
+      <span class="matrix-counts matrix-section">
+        <div class="result-count">Total Results: <span class="number">
+            <?php print l(
+              t('Retrieve')  ,
+              'chado/genotype/' . $partition . '/ajax_count_results/nojs/',
+              array(
+                'query' => drupal_get_query_parameters(),
+                'attributes' => array('class' => array('use-ajax'))
+              )
+            ); ?>
+          </span></div>
+        <div class="variant-count">Unique Variants: <span class="number">
+            <?php print l(
+              t('Retrieve')  ,
+              'chado/genotype/' . $partition . '/ajax_count_variants/nojs/',
+              array(
+                'query' => drupal_get_query_parameters(),
+                'attributes' => array('class' => array('use-ajax'))
+              )
+            ); ?>
+          </span></div>
+      </span>
+      <span class="matrix-sort matrix-section">
         Sort by
         <?php
           $query_args = drupal_get_query_parameters();

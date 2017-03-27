@@ -126,6 +126,22 @@ function nd_genotypes_menu() {
        'access arguments' => array('download nd_genotype_matrix'),
        'type' => MENU_CALLBACK,
       );
+
+     $items['chado/genotype/' . $organism->genus . '/ajax_count_results'] = array(
+       'title' => 'Number of Results',
+       'page callback' => 'nd_genotypes_count_genotype_matrix_results_callback',
+       'page arguments' => array(2,4),
+       'access arguments' => array('access nd_genotypes'),
+       'type' => MENU_CALLBACK,
+      );
+
+     $items['chado/genotype/' . $organism->genus . '/ajax_count_variants'] = array(
+       'title' => 'Number of Results',
+       'page callback' => 'nd_genotypes_count_genotype_matrix_variants_callback',
+       'page arguments' => array(2,4),
+       'access arguments' => array('access nd_genotypes'),
+       'type' => MENU_CALLBACK,
+      );
     }
   }
 
@@ -208,6 +224,10 @@ function nd_genotype_matrix_page($genus) {
 
   // Add the CSS.
   drupal_add_css(drupal_get_path('module', 'nd_genotypes') . '/theme/css/nd_genotype_matrix.css');
+
+  // Add the JS.
+  drupal_add_js('misc/ajax.js');
+  //drupal_add_js(drupal_get_path('module', 'nd_genotypes') . '/theme/js/genotypeMatrixGetResultCounts.js');
 
   // Save the query paramters.
   $vars['q'] = drupal_get_query_parameters();
@@ -501,7 +521,7 @@ function nd_genotypes_lookup_germplasm_name_callback($partition, $string = "") {
     $result = ndg_mview_query($partition, '
       SELECT germplasm_name
       FROM {mview_ndg_germplasm_genotyped} m
-      WHERE germplasm_name ~* :query AND partition = :partition
+      WHERE partition = :partition AND germplasm_name ~* :query
       LIMIT 10
     ', array(':query' => $string, ':partition' => $partition))->fetchCol();
     foreach ($result as $name) {
@@ -551,6 +571,352 @@ function nd_genotypes_lookup_project_name_callback($string = '') {
   }
 
   drupal_json_output($matches);
+}
+
+/**
+ * Provide a count of results via AJAX.
+ */
+function nd_genotypes_count_genotype_matrix_results_callback($partition = '', $type = 'ajax') {
+
+  // @PARTITION: This is where the partition is set for the genotype matrix. From here
+  // if is carried throughout the rest of the functions.
+  $vars = array('genus' => $partition, 'partition' => $partition);
+
+  // Save the query paramters.
+  $vars['q'] = drupal_get_query_parameters();
+
+  // Process the query paramters to determine the defaults for the filter form
+  // as well as to isolate the values that are needed to retrieve the data.
+  nd_genotypes_process_query_parameters($vars);
+
+  // Compile all the parameters we will use when grabbing the calls so that we can restrict
+  // the variant list to those that will have data once we do retrieve the calls.
+  $query_args = $vars['query_args'];
+  $call = $variant = $call_args = $variant_args = $variant_joins = array();
+
+  // Sequence Ranges:
+  // First get the arguements. There must always be a backbone and fmin even if the user
+  // did not provide one.
+  if (isset($query_args['start_backbone'])) {
+    if (isset($query_args['start_pos'])) {
+      $variant_args[':sbackbone'] = $query_args['start_backbone'];
+      $variant_args[':sfmin'] = (int) $query_args['start_pos'];
+    }
+    else {
+      $variant_args[':sbackbone'] = $query_args['start_backbone'];
+      $variant_args[':sfmin'] = 1;
+    }
+    unset($query_args['start_backbone'], $query_args['start_pos']);
+  }
+  if (isset($query_args['end_backbone'])) {
+    if (isset($query_args['end_pos'])) {
+      $variant_args[':ebackbone'] = $query_args['end_backbone'];
+      $variant_args[':efmin'] = (int) $query_args['end_pos'];
+    }
+    else {
+      $variant_args[':ebackbone'] = $query_args['end_backbone'];
+      // @TODO: Switch to bigints then change this value to match the largest bigint.
+      $variant_args[':efmin'] = 2147483645;
+    }
+    unset($query_args['end_backbone'], $query_args['end_pos']);
+  }
+  // Now add the query where condition.
+  if (isset($variant_args[':sbackbone']) AND isset($variant_args[':ebackbone'])) {
+    $variant[] = 'ROW(v.srcfeature_name, v.fmin) BETWEEN ROW(:sbackbone, :sfmin) AND ROW(:ebackbone,:efmin)';
+  }
+  elseif (isset($variant_args[':sbackbone'])) {
+    $variant[] = 'ROW(v.srcfeature_name, v.fmin) >= ROW(:sbackbone, :sfmin)';
+  }
+  elseif (isset($variant_args[':ebackbone'])) {
+    $variant[] = 'ROW(v.srcfeature_name, v.fmin) <= ROW(:ebackbone, :efmin)';
+  }
+
+  // Variant Type:
+  if (isset($query_args['variant_type'])) {
+    $variant[] = 'variant_type=:variant_type';
+    $variant_args[':variant_type'] = $query_args['variant_type'];
+    unset($query_args['variant_type']);
+  }
+
+  // Variant Name:
+  $variant_name_filter = FALSE;
+  if (isset($query_args['variant_name'])) {
+    $variant[] = "variant_name IN (VALUES('" . implode("'), ('", $query_args['variant_name']) . "'))";
+    //$variant_args[':variant_names'] = $query_args['variant_name'];
+    unset($query_args['variant_name']);
+    $variant_name_filter = TRUE;
+  }
+  elseif (isset($query_args['variant_name_list'])) {
+    $list_json = db_query('SELECT list FROM {ndg_matrix_variant_user_lists} WHERE list_id=:id',
+      array(':id' => $query_args['variant_name_list']))->fetchField();
+    $list = json_decode($list_json);
+    $variant[] = "variant_name IN (VALUES('" . implode("'), ('", $list) . "'))";
+  }
+
+  // Polymorphic:
+  $polymorphic_filter = FALSE;
+  if (isset($query_args['polymorphic'])
+    AND is_numeric($query_args['polymorphic']['first'])
+    AND is_numeric($query_args['polymorphic']['second'])) {
+      if (!$variant_name_filter) {
+        $variant_joins[] = "LEFT JOIN (
+            SELECT a.variant_id, a.allele_call=b.allele_call as monomorphic
+            FROM mview_ndg_calls a, mview_ndg_calls b
+            WHERE a.variant_id=b.variant_id AND a.germplasm_id=:poly1 AND b.germplasm_id=:poly2
+          ) p ON p.variant_id=v.variant_id ";
+        $variant_args[':poly1'] = $query_args['polymorphic']['first'];
+        $variant_args[':poly2'] = $query_args['polymorphic']['second'];
+        $variant[] = "p.monomorphic IS FALSE";
+      }
+      $polymorphic_filter = TRUE;
+  }
+
+  // Germplasm:
+  if (isset($query_args['germplasm_id']) AND !empty($query_args['germplasm_id'])) {
+    $call[] = 'germplasm_id IN (:germplasm_ids)';
+    $call_args[':germplasm_ids'] = $query_args['germplasm_id'];
+    unset($query_args['germplasm_id']);
+  }
+  else {
+    return FALSE;
+  }
+
+  // Project:
+  if (isset($query_args['project_id']) AND !empty($query_args['project_id'])) {
+    if (sizeof($query_args['project_id']) == 1) {
+      $call[] = 'project_id = :project_id';
+    }
+    else {
+      $call[] = 'project_id IN (:project_id)';
+    }
+    $call_args[':project_id'] = $query_args['project_id'];
+  }
+
+  // Marker Type:
+  if (isset($query_args['marker_type'])) {
+    $call[] = 'marker_type = :marker_type';
+    $call_args[':marker_type'] = $query_args['marker_type'];
+  }
+
+  // Now determine the query for the variants.
+  $sql = "SELECT count(v.variant_id) \n"
+       . "FROM {mview_ndg_variants} v \n"
+       . implode("\n", $variant_joins)
+       . "WHERE \n";
+
+  // Add in conditions on the variants table.
+  if ($variant) {
+    $sql .= implode("\n  AND ",$variant) . "\n  AND ";
+  }
+
+  // Add in conditions on the call table.
+  $sql .= "EXISTS ( \n"
+       . "    SELECT true \n"
+       . "    FROM {mview_ndg_calls} call \n"
+       . "    WHERE \n"
+       . "      " . implode("\n      AND ", $call) .  "\n"
+       . "      AND call.variant_id=v.variant_id\n"
+       . "  ) \n";
+
+  if ($polymorphic_filter AND $variant_name_filter) {
+    $sql = "SELECT * FROM (\n"
+      . $sql . ") v \n"
+      . "LEFT JOIN (
+            SELECT a.variant_id, a.allele_call=b.allele_call as monomorphic
+            FROM mview_ndg_calls a, mview_ndg_calls b
+            WHERE a.variant_id=b.variant_id AND a.germplasm_id=:poly1 AND b.germplasm_id=:poly2
+          ) p ON p.variant_id=v.variant_id \n"
+      . "WHERE p.monomorphic IS FALSE \n";
+      $variant_args[':poly1'] = $query_args['polymorphic']['first'];
+      $variant_args[':poly2'] = $query_args['polymorphic']['second'];
+  }
+
+
+  $args = array_merge($call_args, $variant_args);
+  $count = ndg_mview_query($vars['partition'], $sql, $args)->fetchField();
+
+  $content = '<span class="number">' . $count . '</span>';
+  if ($type != 'ajax') {
+    return $content;
+  }
+
+  $commands = array();
+  $commands[] = ajax_command_replace(".matrix-counts .result-count .number", $content);
+  ajax_deliver(array('#type' => 'ajax', '#commands' => $commands));
+}
+
+/**
+ * Provide a count of variants via AJAX.
+ */
+function nd_genotypes_count_genotype_matrix_variants_callback($partition = '', $type = 'ajax') {
+
+  // @PARTITION: This is where the partition is set for the genotype matrix. From here
+  // if is carried throughout the rest of the functions.
+  $vars = array('genus' => $partition, 'partition' => $partition);
+
+  // Save the query paramters.
+  $vars['q'] = drupal_get_query_parameters();
+
+  // Process the query paramters to determine the defaults for the filter form
+  // as well as to isolate the values that are needed to retrieve the data.
+  nd_genotypes_process_query_parameters($vars);
+
+  // Compile all the parameters we will use when grabbing the calls so that we can restrict
+  // the variant list to those that will have data once we do retrieve the calls.
+  $query_args = $vars['query_args'];
+  $call = $variant = $call_args = $variant_args = $variant_joins = array();
+
+  // Sequence Ranges:
+  // First get the arguements. There must always be a backbone and fmin even if the user
+  // did not provide one.
+  if (isset($query_args['start_backbone'])) {
+    if (isset($query_args['start_pos'])) {
+      $variant_args[':sbackbone'] = $query_args['start_backbone'];
+      $variant_args[':sfmin'] = (int) $query_args['start_pos'];
+    }
+    else {
+      $variant_args[':sbackbone'] = $query_args['start_backbone'];
+      $variant_args[':sfmin'] = 1;
+    }
+    unset($query_args['start_backbone'], $query_args['start_pos']);
+  }
+  if (isset($query_args['end_backbone'])) {
+    if (isset($query_args['end_pos'])) {
+      $variant_args[':ebackbone'] = $query_args['end_backbone'];
+      $variant_args[':efmin'] = (int) $query_args['end_pos'];
+    }
+    else {
+      $variant_args[':ebackbone'] = $query_args['end_backbone'];
+      // @TODO: Switch to bigints then change this value to match the largest bigint.
+      $variant_args[':efmin'] = 2147483645;
+    }
+    unset($query_args['end_backbone'], $query_args['end_pos']);
+  }
+  // Now add the query where condition.
+  if (isset($variant_args[':sbackbone']) AND isset($variant_args[':ebackbone'])) {
+    $variant[] = 'ROW(v.srcfeature_name, v.fmin) BETWEEN ROW(:sbackbone, :sfmin) AND ROW(:ebackbone,:efmin)';
+  }
+  elseif (isset($variant_args[':sbackbone'])) {
+    $variant[] = 'ROW(v.srcfeature_name, v.fmin) >= ROW(:sbackbone, :sfmin)';
+  }
+  elseif (isset($variant_args[':ebackbone'])) {
+    $variant[] = 'ROW(v.srcfeature_name, v.fmin) <= ROW(:ebackbone, :efmin)';
+  }
+
+  // Variant Type:
+  if (isset($query_args['variant_type'])) {
+    $variant[] = 'variant_type=:variant_type';
+    $variant_args[':variant_type'] = $query_args['variant_type'];
+    unset($query_args['variant_type']);
+  }
+
+  // Variant Name:
+  $variant_name_filter = FALSE;
+  if (isset($query_args['variant_name'])) {
+    $variant[] = "variant_name IN (VALUES('" . implode("'), ('", $query_args['variant_name']) . "'))";
+    //$variant_args[':variant_names'] = $query_args['variant_name'];
+    unset($query_args['variant_name']);
+    $variant_name_filter = TRUE;
+  }
+  elseif (isset($query_args['variant_name_list'])) {
+    $list_json = db_query('SELECT list FROM {ndg_matrix_variant_user_lists} WHERE list_id=:id',
+      array(':id' => $query_args['variant_name_list']))->fetchField();
+    $list = json_decode($list_json);
+    $variant[] = "variant_name IN (VALUES('" . implode("'), ('", $list) . "'))";
+  }
+
+  // Polymorphic:
+  $polymorphic_filter = FALSE;
+  if (isset($query_args['polymorphic'])
+    AND is_numeric($query_args['polymorphic']['first'])
+    AND is_numeric($query_args['polymorphic']['second'])) {
+      if (!$variant_name_filter) {
+        $variant_joins[] = "LEFT JOIN (
+            SELECT a.variant_id, a.allele_call=b.allele_call as monomorphic
+            FROM mview_ndg_calls a, mview_ndg_calls b
+            WHERE a.variant_id=b.variant_id AND a.germplasm_id=:poly1 AND b.germplasm_id=:poly2
+          ) p ON p.variant_id=v.variant_id ";
+        $variant_args[':poly1'] = $query_args['polymorphic']['first'];
+        $variant_args[':poly2'] = $query_args['polymorphic']['second'];
+        $variant[] = "p.monomorphic IS FALSE";
+      }
+      $polymorphic_filter = TRUE;
+  }
+
+  // Germplasm:
+  if (isset($query_args['germplasm_id']) AND !empty($query_args['germplasm_id'])) {
+    $call[] = 'germplasm_id IN (:germplasm_ids)';
+    $call_args[':germplasm_ids'] = $query_args['germplasm_id'];
+    unset($query_args['germplasm_id']);
+  }
+  else {
+    return FALSE;
+  }
+
+  // Project:
+  if (isset($query_args['project_id']) AND !empty($query_args['project_id'])) {
+    if (sizeof($query_args['project_id']) == 1) {
+      $call[] = 'project_id = :project_id';
+    }
+    else {
+      $call[] = 'project_id IN (:project_id)';
+    }
+    $call_args[':project_id'] = $query_args['project_id'];
+  }
+
+  // Marker Type:
+  if (isset($query_args['marker_type'])) {
+    $call[] = 'marker_type = :marker_type';
+    $call_args[':marker_type'] = $query_args['marker_type'];
+  }
+
+  // Now determine the query for the variants.
+  $sql = "SELECT v.variant_id \n"
+       . "FROM {mview_ndg_variants} v \n"
+       . implode("\n", $variant_joins)
+       . "WHERE \n";
+
+  // Add in conditions on the variants table.
+  if ($variant) {
+    $sql .= implode("\n  AND ",$variant) . "\n  AND ";
+  }
+
+  // Add in conditions on the call table.
+  $sql .= "EXISTS ( \n"
+       . "    SELECT true \n"
+       . "    FROM {mview_ndg_calls} call \n"
+       . "    WHERE \n"
+       . "      " . implode("\n      AND ", $call) .  "\n"
+       . "      AND call.variant_id=v.variant_id\n"
+       . "  ) \n";
+
+  if ($polymorphic_filter AND $variant_name_filter) {
+    $sql = "SELECT * FROM (\n"
+      . $sql . ") v \n"
+      . "LEFT JOIN (
+            SELECT a.variant_id, a.allele_call=b.allele_call as monomorphic
+            FROM mview_ndg_calls a, mview_ndg_calls b
+            WHERE a.variant_id=b.variant_id AND a.germplasm_id=:poly1 AND b.germplasm_id=:poly2
+          ) p ON p.variant_id=v.variant_id \n"
+      . "WHERE p.monomorphic IS FALSE \n";
+      $variant_args[':poly1'] = $query_args['polymorphic']['first'];
+      $variant_args[':poly2'] = $query_args['polymorphic']['second'];
+  }
+
+
+  $count_sql = "SELECT count(variant_id) FROM (" . $sql . " GROUP BY v.variant_id) t";
+  $args = array_merge($call_args, $variant_args);
+  $count = ndg_mview_query($vars['partition'], $count_sql, $args)->fetchField();
+
+  $content = '<span class="number">' . $count . '</span>';
+  if ($type != 'ajax') {
+    return $content;
+  }
+
+  $commands = array();
+  $commands[] = ajax_command_replace(".matrix-counts .variant-count .number", $content);
+  ajax_deliver(array('#type' => 'ajax', '#commands' => $commands));
+
 }
 
 /**

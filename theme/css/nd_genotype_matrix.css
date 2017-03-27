@@ -109,12 +109,20 @@ td.genotype.C, td.genotype.CC {
 
 /* Style the Download/Sort links */
 .matrix-controls {
+  display: inline-flex;
   position: relative;
   top: 10px;
-  height: 21px;
+  height: 50px;
+  width: 100%;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.matrix-counts {
+  text-align: center;
+  font-weight: 900;
+  color: #45980C;
 }
 .matrix-sort {
-  float: right;
   margin-right: 5px;
 }
 .matrix-sort a.current {
