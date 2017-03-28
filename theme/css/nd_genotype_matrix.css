@@ -130,6 +130,12 @@ td.genotype.C, td.genotype.CC {
   color: #999999;
   font-style: italic;
 }
+.matrix-controls .help {
+  vertical-align: super;
+  font-size: 0.8em;
+  font-weight: light;
+  color:black;
+}
 .matrix-sort {
   margin-right: 5px;
 }

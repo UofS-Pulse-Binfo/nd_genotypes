@@ -244,8 +244,14 @@ if ($num_rows < 100) {
            with the ajax spinner while the count is being determined.
            @see theme/js/genotypeMatrixGetResultCounts.js -->
       <span class="matrix-counts matrix-section">
-        <div class="result-count">Total Results: <span class="ajax-waiting">Unavailable</span></div>
-        <div class="variant-count">Unique Variants: <span class="ajax-waiting">Unavailable</span></div>
+        <div class="result-count">
+          <span>Total Results<span class="help" title="This reflects the total number of rows across all pages. NOTE: This may not match the number of variants since each variant may have more than one location (e.g. locations on different assemblies).">?</span>:</span>
+          <span class="ajax-waiting"> Unavailable</span>
+        </div>
+        <div class="variant-count">
+          <span>Unique Variants<span class="help" title="The number of unique variants across all pages.">?</span>:</span>
+          <span class="ajax-waiting"> Unavailable</span>
+        </div>
       </span>
       <span class="matrix-sort matrix-section">
         Sort by
