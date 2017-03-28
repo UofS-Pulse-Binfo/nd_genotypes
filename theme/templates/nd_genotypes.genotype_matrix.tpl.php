@@ -245,7 +245,7 @@ if ($num_rows < 100) {
            @see theme/js/genotypeMatrixGetResultCounts.js -->
       <span class="matrix-counts matrix-section">
         <div class="result-count">
-          <span>Total Results<span class="help" title="This reflects the total number of rows across all pages. NOTE: This may not match the number of variants since each variant may have more than one location (e.g. locations on different assemblies).">?</span>:</span>
+          <span>Total Results<span class="help" title="There may be multiple locations per variant (e.g. locations on different assemblies) which results in multiple rows in this table.">?</span>:</span>
           <span class="ajax-waiting"> Unavailable</span>
         </div>
         <div class="variant-count">
