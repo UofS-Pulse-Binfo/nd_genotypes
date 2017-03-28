@@ -122,6 +122,14 @@ td.genotype.C, td.genotype.CC {
   font-weight: 900;
   color: #45980C;
 }
+.matrix-counts .ajax-waiting {
+  color: #999999;
+  font-style: italic;
+}
+.matrix-counts .ajax-progress {
+  color: #999999;
+  font-style: italic;
+}
 .matrix-sort {
   margin-right: 5px;
 }

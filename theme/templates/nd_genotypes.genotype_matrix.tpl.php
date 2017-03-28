@@ -238,27 +238,14 @@ if ($num_rows < 100) {
         }
 ?>
       </span>
+      <!-- This section is updated via AJAX to ensure these potentially slow queries
+           don't slow down the page load. If JS is unavailable then these fields will
+           remain unchanged. Otherwise, they will be changed to show "Counting..."
+           with the ajax spinner while the count is being determined.
+           @see theme/js/genotypeMatrixGetResultCounts.js -->
       <span class="matrix-counts matrix-section">
-        <div class="result-count">Total Results: <span class="number">
-            <?php print l(
-              t('Retrieve')  ,
-              'chado/genotype/' . $partition . '/ajax_count_results/nojs/',
-              array(
-                'query' => drupal_get_query_parameters(),
-                'attributes' => array('class' => array('use-ajax'))
-              )
-            ); ?>
-          </span></div>
-        <div class="variant-count">Unique Variants: <span class="number">
-            <?php print l(
-              t('Retrieve')  ,
-              'chado/genotype/' . $partition . '/ajax_count_variants/nojs/',
-              array(
-                'query' => drupal_get_query_parameters(),
-                'attributes' => array('class' => array('use-ajax'))
-              )
-            ); ?>
-          </span></div>
+        <div class="result-count">Total Results: <span class="ajax-waiting">Unavailable</span></div>
+        <div class="variant-count">Unique Variants: <span class="ajax-waiting">Unavailable</span></div>
       </span>
       <span class="matrix-sort matrix-section">
         Sort by
