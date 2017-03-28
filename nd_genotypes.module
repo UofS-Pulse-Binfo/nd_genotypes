@@ -745,7 +745,10 @@ function nd_genotypes_count_genotype_matrix_results_callback($partition = '', $t
   $args = array_merge($call_args, $variant_args);
   $count = ndg_mview_query($vars['partition'], $sql, $args)->fetchField();
 
-  drupal_json_output($count);
+  drupal_json_output(array(
+    'raw' => $count,
+    'formatted' => number_format($count),
+  ));
 }
 
 /**
@@ -917,7 +920,10 @@ function nd_genotypes_count_genotype_matrix_variants_callback($partition = '', $
   $args = array_merge($call_args, $variant_args);
   $count = ndg_mview_query($vars['partition'], $count_sql, $args)->fetchField();
 
-  drupal_json_output($count);
+  drupal_json_output(array(
+    'raw' => $count,
+    'formatted' => number_format($count),
+  ));
 
 }
 

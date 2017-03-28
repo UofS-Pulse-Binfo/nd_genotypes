@@ -30,7 +30,7 @@
       $.getJSON(url,
         function(data) {
           // Once the count has been retrieved, substitute it into the page.
-          $('.matrix-counts .result-count .ajax-progress').replaceWith('<span class="number">' + data + '</span>');
+          $('.matrix-counts .result-count .ajax-progress').replaceWith('<span class="number">' + data.formatted + '</span>');
       });
     }
   };
@@ -48,7 +48,7 @@
       $.getJSON(url,
         function(data) {
           // Once the count has been retrieved, substitute it into the page.
-          $('.matrix-counts .variant-count .ajax-progress').replaceWith('<span class="number">' + data + '</span>');
+          $('.matrix-counts .variant-count .ajax-progress').replaceWith('<span class="number">' + data.formatted + '</span>');
       });
     }
   };
