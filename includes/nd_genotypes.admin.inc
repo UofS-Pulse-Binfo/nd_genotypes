@@ -13,21 +13,26 @@ function nd_genotypes_admin_landing_page() {
   $output .= "<p>The following table summarizes the data currently sync'd by this module. NOTE: Partitions without any data will not be listed.</p>";
 
   // Simply display the summary table.
-  $table = array('header' => array('stat_name' => ' '), 'rows' => array());
-  $stats = chado_query('SELECT * FROM {mview_ndg_summary}');
-  foreach ($stats as $stat) {
-    $table['header'][ $stat->partition ] = ucwords($stat->partition);
-
-    if (!isset($table['rows'][ $stat->stat_id ])) {
-      $table['rows'][ $stat->stat_id ] = array(
-        $stat->stat_id => $stat->stat_name
-      );
+  if (chado_table_exists('mview_ndg_summary')) {
+    $table = array('header' => array('stat_name' => ' '), 'rows' => array());
+    $stats = chado_query('SELECT * FROM {mview_ndg_summary}');
+    foreach ($stats as $stat) {
+      $table['header'][ $stat->partition ] = ucwords($stat->partition);
+  
+      if (!isset($table['rows'][ $stat->stat_id ])) {
+        $table['rows'][ $stat->stat_id ] = array(
+          $stat->stat_id => $stat->stat_name
+        );
+      }
+  
+      $table['rows'][ $stat->stat_id ][ $stat->partition ] = number_format($stat->value);
     }
-
-    $table['rows'][ $stat->stat_id ][ $stat->partition ] = number_format($stat->value);
+  
+    $output .= theme('table', $table);
   }
-
-  $output .= theme('table', $table);
+  else {
+    $output .= '<div class="messages warning">No genotypic data has yet been sync\'d. To Sync data, click on the "Sync" tab in the top right corner of this page.</div>';
+  }
 
   return $output;
 }

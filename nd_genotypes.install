@@ -8,17 +8,19 @@
  */
 function nd_genotypes_install() {
 
+  // Determine the PostgreSQL version.
+  $version_string = db_query('SELECT version()')->fetchField();
+  $version = '9.2';
+  if (preg_match('/PostgreSQL (9\.\d+)\.\d+/', $version_string, $matches)) {
+    $version = $matches[1];
+  }
+  variable_set('pgsql_version', $version);
+
   // Create the genotype_call table for storing genotypes in chado.
   chado_create_custom_table(
     'genotype_call',
     nd_genotypes_genotype_call_schema_template()
   );
-
-  // Create the materialized views.
-  $ndg_variants = 'mview_ndg_variants';
-  $ndg_call = 'mview_ndg_calls';
-  nd_genotypes_create_mview_ndg_variants($ndg_variants);
-  nd_genotypes_create_mview_ndg_calls($ndg_call);
 
   // Move our module up in the list priority-wise
   // so our templates can override default tripal ones.
@@ -51,7 +53,7 @@ function nd_genotypes_schema() {
       ),
       'list' => array(
         'description' => 'An array of variant names.',
-        'pgsql_type' => 'jsonb',
+        'pgsql_type' => 'json',
         'not null' => TRUE,
       ),
       'created' => array(
