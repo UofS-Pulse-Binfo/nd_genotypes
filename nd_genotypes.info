@@ -5,11 +5,6 @@ version = 7.x-2.x-1.0a
 core = 7.x
 configure = admin/tripal/extension/nd_genotypes/settings
 
-dependencies[] = tripal_feature
-dependencies[] = tripal_project
-dependencies[] = tripal_genetic
-dependencies[] = tripal_stock
-dependencies[] = tripal_natural_diversity
-
+dependencies[] = tripal
+dependencies[] = tripal_chado
 dependencies[] = trpdownload_api
-
