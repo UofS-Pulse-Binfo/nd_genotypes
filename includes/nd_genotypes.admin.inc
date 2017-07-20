@@ -81,76 +81,17 @@ function nd_genotypes_admin_settings($form, $form_state) {
       still be able to navigate the necessary relationships and interpret your types.',
   );
 
-  $form['cvterms']['types'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'Types',
-    '#description' => 'Allows you to configure which controlled vocabulary terms
-      you would like to fall into each category of features (variants and markers)
-      handled by this module.'
-  );
-
-  // Get vocab terms for feature types.
-  $default_cv = tripal_get_default_cv('feature', 'type_id');
-  if (!empty($default_cv)) {
-    $feature_types = tripal_get_cvterm_select_options($default_cv->cv_id);
+  // Get vocab terms for feature relationship types.
+  $feature_reltypes = array();
+  $resource = chado_query(
+    'SELECT fr.type_id, cvt.name as type_name 
+     FROM {feature_relationship} fr 
+     LEFT JOIN {cvterm} cvt ON cvt.cvterm_id=fr.type_id');
+  foreach ($resource as $r) {
+    $feature_reltypes[ $r->type_id ] = $r->type_name;
   }
-  else {
-    tripal_set_message(
-      'There is not a default vocabulary set for Feature Types. Please set one
-      using the <a href="@url">vocabulary defaults configuration page</a>.',
-      TRIPAL_WARNING,
-      array('@url' => url('admin/tripal/chado/tripal_cv/defaults'))
-    );
-    $feature_types = array();
-  }
-
-  $form['cvterms']['types']['descrip'] = array(
-    '#type' => 'item',
-    '#markup' => 'This module assumes the following set-up of data: Sequence
-    Backbone > Variants > Markers where variants are the location/range shown
-    to vary betweeen germplasm and markers are the actual assays detecting that
-    variation. Note that genotypes are only attached to markers (ensures researches
-    know the method used) and that both variants & markers have feature locations on
-    your sequence backbone (ie: contigs, chromosomes; features with sequence
-    information).',
-  );
-
-  // Set variant types.
-  $form['cvterms']['types']['variants'] = array(
-    '#type' => 'select',
-    '#title' => 'Variants',
-    '#description' => 'Variants are the location/range shown to vary betweeen
-      germplasm. They should not have genotypes attached directly to them but
-      instead act as a way to see all the markers assaying a particular position.',
-    '#multiple' => TRUE,
-    '#options' => $feature_types,
-    '#default_value' => unserialize(variable_get('nd_genotypes_variant_feature_types', 'a:0:{}'))
-  );
-
-  // Set marker types.
-  $form['cvterms']['types']['markers'] = array(
-    '#type' => 'select',
-    '#title' => 'Markers',
-    '#description' => 'Markers are the actual assays detecting variation and
-      the genotypes detected by each assay would be attached to it.',
-    '#multiple' => TRUE,
-    '#options' => $feature_types,
-    '#default_value' => unserialize(variable_get('nd_genotypes_marker_feature_types', 'a:0:{}'))
-  );
-
-  // Get vocab terms for feature types.
-  $default_cv = tripal_get_default_cv('feature_relationship', 'type_id');
-  if (!empty($default_cv)) {
-    $feature_reltypes = tripal_get_cvterm_select_options($default_cv->cv_id);
-  }
-  else {
-    tripal_set_message(
-      'There is not a default vocabulary set for Feature Types. Please set one
-      using the <a href="@url">vocabulary defaults configuration page</a>.',
-      TRIPAL_WARNING,
-      array('@url' => url('admin/tripal/chado/tripal_cv/defaults'))
-    );
-    $feature_reltypes = array();
+  if (empty($feature_reltypes)) {
+    drupal_set_message('You need to have loaded genotypic data before the relationship types can be detected.', 'warning');
   }
 
   $form['cvterms']['marker_relationship'] = array(
@@ -205,18 +146,16 @@ function nd_genotypes_admin_settings($form, $form_state) {
   );
 
   // Get vocab terms for project relationship types.
-  $default_cv = tripal_get_default_cv('project_relationship', 'type_id');
-  if (!empty($default_cv)) {
-    $project_reltypes = tripal_get_cvterm_select_options($default_cv->cv_id);
+  $project_reltypes = array();
+   $resource = chado_query(
+    'SELECT pr.type_id, cvt.name as type_name 
+     FROM {project_relationship} pr 
+     LEFT JOIN {cvterm} cvt ON cvt.cvterm_id=pr.type_id');
+  foreach ($resource as $r) {
+    $project_reltypes[ $r->type_id ] = $r->type_name;
   }
-  else {
-    tripal_set_message(
-      'There is not a default vocabulary set for Project Relationship Types. Please set one
-      using the <a href="@url">vocabulary defaults configuration page</a>.',
-      TRIPAL_WARNING,
-      array('@url' => url('admin/tripal/chado/tripal_cv/defaults'))
-    );
-    $project_reltypes = array();
+  if (empty($project_reltypes)) {
+    drupal_set_message('You need to have created relationships between projects before the relationship types can be detected.', 'warning');
   }
 
   $form['cvterms']['project']['subproject_type_id'] = array(
@@ -272,9 +211,6 @@ function nd_genotypes_admin_settings_cvterms_validate($form, $form_state) {}
  * Config -Types: Submit
  */
 function nd_genotypes_admin_settings_cvterms_submit($form, $form_state) {
-
-  variable_set('nd_genotypes_variant_feature_types', serialize($form_state['values']['variants']));
-  variable_set('nd_genotypes_marker_feature_types', serialize($form_state['values']['markers']));
 
   $reltypes = unserialize($form_state['values']['reltypes']);
   variable_set('nd_genotypes_rel_type_id', $form_state['values']['marker_reltype']);
