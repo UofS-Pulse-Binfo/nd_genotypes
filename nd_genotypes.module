@@ -10,6 +10,8 @@ require_once('includes/nd_genotypes.mview.inc');
 require_once('includes/nd_genotypes.mview.sync.inc');
 require_once('includes/nd_genotypes.form_elements.inc');
 
+require_once('includes/nd_genotypes.fields.inc');
+
 require_once('includes/nd_genotypes.genotype_matrix.inc');
 require_once('includes/nd_genotypes.genotype_matrix.download.inc');
 

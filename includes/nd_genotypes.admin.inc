@@ -18,16 +18,16 @@ function nd_genotypes_admin_landing_page() {
     $stats = chado_query('SELECT * FROM {mview_ndg_summary}');
     foreach ($stats as $stat) {
       $table['header'][ $stat->partition ] = ucwords($stat->partition);
-  
+
       if (!isset($table['rows'][ $stat->stat_id ])) {
         $table['rows'][ $stat->stat_id ] = array(
           $stat->stat_id => $stat->stat_name
         );
       }
-  
+
       $table['rows'][ $stat->stat_id ][ $stat->partition ] = number_format($stat->value);
     }
-  
+
     $output .= theme('table', $table);
   }
   else {
@@ -41,6 +41,27 @@ function nd_genotypes_admin_landing_page() {
  *
  */
 function nd_genotypes_admin_settings($form, $form_state) {
+
+  $form['#attached']['css'][] = array(
+    'data' => '
+      fieldset.colours .form-type-textfield label {
+        display: inline;
+        padding-right: 5px;
+      }
+      fieldset.colours  .swatch {
+        float: left;
+        margin-top: 10px;
+        margin-right: 10px;
+        display: block;
+        height: 20px;
+        width: 20px;
+      }
+      #edit-swatches {
+        height: 60px;
+      }
+    ',
+    'type' => 'inline'
+  );
 
   $form['storage'] = array(
     '#type' => 'fieldset',
@@ -72,6 +93,68 @@ function nd_genotypes_admin_settings($form, $form_state) {
     '#value' => 'Save Method'
   );
 
+  $form['colours'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Allele Colours',
+    '#description' => 'Allele colours to be used through the fields provided by this module are set here to ensure consistency across fields and provide the best user experience.',
+    '#attributes' => array(
+      'class' => array('colours'),
+    ),
+  );
+
+  $form['colours']['SNPs'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'SNP Alleles',
+    '#description' => 'Since SNP alleles are limited to a particular set and SNPs are the preferred variant type, we provide the ability to pick the colour of each allele below. This allows you to ensure that AA is always the same colour when displayed by this module.',
+    '#tree' => TRUE,
+  );
+
+  nd_genotypes_set_default_colours();
+  $default_SNP_colours = unserialize(variable_get('nd_genotypes_SNP_colours'));
+
+  foreach ($default_SNP_colours as $allele => $colour) {
+    $form['colours']['SNPs'][$allele] = array(
+      '#type' => 'textfield',
+      '#title' => $allele,
+      '#size' => 16,
+      '#default_value' => $colour,
+      '#prefix' => '<span class="swatch" style="background-color:'.$colour.'; color:'.$colour.';">'.$allele.'</span>'
+    );
+  }
+
+  $form['colours']['SNPs']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Save SNP Colours',
+  );
+
+  $form['colours']['alleles'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Generic Alleles',
+    '#description' => 'This section allows you to provide a collection of colours to use for alleles that do not fall into the SNP alleles above (e.g. MNPs or indels). When these alleles are detected, each allele will pick one of the following colours in order.',
+  );
+
+  $default_allele_colours = unserialize(variable_get('nd_genotypes_allele_colours'));
+  $form['colours']['alleles']['allele_colors'] = array(
+    '#type' => 'textarea',
+    '#title' => 'Catagorical Colour Set',
+    '#default_value' => implode('   ', $default_allele_colours),
+    '#description' => 'A listing of HEX colour codes seperated by white-space. Colours will be choosen in the order they appear.',
+  );
+
+  $form['colours']['alleles']['swatches'] = array(
+    '#type' => 'item',
+    '#title' => 'Current Colours',
+    '#markup' => '',
+  );
+  foreach ($default_allele_colours as $colour) {
+    $form['colours']['alleles']['swatches']['#markup'] .= '<span class="swatch" style="background-color:'.$colour.'; color:'.$colour.';"></span>';
+  }
+
+  $form['colours']['alleles']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Save Generic Allele Colourset',
+  );
+
   $form['cvterms'] = array(
     '#type' => 'fieldset',
     '#title' => 'Controlled Vocabulary Terms',
@@ -84,8 +167,8 @@ function nd_genotypes_admin_settings($form, $form_state) {
   // Get vocab terms for feature relationship types.
   $feature_reltypes = array();
   $resource = chado_query(
-    'SELECT fr.type_id, cvt.name as type_name 
-     FROM {feature_relationship} fr 
+    'SELECT fr.type_id, cvt.name as type_name
+     FROM {feature_relationship} fr
      LEFT JOIN {cvterm} cvt ON cvt.cvterm_id=fr.type_id');
   foreach ($resource as $r) {
     $feature_reltypes[ $r->type_id ] = $r->type_name;
@@ -148,8 +231,8 @@ function nd_genotypes_admin_settings($form, $form_state) {
   // Get vocab terms for project relationship types.
   $project_reltypes = array();
    $resource = chado_query(
-    'SELECT pr.type_id, cvt.name as type_name 
-     FROM {project_relationship} pr 
+    'SELECT pr.type_id, cvt.name as type_name
+     FROM {project_relationship} pr
      LEFT JOIN {cvterm} cvt ON cvt.cvterm_id=pr.type_id');
   foreach ($resource as $r) {
     $project_reltypes[ $r->type_id ] = $r->type_name;
@@ -199,6 +282,19 @@ function nd_genotypes_admin_settings_submit($form, $form_state) {
 
   // Save the storage method for use later.
   variable_set('nd_genotype_storage_method', $form_state['values']['storage_method']);
+
+  // Colours.
+  if ($form_state['triggering_element']['#value'] == 'Save SNP Colours') {
+    $colours = $form_state['values']['SNPs'];
+    unset($colours['submit']);
+    variable_set('nd_genotypes_SNP_colours', serialize($colours));
+    drupal_set_message('Successfully updated SNP colours.');
+  }
+  if ($form_state['triggering_element']['#value'] == 'Save Generic Allele Colourset') {
+    $colours = preg_split('/\s+/', $form_state['values']['allele_colors']);
+    variable_set('nd_genotypes_allele_colours', serialize($colours));
+    drupal_set_message('Successfully updated Generic Allele colourset.');
+  }
 
 }
 

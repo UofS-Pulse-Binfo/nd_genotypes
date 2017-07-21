@@ -286,7 +286,9 @@ function nd_genotypes_get_alleles_for_variant($variant_id, $partition = 'All') {
   }
 
   // Finally sort the marker alleles array by key.
-  ksort($variant['marker_alleles']);
+  if (!empty($variant)) {
+    ksort($variant['marker_alleles']);
+  }
 
   return $variant;
 }
@@ -670,6 +672,37 @@ function nd_genotypes_expand_IUPAC_code($codes) {
   // characters is returned as per the PHP documentation.
   $codes = count_chars($codes, 3);
   return $codes;
+}
+
+/**
+ * Default colours for charts.
+ */
+function nd_genotypes_set_default_colours() {
+
+  $SNP_colours = array(
+    'AA' => '#58A600',
+    'TT' => '#FD0000',
+    'CC' => '#008AE0',
+    'GG' => '#1C1C1C',
+    'AT' => '#FF8000',
+    'AG' => '#1D5D02',
+    'AC' => '#0E6E6C',
+    'TG' => '#800000',
+    'TC' => '#800080',
+    'GC' => '#000080',
+  );
+  if (variable_get('nd_genotypes_SNP_colours', NULL) === NULL) {
+    variable_set('nd_genotypes_SNP_colours', serialize($SNP_colours));
+  }
+
+  $allele_colours = array(
+    '#1660A8', '#FF6C00', '#259314', '#CC161A', '#804CB3', '#794439', '#DB5CB8', '#6C6C6C', '#AFB400', '#14B1C6',
+    '#9EB9E4', '#FFAF5E', '#88DC71', '#FF8482', '#B89ECD', '#B78A81', '#F4A4C9', '#BBBBBB', '#D3D674', '#8BCEDB',
+  );
+  if (variable_get('nd_genotypes_allele_colours', NULL) === NULL) {
+    variable_set('nd_genotypes_allele_colours', serialize($allele_colours));
+  }
+
 }
 
 /**

@@ -1,0 +1,117 @@
+<?php
+/**
+ * @file
+ * Contains hooks related to fields provided by this module.
+ */
+
+/**
+ * Implements hook_bundle_fields_info().
+ *
+ * @param $entity_type
+ *   This should be 'TripalEntity' for all Tripal Content.
+ * @param $bundle
+ *   This object describes the Type of Tripal Entity (e.g. Organism or Gene) this hook is
+ *   being called for. However, since this hook creates field types (by definition not
+ *   tied to a specific Tripal Content Type (bundle)) and since a field type will only be
+ *   created if it doesn't already exist, this parameter doesn't actually matter.
+ *   NOTE: If you do need to determine the bundle in this hook, we suggest inspecting
+ *   the data_table since the label can be changed by site administrators.
+ *
+ * @return
+ *   An array of field definitions. Each field in this array will be created if it
+ *   doesn't already exist. To trigger create of fields when developing call
+ *   tripal_refresh_bundle_fields() for the specific bundle.
+ */
+function nd_genotypes_bundle_fields_info($entity_type, $bundle) {
+  $fields = array();
+
+  // Because we are expecting data housed in Chado we can use the 'data_table'
+  // property of the bundle to determine if this bundle is really the one
+  // we want the field to be associated with.
+  if (isset($bundle->data_table) AND ($bundle->data_table == 'feature')) {
+
+    // Germplasm Summary Field.
+    //---------------------------------
+    // First add my term.
+    tripal_insert_cvterm(array(
+      'id' => 'local:variant_genotype_summary',
+      'name' => 'variant_genotype_summary',
+      'cv_name' => 'local',
+      'definition' => 'A summary of genotypic data for a given variant.',
+    ));
+
+    // Then describe the field defined by that term.
+    $field_name = 'local__variant_genotype_summary';
+    $field_type = 'local__variant_genotype_summary';
+    $fields[$field_name] = array(
+      'field_name' => $field_name,
+      'type' => $field_type,
+      // Controlls how many values you expect your field to have.
+      'cardinality' => 0,
+      // This locks your field so it can't be deleted by an administrator --use with care!
+      'locked' => FALSE,
+      // Indicated the storage API this field uses.
+      'storage' => array(
+        'type' => 'field_chado_storage',
+      ),
+    );
+  }
+
+  return $fields;
+}
+
+/**
+ * Impelments hook_create_tripalfield_instance().
+ *
+ * This is a Tripal defined hook that supports integration with the
+ * TripalEntity field.
+ */
+function nd_genotypes_bundle_instances_info($entity_type, $bundle) {
+  $info = array();
+
+  // Load the term used for the content type.
+  $term = tripal_load_term_entity(array('term_id' => $bundle->term_id));
+
+  // Because we are expecting data housed in Chado we can use the 'data_table'
+  // property of the bundle to determine if this bundle is really the one
+  // we want the field to be associated with.
+  if (isset($bundle->data_table) AND ($bundle->data_table == 'feature')) {
+
+    // Only add the Variant Genotype Summary field
+    // if the current Tripal Content Type is SO:sequence_variant.
+    if ($term->name == 'sequence_variant') {
+
+      $info['local__variant_genotype_summary'] =  array(
+        'field_name' => 'local__variant_genotype_summary',
+        'entity_type' => $entity_type,
+        'bundle' => $bundle->name,
+        'label' => 'Genotype Summary',
+        'description' => 'Summarizes the genotypes associated with a given variant.',
+        'required' => FALSE,
+        'settings' => array(
+          'auto_attach' => FALSE,
+          'chado_table' => $bundle->data_table,
+          'chado_column' => 'feature_id',
+          'base_table' => $bundle->data_table,
+          'vocabulary' => 'local',
+          'parent_term' => 'local:variant_genotype_summary',
+        ),
+        'widget' => array(
+          'type' => 'local__variant_genotype_summary_widget',
+          'settings' => array(
+            'display_label' => 1,
+          ),
+        ),
+        'display' => array(
+          'default' => array(
+            'label' => 'hidden',
+            'type' => 'local__variant_genotype_summary_formatter',
+            'settings' => array(),
+          ),
+        ),
+      );
+    }
+  }
+
+  return $info;
+}
