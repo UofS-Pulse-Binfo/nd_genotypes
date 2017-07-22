@@ -14,8 +14,11 @@ Drupal.behaviors.ndGenotypesFeaturePieChart = {
         labelPadding = width - height - 300;
 
     // Retrieve a set of colours to use.
+    var HEX = Object.keys(Drupal.settings.nd_genotypes.settings.SNPcolours).map(function (key) { return Drupal.settings.nd_genotypes.settings.SNPcolours[key]; });
+    var alleles = Object.keys(Drupal.settings.nd_genotypes.settings.SNPcolours);
     var color = d3.scale.ordinal()
-        .range(["#A3AF51", "#35424C", "#5D6F06", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
+      .range(HEX)
+      .domain(alleles);
 
     // Remove previous canvas if existing.
     d3.select("#nd-genotypes-pie-chart").selectAll("svg").remove();
@@ -72,22 +75,23 @@ Drupal.behaviors.ndGenotypesFeaturePieChart = {
 
       var pie = d3.layout.pie()
         .sort(null)
-        .value(function(d) { return d.num; });
+        .value(function(d) { return d.count; });
 
       var seriesName = "m" + _data.label.replace(/ /g,'-').replace(/[!\"#$%&'\(\)\*\+,\.\/:;<=>\?\@\[\\\]\^`\{\|\}~]/g, '');
       var ring = svg.append("g")
         .attr("class", "ring series " + seriesName);
 
       var g = ring.selectAll(".arc")
-          .data(pie(_data.portions))
+          .data(pie(_data.parts))
         .enter().append("g")
-          .attr("class", function(d) { return "arc " + d.data.class + " " + d.data.label; });
+          .attr("class", function(d) { return "arc marker-name " + d.data.label; });
 
       g.append("path")
           .attr("d", arc)
           .style("fill", function(d) { return color(d.data.label); })
+          .attr("class", function(d) { return 'pie allele ' + d.data.label;})
           .append("svg:title")
-            .text(function(d) { return d.data.label + ' (' + d.data.num + ' calls)'; });
+            .text(function(d) { return d.data.label + ' (' + d.data.count + ' calls)'; });
 
     }
 
@@ -170,7 +174,8 @@ Drupal.behaviors.ndGenotypesFeaturePieChart = {
         .attr('x', 0)
         .attr('y', function(d,i) { return (legendRectSize + 4) * i;})
         .style('fill', color)
-        .style('stroke', color);
+        .style('stroke', color)
+        .attr("class", function(d) { return 'legend allele ' + d; });
       legend.append('text')
         .attr('x', legendRectSize + 4)
         .attr('y', function(d,i) { return ((legendRectSize+2) * i) + legendRectSize;})

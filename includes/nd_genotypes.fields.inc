@@ -30,7 +30,7 @@ function nd_genotypes_bundle_fields_info($entity_type, $bundle) {
   // we want the field to be associated with.
   if (isset($bundle->data_table) AND ($bundle->data_table == 'feature')) {
 
-    // Germplasm Summary Field.
+    // Variant Genotype Summary Field.
     //---------------------------------
     // First add my term.
     tripal_insert_cvterm(array(
@@ -43,6 +43,32 @@ function nd_genotypes_bundle_fields_info($entity_type, $bundle) {
     // Then describe the field defined by that term.
     $field_name = 'local__variant_genotype_summary';
     $field_type = 'local__variant_genotype_summary';
+    $fields[$field_name] = array(
+      'field_name' => $field_name,
+      'type' => $field_type,
+      // Controlls how many values you expect your field to have.
+      'cardinality' => 0,
+      // This locks your field so it can't be deleted by an administrator --use with care!
+      'locked' => FALSE,
+      // Indicated the storage API this field uses.
+      'storage' => array(
+        'type' => 'field_chado_storage',
+      ),
+    );
+
+    // Marker Genotype Summary Field.
+    //---------------------------------
+    // First add my term.
+    tripal_insert_cvterm(array(
+      'id' => 'local:marker_genotype_summary',
+      'name' => 'marker_genotype_summary',
+      'cv_name' => 'local',
+      'definition' => 'A summary of genotypic data for a given marker.',
+    ));
+
+    // Then describe the field defined by that term.
+    $field_name = 'local__marker_genotype_summary';
+    $field_type = 'local__marker_genotype_summary';
     $fields[$field_name] = array(
       'field_name' => $field_name,
       'type' => $field_type,
@@ -106,6 +132,40 @@ function nd_genotypes_bundle_instances_info($entity_type, $bundle) {
           'default' => array(
             'label' => 'hidden',
             'type' => 'local__variant_genotype_summary_formatter',
+            'settings' => array(),
+          ),
+        ),
+      );
+    }
+    // Only add the Marker Genotype Summary field
+    // if the current Tripal Content Type is SO:genetic_marker.
+    elseif ($term->name == 'genetic_marker') {
+
+      $info['local__marker_genotype_summary'] =  array(
+        'field_name' => 'local__marker_genotype_summary',
+        'entity_type' => $entity_type,
+        'bundle' => $bundle->name,
+        'label' => 'Genotype Summary',
+        'description' => 'Summarizes the genotypes associated with a given marker.',
+        'required' => FALSE,
+        'settings' => array(
+          'auto_attach' => FALSE,
+          'chado_table' => $bundle->data_table,
+          'chado_column' => 'feature_id',
+          'base_table' => $bundle->data_table,
+          'vocabulary' => 'local',
+          'parent_term' => 'local:marker_genotype_summary',
+        ),
+        'widget' => array(
+          'type' => 'local__marker_genotype_summary_widget',
+          'settings' => array(
+            'display_label' => 1,
+          ),
+        ),
+        'display' => array(
+          'default' => array(
+            'label' => 'hidden',
+            'type' => 'local__marker_genotype_summary_formatter',
             'settings' => array(),
           ),
         ),

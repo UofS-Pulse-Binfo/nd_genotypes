@@ -247,20 +247,40 @@ function nd_genotypes_get_variant($marker_id, $id_only = FALSE) {
  * @return
  *   An array of allele objects.
  */
-function nd_genotypes_get_alleles_for_variant($variant_id, $partition = 'All') {
+function nd_genotypes_get_alleles_for_variant($variant_id, $partition = 'All', $options = array()) {
   $variant = array();
 
-  $sql = "SELECT
-    call.variant_id,
-    v.name as variant_name,
-    call.marker_name,
-    call.allele_call as allele,
-    count(*) as num_germplasm
-  FROM {mview_ndg_calls} call
-    LEFT JOIN {feature} v ON v.feature_id=call.variant_id
-  WHERE call.variant_id=:id
-  GROUP BY call.variant_id, v.name, call.marker_name, call.allele_call";
-  $resource = ndg_mview_query($partition, $sql, array(':id' => $variant_id))->fetchAll();
+  // If the option 'single marker' is provided then the $variant_id should
+  // be the marker_id and we should only retrieve calls associated with that
+  // marker.
+  if (isset($options['single marker']) AND $options['single marker'] === TRUE) {
+    $sql = "SELECT
+      call.variant_id,
+      v.name as variant_name,
+      call.marker_id,
+      call.marker_name,
+      call.allele_call as allele,
+      count(*) as num_germplasm
+    FROM {mview_ndg_calls} call
+      LEFT JOIN {feature} v ON v.feature_id=call.variant_id
+    WHERE call.marker_id=:id
+    GROUP BY call.variant_id, v.name, call.marker_id, call.marker_name, call.allele_call";
+    $resource = ndg_mview_query($partition, $sql, array(':id' => $variant_id))->fetchAll();
+  }
+  else {
+    $sql = "SELECT
+      call.variant_id,
+      v.name as variant_name,
+      call.marker_id,
+      call.marker_name,
+      call.allele_call as allele,
+      count(*) as num_germplasm
+    FROM {mview_ndg_calls} call
+      LEFT JOIN {feature} v ON v.feature_id=call.variant_id
+    WHERE call.variant_id=:id
+    GROUP BY call.variant_id, v.name, call.marker_id, call.marker_name, call.allele_call";
+    $resource = ndg_mview_query($partition, $sql, array(':id' => $variant_id))->fetchAll();
+  }
 
   foreach ($resource as $r) {
     $variant['variant_id'] = $r->variant_id;
@@ -276,8 +296,11 @@ function nd_genotypes_get_alleles_for_variant($variant_id, $partition = 'All') {
     }
 
     // Add in allele by marker type.
-    $variant['marker_alleles'][$r->marker_name][$r->allele]['allele'] = $r->allele;
-    $variant['marker_alleles'][$r->marker_name][$r->allele]['num_germplasm'] = $r->num_germplasm;
+    $variant['marker_alleles'][$r->marker_id][$r->allele]['allele'] = $r->allele;
+    $variant['marker_alleles'][$r->marker_id][$r->allele]['num_germplasm'] = $r->num_germplasm;
+
+    // Also store the marker name.
+    $variant['markers'][$r->marker_id] = $r->marker_name;
 
     //Add in the single base nucleotides.
     foreach (str_split($r->allele) as $n) {

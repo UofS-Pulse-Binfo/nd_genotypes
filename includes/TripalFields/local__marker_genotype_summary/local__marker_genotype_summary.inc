@@ -1,7 +1,7 @@
 <?php
 /**
  * @class
- * Purpose: Provides a summary of genotypic data for a given variant.
+ * Purpose: Provides a summary of genotypic data for a given marker.
  *
  * Data:
  *   Genotypic data is expected to be stored in the genotype_call table created
@@ -10,20 +10,20 @@
  *   describing the actual marker assay used to determine the genotypes.
  *
  *   Specifically, this field provides a summary of the genotypic calls for
- *   all markers for the current variant.
+ *   the current marker.
  *
  * Assumptions:
  *   1. This field should only be attached to a Tripal Content Type storing
  *      it's primary data in the chado.feature table.
- *   2. The feature_id of the current variant will be present in the variant_id
- *      column of the genotype_call table if this variant has any markers assaying
- *      variation at this position.
+ *   2. The feature_id of the current marker will be present in the marker_id
+ *      column of the genotype_call table if this marker has any genotypes
+ *      attached to it.
  *
  * NOTE: This field pulls all data from the materialized views created by this
  *  module. As such, you must make sure to keep them sync'd in the administrative
  *  UI in order to see any changes after data loading.
  */
-class local__variant_genotype_summary extends ChadoField {
+class local__marker_genotype_summary extends ChadoField {
 
   // --------------------------------------------------------------------------
   //                     EDITABLE STATIC CONSTANTS
@@ -37,13 +37,13 @@ class local__variant_genotype_summary extends ChadoField {
   public static $default_label = 'Genotype Summary';
 
   // The default description for this field.
-  public static $default_description = 'A summary of genotypic data associated with the current variant.';
+  public static $default_description = 'A summary of genotypic data associated with the current marker.';
 
   // The default widget for this field.
-  public static $default_widget = 'local__variant_genotype_summary_widget';
+  public static $default_widget = 'local__marker_genotype_summary_widget';
 
   // The default formatter for this field.
-  public static $default_formatter = 'local__variant_genotype_summary_formatter';
+  public static $default_formatter = 'local__marker_genotype_summary_formatter';
 
   // The module that manages this field.
   public static $module = 'nd_genotypes';
@@ -75,9 +75,9 @@ class local__variant_genotype_summary extends ChadoField {
     // The short name for the vocabulary (e.g. shcema, SO, GO, PATO, etc.).
     'term_vocabulary' => 'local',
     // The name of the term.
-    'term_name' => 'variant_genotype_summary',
+    'term_name' => 'marker_genotype_summary',
     // The unique ID (i.e. accession) of the term.
-    'term_accession' => 'variant_genotype_summary',
+    'term_accession' => 'marker_genotype_summary',
     // Set to TRUE if the site admin is not allowed to change the term
     // type, otherwise the admin can change the term mapped to a field.
     'term_fixed' => FALSE,
@@ -135,8 +135,6 @@ class local__variant_genotype_summary extends ChadoField {
    *   The array may contain as many other keys at the same level as 'value'
    *   but those keys are for internal field use and are not considered the
    *   value of the field.
-   *
-   *
    */
   public function load($entity) {
 
@@ -146,46 +144,43 @@ class local__variant_genotype_summary extends ChadoField {
     // additional data to be used in the display, you should add it here.
     parent::load($entity);
 
-    // First, retrieve the chado feature_id/variant_id for the current Tripal Content, as we requested.
-    $variant_id = $entity->local__variant_genotype_summary['und'][0]['chado-feature__feature_id'];
+    // First, retrieve the chado feature_id/marker_id for the current Tripal Content, as we requested.
+    $marker_id = $entity->local__marker_genotype_summary['und'][0]['chado-feature__feature_id'];
 
     // Retrieve the data using the api.
     $variant = NULL;
-    if ($variant_id) {
-      $variant = nd_genotypes_get_alleles_for_variant($variant_id, 'tripalus');
+    if ($marker_id) {
+      $variant = nd_genotypes_get_alleles_for_variant(
+        $marker_id,
+        'tripalus',
+        array('single marker' => TRUE)
+      );
     }
 
-    // If there are no genotypes attached to this variant, we would like to
+    // If there are no genotypes attached to this marker, we would like to
     // indicate that the genotype summary should be empty.
     if (empty($variant)) {
-      $entity->local__variant_genotype_summary['und'][0]['value'] = array();
+      $entity->local__marker_genotype_summary['und'][0]['value'] = array();
     }
     else {
-      // For each marker attached to this variant, add an item to the field.
-      // We use the cardinality to indicate the number of markers.
-      $i = 0;
-      foreach($variant['marker_alleles'] as $marker_id => $alleles) {
+      $marker_name = $variant['markers'][$marker_id];
 
-        $marker_name = $variant['markers'][$marker_id];
+      // First store information about the marker so we can lebel the donut/ring.
+      $entity->local__marker_genotype_summary['und'][0]['value'] = array();
+      $entity->local__marker_genotype_summary['und'][0]['value']['rdfs:label'] = $marker_name;
+      $entity->local__marker_genotype_summary['und'][0]['value']['SO:genetic_marker'] = $marker_name;
+      $entity->local__marker_genotype_summary['und'][0]['value']['local:parts'] = array();
 
-        // First store information about the marker so we can lebel the donut/ring.
-        $entity->local__variant_genotype_summary['und'][$i]['value'] = array();
-        $entity->local__variant_genotype_summary['und'][$i]['value']['rdfs:label'] = $marker_name;
-        $entity->local__variant_genotype_summary['und'][$i]['value']['SO:genetic_marker'] = $marker_name;
-        $entity->local__variant_genotype_summary['und'][$i]['value']['local:parts'] = array();
-
-        // Then store information about each allele so we can draw/label each
-        // part or pie piece of the donut/ring.
-        foreach ($alleles as $d) {
-          $entity->local__variant_genotype_summary['und'][$i]['value']['local:parts'][] = array(
-            'SO:allele' => $d['allele'],
-            'rdfs:label' => $d['allele'],
-            'local:count' => $d['num_germplasm'],
-          );
-        }
-
-        $i++;
+      // Then store information about each allele so we can draw/label each
+      // part or pie piece of the donut/ring.
+      foreach ($variant['marker_alleles'][$marker_id] as $d) {
+        $entity->local__marker_genotype_summary['und'][0]['value']['local:parts'][] = array(
+          'SO:allele' => $d['allele'],
+          'rdfs:label' => $d['allele'],
+          'local:count' => $d['num_germplasm'],
+        );
       }
+
     }
   }
 }
