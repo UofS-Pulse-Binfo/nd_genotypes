@@ -1,7 +1,9 @@
 # Natural Diversity Genotypes
-This module provides a more specialized interface to genotypic information stored in the chado natural diversity module tables including adding summaries of this information to feature pages and providing a powerful marker by germplasm matrix.
+This module provides a specialized interface to genotypic information stored in Chado including adding summaries of this information to feature pages and providing a powerful marker by germplasm matrix.
 
-The 2.x branch of this module switches from using Drupal Views and moves towards a much more efficient framework. This process was initiated to ensure this modue can handle large datasets (tested with 5 billion genotype calls: 5 million variants by 1000 germplasm). It is currently a fully PostgreSQL solution although it is being developed to allow use of other data backends in the future as needed.
+The 3.x branch of this module switches from using Drupal Views and moves towards a much more efficient framework. This process was initiated to ensure this modue can handle large datasets (tested with 5 billion genotype calls: 5 million variants by 1000 germplasm). 
+
+Furthermore, the new branch of this module stores it's data in a custom gneotype_call gathering table rather than the Chado natural diversity module. This change was also undertaken in the interests of efficiency and is documented in the (wiki)[https://github.com/UofS-Pulse-Binfo/nd_genotypes/wiki/How-to-Store-your-Data]. It is currently a fully PostgreSQL solution, although it is being developed to allow use of other data backends in the future as needed.
 
 ## Functionality
 1. Configuration allowing admin to specify controlled vocabulary terms used for marker and variant types, as well as, relationship types.
@@ -13,7 +15,7 @@ The 2.x branch of this module switches from using Drupal Views and moves towards
 7. Countless efficiency improvements including optimized queries and well-choosen indexes.
 
 ## Dependencies
-1. Tripal 2.x
+1. Tripal 3.x
 2. Tripal Download API
 
 ## Installation
