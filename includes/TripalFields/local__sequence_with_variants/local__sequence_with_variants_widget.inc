@@ -1,17 +1,18 @@
 <?php
 /**
  * @class
- * Purpose: Provides a summary of genotypic data for a given marker.
+ * Purpose: Display flanking sequence for the current variant showing all
+ *  known flanking variants.
  *
  * Allowing edit? No
  * Data:
- *   Genotypic data is expected to be stored in the genotype_call table created
- *   by this module. The design of this table enforces you have one feature
- *   describing the position variation occurs at (the variant) and 1+ features
- *   describing the actual marker assay used to determine the genotypes.
- *
- *   Specifically, this field provides a summary of the genotypic calls for
- *   the current marker.
+ *   1. Sequence Data: Each variant is expected to be located on a feature with
+ *      sequence via the featureloc table. The sequence should be in the
+ *      feature.residues field of the srcfeature.
+ *   2. Variant Information: Genotypic data is expected to be stored in the
+ *      genotype_call table created by this module. Allele Calls should be
+ *      saved in the bi-allelic form (e.g. AA vs. A) and only SNPs are
+ *      supported.
  *
  * Form:
  *   Since this field doesn't allow editing, this widget simply displays a
@@ -21,18 +22,14 @@
  *   - Genotypic data is generally generated through computational analysis
  *     of assay results and as such is not condusive to being entered by hand
  *     but rather something that should be loaded in bulk.
- *
- * @TODO: Evalutate whether there might be some cases where manual entering of
- *    genotypic data is preferred. For example, when a lab runs a specific
- *    marker on a small panel of germplasm as part of a graduate project?
  */
-class local__marker_genotype_summary_widget extends ChadoFieldWidget {
+class local__sequence_with_variants_widget extends ChadoFieldWidget {
 
   // The default lable for this field.
   public static $default_label = 'No Form';
 
   // The list of field types for which this formatter is appropriate.
-  public static $field_types = array('local__marker_genotype_summary');
+  public static $field_types = array('local__sequence_with_variants');
 
   /**
    * Provides the form for editing of this field.
@@ -91,7 +88,6 @@ class local__marker_genotype_summary_widget extends ChadoFieldWidget {
    */
   public function form(&$widget, &$form, &$form_state, $langcode, $items, $delta, $element) {
     parent::form($widget, $form, $form_state, $langcode, $items, $delta, $element);
-
   }
 
   /**

@@ -73,6 +73,40 @@ function nd_genotypes_bundle_fields_info($entity_type, $bundle) {
       'field_name' => $field_name,
       'type' => $field_type,
       // Controlls how many values you expect your field to have.
+      'cardinality' => 1,
+      // This locks your field so it can't be deleted by an administrator --use with care!
+      'locked' => FALSE,
+      // Indicated the storage API this field uses.
+      'storage' => array(
+        'type' => 'field_chado_storage',
+      ),
+    );
+
+    // Sequence with Variants Field.
+    //---------------------------------
+    // First add my term.
+    tripal_insert_cvterm(array(
+      'id' => 'local:sequence_with_variants',
+      'name' => 'sequence_with_variants',
+      'cv_name' => 'local',
+      'definition' => 'Flanking sequence for a given variant showing all known flanking variants.',
+    ));
+
+    // We also need the following term to describe the value of this field.
+    tripal_insert_cvterm(array(
+      'id' => 'local:variant_coordinates',
+      'name' => 'variant_coordinates',
+      'cv_name' => 'local',
+      'definition' => 'The coordinates of the associated variant.',
+    ));
+
+    // Then describe the field defined by that term.
+    $field_name = 'local__sequence_with_variants';
+    $field_type = 'local__sequence_with_variants';
+    $fields[$field_name] = array(
+      'field_name' => $field_name,
+      'type' => $field_type,
+      // Controlls how many values you expect your field to have.
       'cardinality' => 0,
       // This locks your field so it can't be deleted by an administrator --use with care!
       'locked' => FALSE,
@@ -103,6 +137,8 @@ function nd_genotypes_bundle_instances_info($entity_type, $bundle) {
   // we want the field to be associated with.
   if (isset($bundle->data_table) AND ($bundle->data_table == 'feature')) {
 
+    // Variant Genotype Summary Field.
+    //---------------------------------
     // Only add the Variant Genotype Summary field
     // if the current Tripal Content Type is SO:sequence_variant.
     if ($term->name == 'sequence_variant') {
@@ -137,6 +173,8 @@ function nd_genotypes_bundle_instances_info($entity_type, $bundle) {
         ),
       );
     }
+    // Marker Genotype Summary Field.
+    //---------------------------------
     // Only add the Marker Genotype Summary field
     // if the current Tripal Content Type is SO:genetic_marker.
     elseif ($term->name == 'genetic_marker') {
@@ -166,6 +204,42 @@ function nd_genotypes_bundle_instances_info($entity_type, $bundle) {
           'default' => array(
             'label' => 'hidden',
             'type' => 'local__marker_genotype_summary_formatter',
+            'settings' => array(),
+          ),
+        ),
+      );
+    }
+
+    // Sequence with Variants Field.
+    //---------------------------------
+    // Add to both sequence_variants and genetic_markers.
+    if (($term->name == 'sequence_variant') OR ($term->name == 'genetic_marker')) {
+
+      $info['local__sequence_with_variants'] =  array(
+        'field_name' => 'local__sequence_with_variants',
+        'entity_type' => $entity_type,
+        'bundle' => $bundle->name,
+        'label' => 'Sequence with Variants',
+        'description' => 'Provides flanking sequence for a given variant showing all known flanking variants.',
+        'required' => FALSE,
+        'settings' => array(
+          'auto_attach' => FALSE,
+          'chado_table' => $bundle->data_table,
+          'chado_column' => 'feature_id',
+          'base_table' => $bundle->data_table,
+          'vocabulary' => 'local',
+          'parent_term' => 'local:sequence_with_variants',
+        ),
+        'widget' => array(
+          'type' => 'local__sequence_with_variants_widget',
+          'settings' => array(
+            'display_label' => 1,
+          ),
+        ),
+        'display' => array(
+          'default' => array(
+            'label' => 'hidden',
+            'type' => 'local__sequence_with_variants_formatter',
             'settings' => array(),
           ),
         ),

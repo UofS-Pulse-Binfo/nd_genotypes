@@ -321,75 +321,42 @@ function nd_genotypes_get_alleles_for_variant($variant_id, $partition = 'All', $
  *
  * Known Limitation: Cannot support markers with a length greater than 1.
  *
- * @param $feature
- *   The feature object of the current sequence/variant/marker.
- * @param $sequence_details
- *   Details of the base sequence to be marked-up. See nd_genotypes_get_variant_sequence()
- *   for format information.
- * @param $feature_category
- *   The type of feature ('sequence', 'variant' or 'marker' are supported).
- *   This is not the same as $feature->type_id->name.
+ * @param $values
+ *   An array with the following information:
+ *     - srcfeature_id: the feature.feature_id to which the sequence belongs.
+ *     - srcfeature_name: the feature.name to which the sequence belongs.
+ *     - variant_id: the feature.feature_id of the variant to highlight.
+ *     - sequence: the sequence fragment to be marked-up.
+ *     - sequence_start: the start coordinates of the provided sequence
+ *         fragment on the srcfeature.
+ *     - sequence_end: the end coordinates of the provided sequence fragment
+ *         on the srcfeature.
+ *     - sequence_strand: the strand of the provided sequence fragment.
+ * @param $options
+ *   An array of options... currently none are supported.
+ * @param $partition
+ *   The partition this variant is in.
  *
  * @return
  *   The actual marked-up sequence in string format. Includes HTML.
  */
-function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details, $feature_category = 'sequence', $partition = 'All') {
+function nd_genotypes_markup_sequence_with_variants(&$values, $options = array(), $partition = 'All') {
 
-  // First we need to get the sequence to be marked-up.
-  // Note that we also set some defaults while we're at it such as the sequence
-  // and marker feature_id's.
-  $sequence_details['marker_id'] = (isset($sequence_details['marker_id'])) ? $sequence_details['marker_id'] : NULL;
-  $sequence_details['feature_id'] = (isset($sequence_details['feature_id'])) ? $sequence_details['feature_id'] : $feature->feature_id;
-  if (isset($sequence_details['sequence'])) {
-    $sequence = str_split($sequence_details['sequence']);
-  }
-  elseif(isset($feature->residues)) {
-    $sequence = str_split($feature->residues);
-  }
-  elseif ($feature_category != 'sequence') {
-    // @todo: where did this function go?
-    $retrieved_sequence_details = nd_genotypes_get_variant_sequence($feature, $feature_category);
-    if (!empty($retrieved_sequence_details['sequence'])) {
-      $sequence_details['sequence'] = $retrieved_sequence_details['sequence'];
-      $sequence_details['feature_id'] = $retrieved_sequence_details['feature_id'];
-      $sequence_details['marker_id'] = $retrieved_sequence_details['marker_id'];
-      $sequence = str_split($retrieved_sequence_details['sequence']);
-    }
-    else {
-      tripal_report_error(
-        'nd_genotypes',
-        TRIPAL_WARNING,
-        'Unable to determine the sequence for the :category :name (:id)',
-        array(
-          ':category' => $feature_category,
-          ':name' => $variables['node']->feature->name,
-          ':id' => $variables['node']->feature->feature_id
-        )
-      );
-      return '';
-    }
-  }
-  else {
-    tripal_report_error(
-      'nd_genotypes',
-      TRIPAL_WARNING,
-      'Unable to determine the sequence for the :category :name (:id)',
-      array(
-        ':category' => $feature_category,
-        ':name' => $variables['node']->feature->name,
-        ':id' => $variables['node']->feature->feature_id
-      )
-    );
-    return '';
-  }
+  $sequence = str_split($values['sequence']);
 
   // Now get all the markers with their associated genotypes for the range
   // specified in sequence details.
-  if (isset($sequence_details['start']) AND isset($sequence_details['end'])) {
-    $variants = nd_genotypes_get_variants_for_sequence($sequence_details['feature_name'], $sequence_details['start'], $sequence_details['end'], $partition);
+  if (isset($values['sequence_start']) AND isset($values['sequence_end'])) {
+    $variants = nd_genotypes_get_variants_for_sequence(
+      $values['srcfeature_name'],
+      $values['sequence_start'],
+      $values['sequence_end'],
+      $partition
+    );
 
     // Now we can mark-up the sequence with the alleles for each marker.
-    foreach ($variants as $variant) {
+    foreach ($variants as $k => $variant) {
+      $variant = (array) $variant;
       // Currently we only support single nucleotide alleles due to the added
       // difficulties of replacing multi-nucleotide positions as well as dealing
       // with multiple alleles per variant call (ie: AA in Golden Gate assays).
@@ -398,19 +365,19 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
         // we're dealing with a sequence range that doesn't start at the
         // beginning of the sequence and assuming that variant locations
         // are 0-indexed.
-        if ($sequence_details['start'] == 1) {
+        if ($values['sequence_start'] == 1) {
           $variant_loc = $variant['start'];
         }
         else {
-          $variant_loc = $variant['start'] - $sequence_details['start'];
+          $variant_loc = $variant['start'] - $values['sequence_start'];
         }
 
-        // Since we are showing the calls on a sequence, we need to check that the strand
-        // that the calls were made on matches the one we're showing them on so we don't
-        // get the case where the Ref: G and the SNP is T/C making it look like there
-        // are 3 alleles when there isn't. Thus, complement the alleles if the strands
-        // don't match.
-        if (!empty($variant['meta_data']->strand) AND $variant['meta_data']->strand != $sequence_details['strand']) {
+        // Since we are showing the calls on a sequence, we need to check that
+        // the strand that the calls were made on matches the one we're showing
+        // them on so we don't get the case where the Ref: G and the SNP is T/C
+        // making it look like there are 3 alleles when there isn't. Thus,
+        // complement the alleles if the strands don't match.
+        if (!empty($variant['meta_data']->strand) AND ($variant['meta_data']->strand != $values['sequence_strand'])) {
           // First complement the nucleotides that will be used in the marked-up sequence.
           $variant['nucleotides'] = nd_genotypes_complement_calls($variant['nucleotides']);
           // And then complement the calls as they will appear in the tooltip.
@@ -423,9 +390,9 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
         $ref_allele = strip_tags($sequence[ $variant_loc ]);
         $variant['nucleotides'][$ref_allele] = $ref_allele;
 
-        // Keep in mind, we need to check if $variant is $feature because if
-        // it is we want to use the expanded [a/t] notation.
-        if ($variant['variant_id'] == $sequence_details['variant_id']) {
+        // Keep in mind, we need to check if $variant is the focal variant
+        // because if it is we want to use the expanded [a/t] notation.
+        if ($variant['variant_id'] == $values['variant_id']) {
           // Format the code as [allele1/allele2].
           $code = '[' . implode('/', $variant['nucleotides']) . ']';
           $class = 'variant-expanded';
@@ -440,27 +407,24 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
         }
 
         if ($code) {
-          // Generate a helpful tooltip (ie: variant Name: [a/t] ) to help users
+          // Generate a helpful tooltip (ie: Variant Name: [a/t] ) to help users
           // who don't have IUPAC codes memorized.
           $allele_info = array($ref_allele.'(Reference)');
+          $variant['reference_allele'] = $ref_allele;
+          if (!isset($variant['alleles']) OR !is_array($variant['alleles'])) { $variant['alleles'] = array(); }
           foreach ($variant['alleles'] as $i) {
             $allele_info[] = $i['allele'] . '(' . $i['num_germplasm'] . ')';
           }
           $tooltip = $variant['variant_name'] . ': ' . implode(', ', $allele_info);
+          $variant['tooltip'] = $tooltip;
 
-          // Now, replace the existing base at that position with the IUPAC code
-          // and link to the variant if the node nid is available. Note that if the
-          // base feature is a variant or variant then we want to mark-up the
-          // current variant/variant using expanded, non-IUPAC form.
-          if ($variant['variant_nid'] > 0) {
-            $sequence[ $variant_loc ] =
-              '<span class="variant ' . $class . '" title="' . $tooltip . '">'
-                  . l($code, 'node/' . $variant['variant_nid'])
-              . '</span>';
-          }
-          else {
-            $sequence[ $variant_loc ] = '<span class="variant variant-IUPAC" title="' . $tooltip . '">' . $code . '</span>';
-          }
+          // Add the code and index to the variant for use by the calling function.
+          $variant['code'] = $code;
+          $variant['index'] = $variant_loc;
+          $variants[$k] = $variant;
+
+          // Now, replace the existing base at that position with the IUPAC code.
+          $sequence[ $variant_loc ] = $code;
         }
       }
     }
@@ -471,11 +435,14 @@ function nd_genotypes_markup_sequence_with_variants($feature, &$sequence_details
         TRIPAL_WARNING,
         'The start and end coordinates must be provided in order to mark-up :name (:feature_id) sequence.',
         array(
-          ':name' => $feature->name,
-          ':id' => $feature->feature_id
+          ':name' => $values['srcfeature_name'],
+          ':id' => $values['srcfeature_id'],
         )
       );
   }
+
+  // Save the variants for use by the calling function.
+  $values['variants'] = $variants;
 
   return implode('', $sequence);
 }
@@ -500,22 +467,21 @@ function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end, 
   $sql = 'SELECT
             v.variant_id,
             v.variant_name,
-            cf.nid as variant_nid,
             v.fmin as start,
             v.fmax as end,
             v.meta_data
           FROM {mview_ndg_variants} v
-          LEFT JOIN [chado_feature] cf ON cf.feature_id=v.variant_id
           WHERE srcfeature_name=:backbone AND fmin >= :min AND fmax <= :max';
   $variants = ndg_mview_query($partition, $sql,
     array(':backbone' => $srcfeature_name, ':min' => $start, ':max' => $end))->fetchAllAssoc('variant_id');
 
-  // If there are no variants then return and empty array -obviously there won't be any calls.
+  // If there are no variants then return and empty array
+  // obviously there won't be any calls.
   if (empty($variants)) return $variants;
 
   // Now use that list fo get the allele distribution.
-  // If there is only a single variant then we need to use a different query to ensure
-  // that chado_query doesn't expand ARRAY[####] as a drupal table.
+  // If there is only a single variant then we need to use a different query
+  // to ensure that chado_query doesn't expand ARRAY[####] as a drupal table.
   if (sizeof($variants) == 1) {
     $sql = 'SELECT
               variant_id,
