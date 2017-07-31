@@ -115,10 +115,10 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
       gc.meta_data
     FROM {genotype_call} gc
       LEFT JOIN {feature} m ON m.feature_id=gc.marker_id
-      LEFT JOIN {featureprop} mt ON mt.feature_id=m.feature_id AND mt.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='marker_type')
+      LEFT JOIN {featureprop} mt ON mt.feature_id=m.feature_id AND mt.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='type')
       LEFT JOIN {stock} s ON s.stock_id=gc.stock_id
       LEFT JOIN {organism} o ON o.organism_id=s.organism_id
-      LEFT JOIN {stock}_relationship sr ON sr.subject_id=s.stock_id AND sr.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='is_extracted_from')
+      LEFT JOIN {stock}_relationship sr ON sr.subject_id=s.stock_id AND sr.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='derives_from')
       LEFT JOIN {stock} g ON g.stock_id=sr.object_id
       LEFT JOIN {genotype} a ON a.genotype_id=gc.genotype_id
     WHERE gc.genotype_id=:id AND LOWER(o.genus)=LOWER(:partition)
@@ -172,6 +172,7 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
  * Notice that we will attempt to create the table if it doesn't already exist.
  */
 function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
+  $pg_version = nd_genotypes_get_postgresql_version();
 
   // Determine the name of the mview table in this partition.
   $table_name = 'mview_ndg_'.$partition.'_variants';
@@ -216,23 +217,53 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
   // based on the mview_ndg_calls table :-).
   // Because this only pulls from the calls which are already filtered to the given partition
   // we don't need to use the partition here.
+  // @todo make json_build_object() for 9.3?
+  if ($pg_version == '9.3') {
   $query = "
-    SELECT
-      call.variant_id,
-      v.name as variant_name,
-      cvt.name as variant_type,
-      loc.srcfeature_id as srcfeature_id,
-      b.name as srcfeature_name,
-      loc.fmin,
-      loc.fmax,
-      json_build_object('strand', loc.strand, 'variant_type_id', cvt.cvterm_id, 'featureloc_id', loc.featureloc_id) as meta_data
-    FROM {".$ndg_calls_name."} call
-      LEFT JOIN {feature} v ON v.feature_id=call.variant_id
-      LEFT JOIN {cvterm} cvt ON v.type_id=cvt.cvterm_id
-      LEFT JOIN {featureloc} loc ON loc.feature_id=call.variant_id
-      LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
-    WHERE call.variant_id BETWEEN :min AND :max
-    ";
+      SELECT
+        call.variant_id,
+        v.name as variant_name,
+        cvt.name as variant_type,
+        loc.srcfeature_id as srcfeature_id,
+        b.name as srcfeature_name,
+        loc.fmin,
+        loc.fmax,
+        row_to_json((SELECT d FROM (SELECT loc.strand as strand, cvt.cvterm_id as variant_type_id, loc.featureloc_id as featureloc_id) d)) as meta_data
+      FROM {".$ndg_calls_name."} call
+        LEFT JOIN {feature} v ON v.feature_id=call.variant_id
+        LEFT JOIN {cvterm} cvt ON v.type_id=cvt.cvterm_id
+        LEFT JOIN {featureloc} loc ON loc.feature_id=call.variant_id
+        LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
+      WHERE call.variant_id BETWEEN :min AND :max
+      ";
+  }
+  elseif ($pg_version == '9.4') {
+    $query = "
+      SELECT
+        call.variant_id,
+        v.name as variant_name,
+        cvt.name as variant_type,
+        loc.srcfeature_id as srcfeature_id,
+        b.name as srcfeature_name,
+        loc.fmin,
+        loc.fmax,
+        json_build_object('strand', loc.strand, 'variant_type_id', cvt.cvterm_id, 'featureloc_id', loc.featureloc_id) as meta_data
+      FROM {".$ndg_calls_name."} call
+        LEFT JOIN {feature} v ON v.feature_id=call.variant_id
+        LEFT JOIN {cvterm} cvt ON v.type_id=cvt.cvterm_id
+        LEFT JOIN {featureloc} loc ON loc.feature_id=call.variant_id
+        LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
+      WHERE call.variant_id BETWEEN :min AND :max
+      ";
+  }
+  else {
+    tripal_report_error(
+      'nd_genotypes',
+      TRIPAL_ERROR,
+      'Unable to populate materialized view due to incompatible postgresql version. You are using :curr and this module requires at least 9.3.',
+      array( ':curr' => $pg_version )
+    );
+  }
 
   $total = $max - $min;
   $min = $total_min;

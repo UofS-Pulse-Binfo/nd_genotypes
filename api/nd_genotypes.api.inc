@@ -61,11 +61,12 @@ function ndg_mview_tables_exist($partition) {
 /**
  * Uses drush to safely copy data quickly. ONLY USE IN TRIPAL JOBS!!
  *
- * PostgreSQL COPY is extremely effective at copying/inserting large amount of data. This
- * modules uses it to create materialized views to cache queries for faster data access.
- * However, using chado_query('COPY...') poses many security risks in a web setting.
- * We use drush sql-connect to take advantage of our sync process taking place within a
- * Tripal job.
+ * PostgreSQL COPY is extremely effective at copying/inserting large amount of
+ * data. This modules uses it to create materialized views to cache queries
+ * for faster data access. However, using chado_query('COPY...') poses many
+ * security risks in a web setting. We use a combination of drush sql-cli,
+ * which opens a psql session, and psql's \copy command to take advantage of
+ * the fact that Tripal Jobs are run on the command-line.
  *
  * @param $copy_command
  *   The full PostgreSQL copy command to be executed.
@@ -91,13 +92,35 @@ function ndg_remote_chado_copy($copy_command, $args = array()) {
   // Allow the same hooks that act on chado_query to act on this query.
   drupal_alter('chado_query', $copy_command, $args);
 
-  // Generate the command-line form of the copy command.
-  $connection_string = `drush sql-connect`;
-  $connection_string = trim($connection_string);
-  $command = $connection_string . ' -c "\\' . $copy_command . '"';
+  // Execute the command within a drush created psql session using \COPY.
+  return drush_invoke_process(
+    '@self',
+    'sql-cli',
+    array(),
+    array('extra' => '--command="\\'.$copy_command.'"')
+  );
+}
 
-  // Execute the command.
-  return `$command`;
+/**
+ * Update the postgresql version.
+ */
+function nd_genotypes_recheck_postgresql_version() {
+
+  // Determine the PostgreSQL version.
+  $version_string = db_query('SELECT version()')->fetchField();
+  $version = '9.2';
+  if (preg_match('/PostgreSQL (9\.\d+)\.\d+/', $version_string, $matches)) {
+    $version = $matches[1];
+  }
+  variable_set('pgsql_version', $version);
+
+}
+
+/**
+ * Retrieve the postgresql version.
+ */
+function nd_genotypes_get_postgresql_version() {
+  return variable_get('pgsql_version', '9.2');
 }
 
 /**
