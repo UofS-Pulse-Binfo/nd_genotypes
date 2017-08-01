@@ -192,6 +192,7 @@ class local__marker_genotype_summary_formatter extends ChadoFieldFormatter {
             <div class="legend">
               <span class="legend-title">Figure: '.strtr($settings['title'], $tokens).'</span>
               <span class="legend-description">'.strtr($settings['legend'], $tokens).'</span>
+            </div>
           </div>',
       );
     }
