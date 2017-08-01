@@ -217,6 +217,93 @@ function nd_genotypes_get_marker($variant_id, $id_only = FALSE) {
 }
 
 /**
+ * Retrieve the type_id for a given type used by this module. This function
+ * provides an easy way to grab the admin defined type_id or the default
+ * if the admin has yet to configure the type_id.
+ *
+ * @param $type
+ *   The type to return the type_id for. One of the following:
+ *     - Marker Type: the featureprop.type_id indicating the marker type
+ *         (e.g. Exome Capture).
+ *     - Variant Type: the featureprop.type_id indicating the variant type
+ *         (e.g. SNP, MNP).
+ *     - Feature Relationship: the feature_relationship.type_id connecting the
+ *         marker => variant.
+ *     - Stock Relationship: the stock_relationship.type_id connecting the
+ *         sample => germplasm.
+ *
+ * @return
+ *   The type_id if $type is Marker/Variant Type
+ *   or an array (keys: type_id, position) if type is Feature/Stock Relationship.
+ */
+function nd_genotypes_get_type_id($type) {
+
+  $retrieve_type_id_sql = '
+    SELECT cvterm_id FROM {cvterm}
+    WHERE name=:term
+      AND cv_id IN (SELECT cv_id FROM {cv} WHERE name=:cv)';
+
+  switch ($type) {
+    case 'Marker Type':
+      $type_id = variable_set('nd_genotypes_markerprop_type_id', NULL);
+      if (!$type_id) {
+        $type_id = chado_query($retrieve_type_id_sql,
+          array(':term' => 'additionalType', ':cv' => 'schema'))->fetchField();
+      }
+      return $type_id;
+      break;
+    case 'Variant Type':
+      $type_id = variable_set('nd_genotypes_variantprop_type_id', NULL);
+      if (!$type_id) {
+        $type_id = chado_query($retrieve_type_id_sql,
+          array(':term' => 'additionalType', ':cv' => 'schema'))->fetchField();
+      }
+      return $type_id;
+      break;
+    case 'Feature Relationship':
+      $default_type_id = variable_get('nd_genotypes_rel_type_id', NULL);
+      $default_position = variable_get('nd_genotypes_rel_position', NULL);
+      if ($default_type_id === NULL) {
+        $default_type_id = chado_query($retrieve_type_id_sql,
+          array(':term' => 'is marker for', ':cv' => 'relationship'))->fetchField();
+        $default_position = 'object';
+      }
+      return array(
+        'type_id' => $default_type_id,
+        'position' => $default_position,
+      );
+      break;
+    case 'Project Relationship':
+      $default_type_id = variable_get('nd_genotypes_subproject_rel_type_id', NULL);
+      $default_position = variable_get('nd_genotypes_subproject_rel_position', NULL);
+      if ($default_type_id === NULL) {
+        $default_type_id = NULL;
+        $default_position = NULL;
+      }
+      return array(
+        'type_id' => $default_type_id,
+        'position' => $default_position,
+      );
+      break;
+    case 'Stock Relationship':
+      $default_type_id = variable_get('nd_genotypes_stock_rel_type_id', NULL);
+      $default_position = variable_get('nd_genotypes_stock_rel_position', NULL);
+      if ($default_type_id === NULL) {
+        $default_type_id = chado_query($retrieve_type_id_sql,
+          array(':term' => 'extracted', ':cv' => 'MIXSCV'))->fetchField();
+        $default_position = 'subject';
+      }
+      return array(
+        'type_id' => $default_type_id,
+        'position' => $default_position,
+      );
+      break;
+  }
+
+  return FALSE;
+}
+
+/**
  * Retrieve the marker type of the given marker.
  *
  * @param $variant_id

@@ -164,6 +164,52 @@ function nd_genotypes_admin_settings($form, $form_state) {
       still be able to navigate the necessary relationships and interpret your types.',
   );
 
+  $form['cvterms']['featureprop'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Feature Properties',
+    '#description' => 'The type of variant (e.g. SNP, MNP, etc.) and marker
+      (e.g. Exome Capture) is expected to be stored as a feature property of the
+      variant and maker respectively. This is where you can indicate the type of
+      property you used.',
+  );
+
+  $featureprop_types = array();
+  $resource = chado_query(
+    'SELECT prop.type_id, cvt.name as type_name
+     FROM {featureprop} prop
+     LEFT JOIN {cvterm} cvt ON cvt.cvterm_id=prop.type_id');
+  foreach ($resource as $r) {
+    $featureprop_types[ $r->type_id ] = $r->type_name;
+  }
+  if (empty($featureprop_types)) {
+    $msg = 'You need to have specified properties of markers/variants before property types (featureprop.type_id) can be detected.';
+    $form['cvterms']['featureprop']['#description'] .= '<div class="messages warning">'.$msg.'</div>';
+  }
+
+  $form['cvterms']['featureprop']['markerprop'] = array(
+    '#type' => 'select',
+    '#title' => 'Marker Type',
+    '#description' => 'Indicate the type feature property indicating your marker type (e.g. Exome Capture).',
+    '#options' => $featureprop_types,
+    '#default_value' => nd_genotypes_get_type_id('Marker Type'),
+  );
+
+  $form['cvterms']['featureprop']['variantprop'] = array(
+    '#type' => 'select',
+    '#title' => 'Variant Type',
+    '#description' => 'Indicate the type feature property indicating your variant type (e.g. SNP, MNP, etc.).',
+    '#options' => $featureprop_types,
+    '#default_value' => nd_genotypes_get_type_id('Variant Type'),
+  );
+
+  $form['cvterms']['marker_relationship'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Variant => Marker Relationship',
+    '#description' => 'Since genotypes are only attached to markers, in order to
+        display allele calls on your variant pages, this module needs to know
+        the relationship connecting your variants to your SNPs.',
+  );
+
   // Get vocab terms for feature relationship types.
   $feature_reltypes = array();
   $resource = chado_query(
@@ -174,21 +220,17 @@ function nd_genotypes_admin_settings($form, $form_state) {
     $feature_reltypes[ $r->type_id ] = $r->type_name;
   }
   if (empty($feature_reltypes)) {
-    drupal_set_message('You need to have loaded genotypic data before the relationship types can be detected.', 'warning');
+    $msg = 'You need to have loaded genotypic data before the relationship types can be detected.';
+    $form['cvterms']['marker_relationship']['#description'] .= '<div class="messages warning">'.$msg.'</div>';
   }
-
-  $form['cvterms']['marker_relationship'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'Variant => Marker Relationship',
-    '#description' => 'Since genotypes are only attached to markers, in order to
-        display allele calls on your variant pages, this module needs to know
-        the relationship connecting your variants to your SNPs.',
-  );
 
   $form['cvterms']['marker_relationship']['reltypes'] = array(
     '#type' => 'hidden',
     '#value' => serialize($feature_reltypes),
   );
+
+  // Determine the default.
+  $default_feature_rel = nd_genotypes_get_type_id('Feature Relationship');
 
   $form['cvterms']['marker_relationship']['marker_reltype'] = array(
     '#type' => 'select',
@@ -196,7 +238,7 @@ function nd_genotypes_admin_settings($form, $form_state) {
     '#description' => 'Indicate the type of relationship connecting your markers
       to the variants they determine.',
     '#options' => $feature_reltypes,
-    '#default_value' => variable_get('nd_genotypes_rel_type_id', 0)
+    '#default_value' => $default_feature_rel['type_id'],
   );
 
   $form['cvterms']['marker_relationship']['marker_relposition'] = array(
@@ -212,7 +254,63 @@ function nd_genotypes_admin_settings($form, $form_state) {
       'subject' => '<strong>Subject</strong> (Variant is_variant_of Marker)',
       'object' => '<strong>Object</strong> (Marker is_marker_of Variant)'
     ),
-    '#default_value' => variable_get('nd_genotypes_rel_position', NULL)
+    '#default_value' => $default_feature_rel['position'],
+  );
+
+  $form['cvterms']['stock_relationship'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Sample => Germplasm Relationship',
+    '#description' => 'Since genotypes are only attached to samples, in order to
+        display allele calls for a given germplasm, this module needs to know
+        the relationship connecting your samples to your germplasm.',
+  );
+
+  // Get vocab terms for feature relationship types.
+  $stock_reltypes = array();
+  $resource = chado_query(
+    'SELECT sr.type_id, cvt.name as type_name
+     FROM {stock_relationship} sr
+     LEFT JOIN {cvterm} cvt ON cvt.cvterm_id=sr.type_id');
+  foreach ($resource as $r) {
+    $stock_reltypes[ $r->type_id ] = $r->type_name;
+  }
+  if (empty($stock_reltypes)) {
+    $msg = 'You need to have loaded genotypic data before the relationship types can be detected.';
+    $form['cvterms']['stock_relationship']['#description'] .= '<div class="messages warning">'.$msg.'</div>';
+  }
+
+  $form['cvterms']['stock_relationship']['reltypes'] = array(
+    '#type' => 'hidden',
+    '#value' => serialize($stock_reltypes),
+  );
+
+  // Determine the default.
+  $default_stock_rel = nd_genotypes_get_type_id('Stock Relationship');
+
+  $form['cvterms']['stock_relationship']['stock_reltype'] = array(
+    '#type' => 'select',
+    '#title' => 'Relationship Type',
+    '#description' => 'Indicate the type of relationship connecting your samples
+      to the germplasm they were extracted from.',
+    '#options' => $stock_reltypes,
+    '#default_value' => $default_stock_rel['type_id'],
+  );
+
+  $form['cvterms']['stock_relationship']['stock_relposition'] = array(
+    '#type' => 'radios',
+    '#title' => 'Sample Position',
+    '#description' => 'Since relationships are specified as Subject Type Object
+      if you read it like a sentence (ie: DNA123 is_extracted_from Germplasm5 or
+      Germplasm5 is_source_of DNA123), the sample (DNA123 in the examples)
+      can be either the subject or object based on the type you used. As such,
+      we need to know which position the sample is in the relationship in order
+      to follow it. Please select the position of your sample based on the
+      relationship type provided.',
+    '#options' => array(
+      'subject' => '<strong>Subject</strong> (Sample is_extracted_from Germplasm)',
+      'object' => '<strong>Object</strong> (Germplasm is_source_of Sample))'
+    ),
+    '#default_value' => $default_stock_rel['position'],
   );
 
   $form['cvterms']['project'] = array(
@@ -238,15 +336,19 @@ function nd_genotypes_admin_settings($form, $form_state) {
     $project_reltypes[ $r->type_id ] = $r->type_name;
   }
   if (empty($project_reltypes)) {
-    drupal_set_message('You need to have created relationships between projects before the relationship types can be detected.', 'warning');
+    $msg = 'You need to have created relationships between projects before the relationship types can be detected.';
+    $form['cvterms']['project']['#description'] .= '<div class="messages warning">'.$msg.'</div>';
   }
+
+  // Determine the default.
+  $default_project_rel = nd_genotypes_get_type_id('Project Relationship');
 
   $form['cvterms']['project']['subproject_type_id'] = array(
     '#type' => 'select',
     '#title' => 'Sub-Project Relationship Type',
     '#description' => 'Indicate the type of relationship connecting your projects to their sub-projects.',
     '#options' => $project_reltypes,
-    '#default_value' => variable_get('nd_genotypes_subproject_rel_type_id', 0)
+    '#default_value' => $default_project_rel['type_id'],
   );
 
   $form['cvterms']['project']['subproject_position'] = array(
@@ -262,7 +364,7 @@ function nd_genotypes_admin_settings($form, $form_state) {
       'subject' => '<strong>Subject</strong> (Master Project is_parent_project_of SubProject)',
       'object' => '<strong>Object</strong> (SubProject is_subproject_of Master Project)'
     ),
-    '#default_value' => variable_get('nd_genotypes_subproject_rel_position', NULL)
+    '#default_value' => $default_project_rel['position'],
   );
 
   $form['cvterms']['submit'] = array(
@@ -308,11 +410,17 @@ function nd_genotypes_admin_settings_cvterms_validate($form, $form_state) {}
  */
 function nd_genotypes_admin_settings_cvterms_submit($form, $form_state) {
 
+  // Feature Properties.
+  variable_set('nd_genotypes_markerprop_type_id', $form_state['values']['markerprop']);
+  variable_set('nd_genotypes_variantprop_type_id', $form_state['values']['variantprop']);
+
+  // Variant => Marker Relationship.
   $reltypes = unserialize($form_state['values']['reltypes']);
   variable_set('nd_genotypes_rel_type_id', $form_state['values']['marker_reltype']);
   variable_set('nd_genotypes_rel_type_name', $reltypes[ $form_state['values']['marker_reltype'] ]);
   variable_set('nd_genotypes_rel_position', $form_state['values']['marker_relposition']);
 
+  // Projects.
   variable_set('ndg_follow_project_rels', $form_state['values']['follow_project_rels']);
   variable_set('nd_genotypes_subproject_rel_type_id', $form_state['values']['subproject_type_id']);
   variable_set('nd_genotypes_subproject_rel_position', $form_state['values']['subproject_position']);

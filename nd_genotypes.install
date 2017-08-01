@@ -6,15 +6,38 @@
 /**
  * Implements hook_install().
  */
+function nd_genotypes_enable() {
+
+  // Determine the PostgreSQL version.
+  nd_genotypes_recheck_postgresql_version();
+
+  // Ensure we have the vocab terms we would like to use as defaults.
+  tripal_insert_cv(
+    'MIXSCV',
+    'Controlled vocabularies for the MIxS family of metadata checklists. See http://gensc.org/gc_wiki/index.php/MIxS for details on the MIxS checklists.'
+  );
+  tripal_insert_cvterm(array(
+    'id' => 'MVC:0000491',
+    'name' => 'extracted',
+    'cv_name' => 'MIXSCV',
+    'definition' => 'A material separation in which a desired component (the subject) of an input material (the object) is separated from the remainder',
+  ));
+
+  tripal_insert_cvterm(array(
+    'id' => 'RO:0002607',
+    'name' => 'is marker for',
+    'cv_name' => 'relationship',
+    'definition' => 'c is marker for d iff the presence or occurrence of d is correlated with the presence of occurrence of c, and the observation of c is used to infer the presence or occurrence of d. Note that this does not imply that c and d are in a direct causal relationship, as it may be the case that there is a third entity e that stands in a direct causal relationship with c and d.',
+  ));
+}
+
+/**
+ * Implements hook_install().
+ */
 function nd_genotypes_install() {
 
   // Determine the PostgreSQL version.
-  $version_string = db_query('SELECT version()')->fetchField();
-  $version = '9.2';
-  if (preg_match('/PostgreSQL (9\.\d+)\.\d+/', $version_string, $matches)) {
-    $version = $matches[1];
-  }
-  variable_set('pgsql_version', $version);
+  nd_genotypes_recheck_postgresql_version();
 
   // Create the genotype_call table for storing genotypes in chado.
   chado_create_custom_table(

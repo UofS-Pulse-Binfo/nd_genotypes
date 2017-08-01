@@ -97,6 +97,17 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
   $genotypes = chado_query('SELECT genotype_id FROM {genotype}')->fetchCol();
   print "    - Determined there should be " . sizeof($genotypes) . " chunks.\n";
 
+  $markerprop_type_id = nd_genotypes_get_type_id('Marker Type');
+  $stock_rel = nd_genotypes_get_type_id('Stock Relationship');
+  if ($stock_rel['position'] == 'subject') {
+    $sample_pos = 'subject_id';
+    $germ_pos = 'object_id';
+  }
+  else {
+    $sample_pos = 'object_id';
+    $germ_pos = 'subject_id';
+  }
+
   // Now, populate the mview_ndg_calls table for each genotype/allele.
   // This is basically a materialized version of the genotype_call table itself :-).
   $query = "
@@ -115,11 +126,11 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
       gc.meta_data
     FROM {genotype_call} gc
       LEFT JOIN {feature} m ON m.feature_id=gc.marker_id
-      LEFT JOIN {featureprop} mt ON mt.feature_id=m.feature_id AND mt.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='type')
+      LEFT JOIN {featureprop} mt ON mt.feature_id=m.feature_id AND mt.type_id=:markerprop_type
       LEFT JOIN {stock} s ON s.stock_id=gc.stock_id
       LEFT JOIN {organism} o ON o.organism_id=s.organism_id
-      LEFT JOIN {stock}_relationship sr ON sr.subject_id=s.stock_id AND sr.type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='derives_from')
-      LEFT JOIN {stock} g ON g.stock_id=sr.object_id
+      LEFT JOIN {stock}_relationship sr ON sr.".$sample_pos."=s.stock_id AND sr.type_id=:stockrel_type
+      LEFT JOIN {stock} g ON g.stock_id=sr.".$germ_pos."
       LEFT JOIN {genotype} a ON a.genotype_id=gc.genotype_id
     WHERE gc.genotype_id=:id AND LOWER(o.genus)=LOWER(:partition)
     ";
@@ -135,7 +146,8 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
     // Copy it to a file.
     print "       - Copying to file...\n";
     $result = ndg_remote_chado_copy("COPY (" . $query . ") TO '/tmp/mview_ndg_calls.copy'",
-      array(':id' => $genotype_id, ':partition' => $partition));
+      array(':id' => $genotype_id, ':partition' => $partition,
+        ':markerprop_type' => $markerprop_type_id, ':stockrel_type' => $stock_rel['type_id']));
 
     // Then copy it back into the mview.
     print "       - Copying it into the mview...\n";
@@ -217,21 +229,21 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
   // based on the mview_ndg_calls table :-).
   // Because this only pulls from the calls which are already filtered to the given partition
   // we don't need to use the partition here.
-  // @todo make json_build_object() for 9.3?
+  $variantprop_type_id = nd_genotypes_get_type_id('Variant Type');
   if ($pg_version == '9.3') {
   $query = "
       SELECT
         call.variant_id,
         v.name as variant_name,
-        cvt.name as variant_type,
+        vt.value as variant_type,
         loc.srcfeature_id as srcfeature_id,
         b.name as srcfeature_name,
         loc.fmin,
         loc.fmax,
-        row_to_json((SELECT d FROM (SELECT loc.strand as strand, cvt.cvterm_id as variant_type_id, loc.featureloc_id as featureloc_id) d)) as meta_data
+        row_to_json((SELECT d FROM (SELECT loc.strand as strand, loc.featureloc_id as featureloc_id) d)) as meta_data
       FROM {".$ndg_calls_name."} call
         LEFT JOIN {feature} v ON v.feature_id=call.variant_id
-        LEFT JOIN {cvterm} cvt ON v.type_id=cvt.cvterm_id
+        LEFT JOIN {featureprop} vt ON vt.feature_id=v.feature_id AND vt.type_id=:variantprop_type
         LEFT JOIN {featureloc} loc ON loc.feature_id=call.variant_id
         LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
       WHERE call.variant_id BETWEEN :min AND :max
@@ -242,15 +254,15 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
       SELECT
         call.variant_id,
         v.name as variant_name,
-        cvt.name as variant_type,
+        vt.value as variant_type,
         loc.srcfeature_id as srcfeature_id,
         b.name as srcfeature_name,
         loc.fmin,
         loc.fmax,
-        json_build_object('strand', loc.strand, 'variant_type_id', cvt.cvterm_id, 'featureloc_id', loc.featureloc_id) as meta_data
+        json_build_object('strand', loc.strand, 'featureloc_id', loc.featureloc_id) as meta_data
       FROM {".$ndg_calls_name."} call
         LEFT JOIN {feature} v ON v.feature_id=call.variant_id
-        LEFT JOIN {cvterm} cvt ON v.type_id=cvt.cvterm_id
+        LEFT JOIN {featureprop} vt ON vt.feature_id=v.feature_id AND vt.type_id=:variantprop_type
         LEFT JOIN {featureloc} loc ON loc.feature_id=call.variant_id
         LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
       WHERE call.variant_id BETWEEN :min AND :max
@@ -274,7 +286,9 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
 
     // Copy it to a file.
     print "       - Copying to file...\n";
-    $result = ndg_remote_chado_copy("COPY (" . $query . ") TO '/tmp/mview_ndg_variants.copy'", array(':min' => $min, ':max' => $max));
+    $result = ndg_remote_chado_copy(
+        "COPY (" . $query . ") TO '/tmp/mview_ndg_variants.copy'",
+        array(':min' => $min, ':max' => $max, ':variantprop_type' => $variantprop_type_id));
 
     if (!file_exists('/tmp/mview_ndg_variants.copy')) {
       drush_log('No variants selected by: '
