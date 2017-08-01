@@ -29,6 +29,13 @@ function nd_genotypes_enable() {
     'cv_name' => 'relationship',
     'definition' => 'c is marker for d iff the presence or occurrence of d is correlated with the presence of occurrence of c, and the observation of c is used to infer the presence or occurrence of d. Note that this does not imply that c and d are in a direct causal relationship, as it may be the case that there is a third entity e that stands in a direct causal relationship with c and d.',
   ));
+
+  tripal_insert_cvterm(array(
+    'id' => 'local:count',
+    'name' => 'count',
+    'cv_name' => 'local',
+    'definition' => 'An integer indicating the number of something in a generic sense.',
+  ));
 }
 
 /**

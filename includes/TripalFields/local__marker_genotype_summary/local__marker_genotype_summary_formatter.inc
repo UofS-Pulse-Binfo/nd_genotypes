@@ -13,7 +13,7 @@
  *       item (ie: $entity->local__variant_genotype_summary['und'][0]).
  *    - Within the 'value' of a given item there should be the following keys:
  *        - rdfs:label = the label to give to the pie
- *        - local:parts = each element of this array should be a piece of the pie
+ *        - hydra:member = each element of this array should be a piece of the pie
  *            and should contain a rdfs:label and local:count to be used to label
  *            and size the pie respectively.
  *
@@ -135,7 +135,7 @@ class local__marker_genotype_summary_formatter extends ChadoFieldFormatter {
 
     // If this marker has any genotypes attached to it...
     if (!empty($items[0]['value'])) {
-
+dpm($items, 'items');
       // Process items to expose to JS.
       $data = array();
       $js_settings = array();
@@ -146,18 +146,18 @@ class local__marker_genotype_summary_formatter extends ChadoFieldFormatter {
         $data[$key] = array();
         $data[$key]['label'] = $value['value']['rdfs:label'];
         $data[$key]['parts'] = array();
-        foreach ($value['value']['local:parts'] as $part) {
+        foreach ($value['value']['hydra:member'] as $part) {
           $data[$key]['parts'][] = array(
             'label' => $part['rdfs:label'],
             'count' => $part['local:count'],
           );
 
           // Also add colours as we see them.
-          if (isset($colours[ $part['SO:allele'] ])) {
-            $js_settings['SNPcolours'][ $part['SO:allele'] ] = $colours[ $part['SO:allele'] ];
+          if (isset($colours[ $part['SO:0001023'] ])) {
+            $js_settings['SNPcolours'][ $part['SO:0001023'] ] = $colours[ $part['SO:0001023'] ];
           }
           else {
-            $js_settings['SNPcolours'][ $part['SO:allele'] ] = array_shift($extra_colours);
+            $js_settings['SNPcolours'][ $part['SO:0001023'] ] = array_shift($extra_colours);
           }
         }
       }

@@ -171,14 +171,14 @@ class local__variant_genotype_summary extends ChadoField {
         // First store information about the marker so we can lebel the donut/ring.
         $entity->local__variant_genotype_summary['und'][$i]['value'] = array();
         $entity->local__variant_genotype_summary['und'][$i]['value']['rdfs:label'] = $marker_name;
-        $entity->local__variant_genotype_summary['und'][$i]['value']['SO:genetic_marker'] = $marker_name;
-        $entity->local__variant_genotype_summary['und'][$i]['value']['local:parts'] = array();
+        $entity->local__variant_genotype_summary['und'][$i]['value']['SO:0001645'] = $marker_name;
+        $entity->local__variant_genotype_summary['und'][$i]['value']['hydra:member'] = array();
 
         // Then store information about each allele so we can draw/label each
         // part or pie piece of the donut/ring.
         foreach ($alleles as $d) {
-          $entity->local__variant_genotype_summary['und'][$i]['value']['local:parts'][] = array(
-            'SO:allele' => $d['allele'],
+          $entity->local__variant_genotype_summary['und'][$i]['value']['hydra:member'][] = array(
+            'SO:0001023' => $d['allele'],
             'rdfs:label' => $d['allele'],
             'local:count' => $d['num_germplasm'],
           );
