@@ -173,7 +173,6 @@ class local__marker_genotype_summary extends ChadoField {
 
       // Then store information about each allele so we can draw/label each
       // part or pie piece of the donut/ring.
-      dpm($variant['marker_alleles'][$marker_id], 'members');
       foreach ($variant['marker_alleles'][$marker_id] as $d) {
         $entity->local__marker_genotype_summary['und'][0]['value']['hydra:member'][] = array(
           'SO:0001023' => $d['allele'],

@@ -135,7 +135,7 @@ class local__marker_genotype_summary_formatter extends ChadoFieldFormatter {
 
     // If this marker has any genotypes attached to it...
     if (!empty($items[0]['value'])) {
-dpm($items, 'items');
+
       // Process items to expose to JS.
       $data = array();
       $js_settings = array();
