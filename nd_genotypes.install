@@ -11,6 +11,34 @@ function nd_genotypes_enable() {
   // Determine the PostgreSQL version.
   nd_genotypes_recheck_postgresql_version();
 
+  // Warn users if they don't have a high enough version.
+  $pg_version = nd_genotypes_get_postgresql_version();
+  drupal_set_message(t('Your postgresql version is: %curr', array('%curr' => $pg_version)));
+
+  // If not using PostgreSQL 9.3+, give an error
+  if (is_numeric($pg_version)) {
+    if ($pg_version < 9.3) {
+      drupal_set_message(t('This module requires PostgreSQL 9.3 or higher.'), 'error');
+
+      tripal_report_error(
+        'genotypes_loader',
+        TRIPAL_ERROR,
+        'Incompatible postgresql version detected. You are using :curr and this module requires at least 9.3.',
+        array( ':curr' => $pg_version )
+      );
+    }
+  }
+  else {
+    drupal_set_message(t('Could not determine current version of PostgreSQL. This module requires 9.3 or higher.'), 'error');
+
+    tripal_report_error(
+      'genotypes_loader',
+      TRIPAL_ERROR,
+      'Unable to determine postgresql version. You are using :curr and this module requires at least 9.3.',
+      array( ':curr' => $pg_version )
+    );
+  }
+
   // Ensure we have the vocab terms we would like to use as defaults.
   tripal_insert_cv(
     'MIXSCV',
