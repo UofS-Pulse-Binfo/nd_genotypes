@@ -230,7 +230,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
   // Because this only pulls from the calls which are already filtered to the given partition
   // we don't need to use the partition here.
   $variantprop_type_id = nd_genotypes_get_type_id('Variant Type');
-  if ($pg_version == '9.3') {
+  if ($pg_version == 9.3 ) {
   $query = "
       SELECT
         call.variant_id,
@@ -249,7 +249,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
       WHERE call.variant_id BETWEEN :min AND :max
       ";
   }
-  elseif ($pg_version == '9.4') {
+  elseif ($pg_version >= 9.4) {
     $query = "
       SELECT
         call.variant_id,

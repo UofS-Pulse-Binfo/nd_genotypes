@@ -109,9 +109,17 @@ function nd_genotypes_recheck_postgresql_version() {
   // Determine the PostgreSQL version.
   $version_string = db_query('SELECT version()')->fetchField();
   $version = '9.2';
+
+  // Pull it out via REGEX.
   if (preg_match('/PostgreSQL (9\.\d+)\.\d+/', $version_string, $matches)) {
     $version = $matches[1];
   }
+
+  // If it's numeric then change it to a float for better comparison.
+  if (is_numeric($version)) {
+    $version = floatval($version);
+  }
+
   variable_set('pgsql_version', $version);
 
 }
@@ -120,7 +128,7 @@ function nd_genotypes_recheck_postgresql_version() {
  * Retrieve the postgresql version.
  */
 function nd_genotypes_get_postgresql_version() {
-  return variable_get('pgsql_version', '9.2');
+  return variable_get('pgsql_version', nd_genotypes_recheck_postgresql_version());
 }
 
 /**

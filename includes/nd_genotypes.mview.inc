@@ -27,7 +27,7 @@
  */
 function nd_genotypes_create_mview_ndg_variants($tablename = 'mview_ndg_variants') {
 
-  $version = variable_get('pgsql_version', '9.2');
+  $version = variable_get('pgsql_version', 9.2);
 
   $schema = array(
     'description' => 'A listing of all the variants sorted by location.',
@@ -87,7 +87,7 @@ function nd_genotypes_create_mview_ndg_variants($tablename = 'mview_ndg_variants
         'name' => 'meta_data',
         'title' => 'Meta data',
         'description' => 'JSON storage of any addition meta-data for the call.',
-        'pgsql_type' => ($version == '9.4') ? 'jsonb' : 'json',
+        'pgsql_type' => ($version >= 9.4) ? 'jsonb' : 'json',
         'views_type' => 'text',
       ),
       'ndg_variants_id' => array(
@@ -176,7 +176,7 @@ function nd_genotypes_create_mview_ndg_variants_indexes($tablename = 'mview_ndg_
  */
 function nd_genotypes_create_mview_ndg_calls($tablename = 'mview_ndg_calls') {
 
-  $version = variable_get('pgsql_version', '9.2');
+  $version = variable_get('pgsql_version', 9.2);
 
   $schema = array(
     'description' => 'A listing of all the marker calls.',
@@ -273,7 +273,7 @@ function nd_genotypes_create_mview_ndg_calls($tablename = 'mview_ndg_calls') {
         'name' => 'meta_data',
         'title' => 'Meta data',
         'description' => 'JSON storage of any addition meta-data for the call.',
-        'pgsql_type' => ($version == '9.4') ? 'jsonb' : 'json',
+        'pgsql_type' => ($version >= 9.4) ? 'jsonb' : 'json',
         'views_type' => 'text',
       ),
       'ndg_call_id' => array(
@@ -516,7 +516,7 @@ function nd_genotypes_create_mview_summary($table_name = 'mview_ndg_summary') {
  */
 function nd_genotypes_genotype_call_schema_template() {
 
-  $version = variable_get('pgsql_version', '9.2');
+  $version = variable_get('pgsql_version', 9.2);
 
   return array(
     'description' => 'A more compact way to store genotype calls.',
@@ -572,7 +572,7 @@ function nd_genotypes_genotype_call_schema_template() {
         'name' => 'meta_data',
         'title' => 'Meta data',
         'description' => 'JSON storage of any addition meta-data for the call.',
-        'pgsql_type' => ($version == '9.4') ? 'jsonb' : 'json',
+        'pgsql_type' => ($version >= 9.4) ? 'jsonb' : 'json',
         'views_type' => 'text',
       ),
     ),
