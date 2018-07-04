@@ -112,7 +112,7 @@ function nd_genotypes_create_mview_ndg_variants($tablename = 'mview_ndg_variants
     'indexes' => array(    ),
   );
 
-  chado_create_custom_table( $tablename, $schema );
+  chado_create_custom_table( $tablename, $schema, TRUE, NULL, FALSE );
 
 }
 
@@ -319,7 +319,7 @@ function nd_genotypes_create_mview_ndg_calls($tablename = 'mview_ndg_calls') {
     'indexes' => array(),
   );
 
-  chado_create_custom_table( $tablename, $schema );
+  chado_create_custom_table($tablename, $schema, TRUE, NULL, FALSE);
 
 }
 
@@ -437,7 +437,7 @@ function nd_genotypes_create_mview_ndg_germplasm_genotyped($table_name = 'mview_
     ),
   );
 
-  chado_create_custom_table( $table_name, $schema );
+  chado_create_custom_table( $table_name, $schema, TRUE, NULL, FALSE );
 
 }
 
@@ -507,7 +507,7 @@ function nd_genotypes_create_mview_summary($table_name = 'mview_ndg_summary') {
     'indexes' => array(),
   );
 
-  chado_create_custom_table( $table_name, $schema );
+  chado_create_custom_table( $table_name, $schema, TRUE, NULL, FALSE );
 
 }
 
