@@ -92,13 +92,13 @@ function ndg_remote_chado_copy($copy_command, $args = array()) {
   // Allow the same hooks that act on chado_query to act on this query.
   drupal_alter('chado_query', $copy_command, $args);
 
-  // Execute the command within a drush created psql session using \COPY.
-  return drush_invoke_process(
-    '@self',
-    'sql-cli',
-    array(),
-    array('extra' => '--command="\\'.$copy_command.'"')
-  );
+  // Setup the command within a drush created psql session using \COPY.
+  $connection_string = `drush sql-connect`;
+  $connection_string = trim($connection_string);
+  $command = $connection_string . ' -c "\\' . $copy_command . '"';
+
+  // Execute the command
+  return `$command`;
 }
 
 /**
@@ -253,7 +253,7 @@ function nd_genotypes_get_type_id($type) {
 
   switch ($type) {
     case 'Marker Type':
-      $type_id = variable_set('nd_genotypes_markerprop_type_id', NULL);
+      $type_id = variable_get('nd_genotypes_markerprop_type_id', NULL);
       if (!$type_id) {
         $type_id = chado_query($retrieve_type_id_sql,
           array(':term' => 'additionalType', ':cv' => 'schema'))->fetchField();
@@ -261,7 +261,7 @@ function nd_genotypes_get_type_id($type) {
       return $type_id;
       break;
     case 'Variant Type':
-      $type_id = variable_set('nd_genotypes_variantprop_type_id', NULL);
+      $type_id = variable_get('nd_genotypes_variantprop_type_id', NULL);
       if (!$type_id) {
         $type_id = chado_query($retrieve_type_id_sql,
           array(':term' => 'additionalType', ':cv' => 'schema'))->fetchField();

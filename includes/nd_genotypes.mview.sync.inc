@@ -97,7 +97,13 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
   $genotypes = chado_query('SELECT genotype_id FROM {genotype}')->fetchCol();
   print "    - Determined there should be " . sizeof($genotypes) . " chunks.\n";
 
+  // Retrieve the marker type information.
   $markerprop_type_id = nd_genotypes_get_type_id('Marker Type');
+  if (!$markerprop_type_id) {
+    drush_report_error('Marker Type not set. Please go to Admin > Tripal > Extensions > ND Genotypes > Settings to configure this.');
+  }
+
+  // Retrieve the stock relationship information.
   $stock_rel = nd_genotypes_get_type_id('Stock Relationship');
   if ($stock_rel['position'] == 'subject') {
     $sample_pos = 'subject_id';
@@ -106,6 +112,9 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
   else {
     $sample_pos = 'object_id';
     $germ_pos = 'subject_id';
+  }
+  if (!$stock_rel['type_id']) {
+    drush_report_error('Sample => Germplasm Relationship Type not set. Please go to Admin > Tripal > Extensions > ND Genotypes > Settings to configure this.');
   }
 
   // Now, populate the mview_ndg_calls table for each genotype/allele.
@@ -149,6 +158,7 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
       array(':id' => $genotype_id, ':partition' => $partition,
         ':markerprop_type' => $markerprop_type_id, ':stockrel_type' => $stock_rel['type_id']));
 
+
     // Then copy it back into the mview.
     print "       - Copying it into the mview...\n";
     $result = ndg_remote_chado_copy("COPY {".$table_name."} (
@@ -164,7 +174,7 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
           genotype_id,
           allele_call,
           meta_data) FROM '/tmp/mview_ndg_calls.copy'");
-    print "       - Finished $result records.\n";
+    print "       - Finished this chunk.\n";
   }
 
   // Create the indexes you dropped earlier.
