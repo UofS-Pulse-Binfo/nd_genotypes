@@ -211,7 +211,6 @@ function nd_genotypes_create_mview_ndg_calls($tablename = 'mview_ndg_calls') {
         'description' => 'The type of marker.',
         'type' => 'varchar',
         'length' => 255,
-        'not null' => TRUE,
       ),
       'stock_id' => array(
         'name' => 'stock_id',

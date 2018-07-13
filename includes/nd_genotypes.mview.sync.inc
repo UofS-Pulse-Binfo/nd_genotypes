@@ -100,7 +100,7 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
   // Retrieve the marker type information.
   $markerprop_type_id = nd_genotypes_get_type_id('Marker Type');
   if (!$markerprop_type_id) {
-    drush_report_error('Marker Type not set. Please go to Admin > Tripal > Extensions > ND Genotypes > Settings to configure this.');
+    return drush_report_error('Marker Type not set. Please go to Admin > Tripal > Extensions > ND Genotypes > Settings to configure this.');
   }
 
   // Retrieve the stock relationship information.
@@ -114,7 +114,7 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
     $germ_pos = 'subject_id';
   }
   if (!$stock_rel['type_id']) {
-    drush_report_error('Sample => Germplasm Relationship Type not set. Please go to Admin > Tripal > Extensions > ND Genotypes > Settings to configure this.');
+    return drush_set_error('Sample => Germplasm Relationship Type not set. Please go to Admin > Tripal > Extensions > ND Genotypes > Settings to configure this.');
   }
 
   // Now, populate the mview_ndg_calls table for each genotype/allele.
@@ -233,6 +233,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
    $num_chunks = ($total_max-$total_min) / $chunk_size;
   }
 
+  print "    - Variant_ids range from $total_min - $total_max.\n";
   print "    - Determined there should be " . ceil($num_chunks) . " chunks.\n";
 
   // Now, populate the mview_ndg_variants table for each genotype/allele
@@ -245,7 +246,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
       SELECT
         call.variant_id,
         v.name as variant_name,
-        vt.value as variant_type,
+        (SELECT value FROM chado.featureprop WHERE feature_id=v.feature_id AND type_id=:variantprop_type) as variant_type,
         loc.srcfeature_id as srcfeature_id,
         b.name as srcfeature_name,
         loc.fmin,
@@ -253,7 +254,6 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
         row_to_json((SELECT d FROM (SELECT loc.strand as strand, loc.featureloc_id as featureloc_id) d)) as meta_data
       FROM {".$ndg_calls_name."} call
         LEFT JOIN {feature} v ON v.feature_id=call.variant_id
-        LEFT JOIN {featureprop} vt ON vt.feature_id=v.feature_id AND vt.type_id=:variantprop_type
         LEFT JOIN {featureloc} loc ON loc.feature_id=call.variant_id
         LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
       WHERE call.variant_id BETWEEN :min AND :max
@@ -264,7 +264,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
       SELECT
         call.variant_id,
         v.name as variant_name,
-        vt.value as variant_type,
+        (SELECT value FROM chado.featureprop WHERE feature_id=v.feature_id AND type_id=:variantprop_type) as variant_type,
         loc.srcfeature_id as srcfeature_id,
         b.name as srcfeature_name,
         loc.fmin,
@@ -272,7 +272,6 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
         json_build_object('strand', loc.strand, 'featureloc_id', loc.featureloc_id) as meta_data
       FROM {".$ndg_calls_name."} call
         LEFT JOIN {feature} v ON v.feature_id=call.variant_id
-        LEFT JOIN {featureprop} vt ON vt.feature_id=v.feature_id AND vt.type_id=:variantprop_type
         LEFT JOIN {featureloc} loc ON loc.feature_id=call.variant_id
         LEFT JOIN {feature} b ON b.feature_id=loc.srcfeature_id
       WHERE call.variant_id BETWEEN :min AND :max
@@ -289,10 +288,12 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
 
   $total = $max - $min;
   $min = $total_min;
-  for ($i=1; $i <= $num_chunks; $i++) {
+  for ($i=0; $i <= $num_chunks; $i++) {
     $max = $min + $chunk_size - 1;
 
     print "    - Working on $min to $max ($i of ".ceil($num_chunks).")...\n";
+
+    //print "        - QUERY: " . strtr($query, array(':min' => $min, ':max' => $max, ':variantprop_type' => $variantprop_type_id, '{' => 'chado.', '}' => ''));
 
     // Copy it to a file.
     print "       - Copying to file...\n";
