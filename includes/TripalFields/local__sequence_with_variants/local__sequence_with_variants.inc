@@ -172,6 +172,21 @@ class local__sequence_with_variants extends ChadoField {
       return FALSE;
     }
 
+    // Determine the partition.
+    if (isset($entity->chado_record->organism_id)) {
+      $partition = strtolower($entity->chado_record->organism_id->genus);
+    }
+    else {
+      tripal_report_error(
+        'nd_genotypes',
+        TRIPAL_WARNING,
+        '"Sequence with Variants" field was unable to determine what the organism for entity :id is.',
+        array( ':id' => $entity->id, )
+      );
+      $entity->local__sequence_with_variants['und'][0]['value'] = FALSE;
+      return FALSE;
+    }
+
     // First get a list of feature locations where the parent has sequence.
     $locations = chado_query('
       SELECT l.featureloc_id, l.srcfeature_id, p.name as backbone_name, l.fmin, l.fmax, l.locgroup, l.strand as strand
@@ -244,7 +259,7 @@ class local__sequence_with_variants extends ChadoField {
     $value['local:sequence_with_variants'] = nd_genotypes_markup_sequence_with_variants(
       $info,
       array(),
-      'tripalus'
+      $partition
     );
 
     // And process the variant list to provide to the formatter/ws.

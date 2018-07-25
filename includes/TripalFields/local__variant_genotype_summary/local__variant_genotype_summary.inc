@@ -152,8 +152,18 @@ class local__variant_genotype_summary extends ChadoField {
     // Retrieve the data using the api.
     $variant = NULL;
     if ($variant_id) {
-      $variant = nd_genotypes_get_alleles_for_variant($variant_id, 'tripalus');
+      if (isset($entity->chado_record->organism_id)) {
+        $partition = strtolower($entity->chado_record->organism_id->genus);
+        $variant = nd_genotypes_get_alleles_for_variant($variant_id, $partition);
+      }
+      else {
+        tripal_report_error('nd_genotypes',TRIPAL_ERROR,
+          'Variant Genotype Summary: Unable to determine the organism for entity (ID=:id)',
+          array(':id' => $entity->id));
+      }
     }
+
+    // @debug dpm($variant, 'variant in genotype summary');
 
     // If there are no genotypes attached to this variant, we would like to
     // indicate that the genotype summary should be empty.
@@ -186,6 +196,7 @@ class local__variant_genotype_summary extends ChadoField {
 
         $i++;
       }
+      // @debug dpm($entity->local__variant_genotype_summary, 'field after load');
     }
   }
 }

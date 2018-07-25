@@ -147,12 +147,27 @@ class local__marker_genotype_summary extends ChadoField {
     // First, retrieve the chado feature_id/marker_id for the current Tripal Content, as we requested.
     $marker_id = $entity->local__marker_genotype_summary['und'][0]['chado-feature__feature_id'];
 
+    // Determine the partition.
+    if (isset($entity->chado_record->organism_id)) {
+      $partition = strtolower($entity->chado_record->organism_id->genus);
+    }
+    else {
+      tripal_report_error(
+        'nd_genotypes',
+        TRIPAL_WARNING,
+        '"Marker Genotype Summary" field was unable to determine what the organism is for entity :id.',
+        array( ':id' => $entity->id, )
+      );
+      $entity->local__marker_genotype_summary['und'][0]['value'] = FALSE;
+      return FALSE;
+    }
+
     // Retrieve the data using the api.
     $variant = NULL;
     if ($marker_id) {
       $variant = nd_genotypes_get_alleles_for_variant(
         $marker_id,
-        'tripalus',
+        $partition,
         array('single marker' => TRUE)
       );
     }
