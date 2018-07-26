@@ -37,7 +37,11 @@ class local__sequence_with_variants_formatter extends ChadoFieldFormatter {
 
   // The list of default settings for this formatter.
   public static $default_settings = array(
-    //'key' => 'default_value',
+    'title' => 'Variant Marked-up Sequence (FASTA format)',
+    'description' => 'The following FASTA record shows the flanking sequence for this [rdfs__type] <strong>including IUPAC codes for any other variants falling within this region</strong>.',
+    'show_blank_fasta' => TRUE,
+    'blank_fasta_title' => 'Flanking Sequence (FASTA format)',
+    'blank_fasta_desc' => 'The following FASTA record shows the flanking sequence for this [rdfs__type] <strong>without any variants taken into account</strong>.',
   );
 
   /**
@@ -73,6 +77,49 @@ class local__sequence_with_variants_formatter extends ChadoFieldFormatter {
    *   A Drupal Form array containing the settings form for this field.
    */
   public function settingsForm($view_mode, $form, &$form_state) {
+
+    // Grab the parent settings form in all it's glory.
+    $element = parent::settingsForm($view_mode, $form, $form_state);
+
+    // Retrieve the current settings not handled by our parent.
+    $settings = $this->instance['display'][$view_mode]['settings'];
+
+    $element['title'] = array(
+      '#type' => 'textfield',
+      '#title' => 'Marked-up Sequence Record: Title',
+      '#description' => 'The title for the section containing the marked-up sequence fasta record.',
+      '#default_value' => $settings['title'],
+    );
+
+    $element['description'] = array(
+      '#type' => 'textarea',
+      '#title' => 'Marked-up Sequence Record: Description',
+      '#description' => 'A helpful description for the section containing the marked-up sequence fasta record.',
+      '#default_value' => $settings['description'],
+    );
+
+    $element['show_blank_fasta'] = array(
+      '#type' => 'checkbox',
+      '#title' => 'Show Flanking Sequence Record',
+      '#description' => 'If checked, the simple flanking sequence fasta record will be shown in addition to the marked-up fasta record.',
+      '#default_value' => $settings['show_blank_fasta'],
+    );
+
+    $element['blank_fasta_title'] = array(
+      '#type' => 'textfield',
+      '#title' => 'Flanking Sequence Record: Title',
+      '#description' => 'The title for the section containing the simple flanking sequence fasta record.',
+      '#default_value' => $settings['blank_fasta_title'],
+    );
+
+    $element['blank_fasta_desc'] = array(
+      '#type' => 'textarea',
+      '#title' => 'Flanking Sequence Record: Description',
+      '#description' => 'A helpful description for the section containing the simple flanking sequence fasta record.',
+      '#default_value' => $settings['blank_fasta_desc'],
+    );
+
+    return $element;
   }
 
   /**
@@ -104,6 +151,28 @@ class local__sequence_with_variants_formatter extends ChadoFieldFormatter {
     // Get the settings
     $settings = $display['settings'];
 
+    // Ensure settings have defaults set.
+    foreach (self::$default_settings as $k => $default) {
+      if (!isset($settings[$k])) { $settings[$k] = $default; }
+
+      // Check if there's a field token & if so, replace it.
+      $matches = array();
+      if (preg_match('/\[(\w+)\]/', $settings[$k], $matches)) {
+        $key = '[' . $matches[1] . ']';
+        $values = field_get_items($entity_type, $entity, $matches[1]);
+        if ($values === FALSE) {
+          tripal_report_error('trpfancy_fields', TRIPAL_WARNING,
+            'Marked-up Sequence Field %name: %token not found, replaced with empty string.',
+            array('$name' => $this->instance['field_name'], '%token' => $key));
+        }
+
+        foreach ($values as $v) {
+          $value = $v['value'];
+          $settings[$k] = str_replace($key, $value, $settings[$k]);
+        }
+      }
+    }
+
     // If this variant/marker has anything to show...
     if (!empty($items[0]['value'])) {
 
@@ -111,7 +180,7 @@ class local__sequence_with_variants_formatter extends ChadoFieldFormatter {
       drupal_add_css('
         #tripal_feature-fasta-record {
           font-family: Consolas, monaco, monospace;
-          margin: 15px;
+          padding: 0px 15px;
         }
         #tripal_feature-sequence-residues {
           width: 420px;
@@ -130,6 +199,7 @@ class local__sequence_with_variants_formatter extends ChadoFieldFormatter {
           font-weight: bolder;
           font-size: 14px;
           letter-spacing: 2px;
+          color: navy;
         }
         .variant-marked-up-sequence .variant-expanded {
           color: blue;
@@ -218,15 +288,28 @@ class local__sequence_with_variants_formatter extends ChadoFieldFormatter {
         $element[$key] = array(
           '#type' => 'markup',
           '#markup' => '
+            <h4>'.$settings['title'].'</h4>
+            <p>'.$settings['description'].'</p>
             <div id="tripal_feature-fasta-record">
               <div id="tripal_feature-sequence-header">'.$fasta_header.'</div>
               <div id="tripal_feature-sequence-residues" class="variant-marked-up-sequence">
                 '.$sequence_with_variants.'
               </div>
             </div>
-            <br />
-          ',
+            <br />',
         );
+
+        if ($settings['show_blank_fasta']) {
+          $element[$key]['#markup'] .= '
+            <h4>'.$settings['blank_fasta_title'].'</h4>
+            <p>'.$settings['blank_fasta_desc'].'</p>
+            <div id="tripal_feature-fasta-record">
+              <div id="tripal_feature-sequence-header">'.$fasta_header.'</div>
+              <div id="tripal_feature-sequence-residues" class="variant-marked-up-sequence">
+                '.$value['data:2044'].'
+              </div>
+            </div>';
+        }
       }
     }
   }
@@ -259,6 +342,15 @@ class local__sequence_with_variants_formatter extends ChadoFieldFormatter {
    *
    */
   public function settingsSummary($view_mode) {
+
+    $settings = $this->instance['display'][$view_mode]['settings'];
+
+    // Ensure settings have defaults set.
+    foreach (self::$default_settings as $k => $default) {
+      if (!isset($settings[$k])) { $settings[$k] = $default; }
+    }
+
+    return '<strong>Title:</strong> '.$settings['title'];
   }
 
 }
