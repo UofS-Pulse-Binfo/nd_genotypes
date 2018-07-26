@@ -89,6 +89,9 @@ class local__sequence_with_variants extends ChadoField {
     'chado_column' => 'feature_id',
     // The base table.
     'base_table' => 'feature',
+
+    // Whether the field is attached to a variant or a marker.
+    'is_marker' => TRUE,
   );
 
   // A boolean specifying that users should not be allowed to create
@@ -143,33 +146,24 @@ class local__sequence_with_variants extends ChadoField {
     // additional data to be used in the display, you should add it here.
     parent::load($entity);
 
+    // Retrieve the settings.
+    $settings = $this->instance['settings'];
+
     // First, retrieve the chado feature_id for the current Tripal Content.
     $feature_id = $entity->local__sequence_with_variants['und'][0]['chado-feature__feature_id'];
 
-    // Determine whether this is a variant or marker entity type based on the
-    // bundle name. Then ensure we have a $variant_id and $marker_id set.
-    // @todo add admin configuration for the following arrays.
-    $variant_bundles = array('bio_data_34');
-    $marker_bundles = array('bio_data_35');
-    if (in_array($entity->bundle, $variant_bundles)) {
+    // Ensure we have a $variant_id and $marker_id set based on what we are attached to.
+    //  - Attached to a Variant.
+    if ($settings['is_marker'] == FALSE) {
       $variant_id = $feature_id;
       $marker_id = NULL;
       $category = 'variant';
     }
-    elseif (in_array($entity->bundle, $marker_bundles)) {
+    //  - Attached to a marker.
+    else {
       $marker_id = $feature_id;
       $variant_id = nd_genotypes_get_variant($marker_id, TRUE);
       $category = 'marker';
-    }
-    else {
-      tripal_report_error(
-        'nd_genotypes',
-        TRIPAL_WARNING,
-        '"Sequence with Variants" field was unable to determine if :type is a variant or marker. Please go to Administration > Tripal > Extensions > ND Genotypes > Settings to set this for the :type Content Type.',
-        array( ':type' => $entity->bundle_name, )
-      );
-      $entity->local__sequence_with_variants['und'][0]['value'] = FALSE;
-      return FALSE;
     }
 
     // Determine the partition.
@@ -275,5 +269,48 @@ class local__sequence_with_variants extends ChadoField {
     // Finally assign the value to the entity.
     $entity->local__sequence_with_variants['und'][0]['value'] = $value;
 
+  }
+
+  /**
+   * Provides a form for the 'Field Settings' of an instance of this field.
+   *
+   * This function corresponds to the hook_field_instance_settings_form()
+   * function of the Drupal Field API.
+   *
+   * Validation of the instance settings form is not supported by Drupal, but
+   * the TripalField class does provide a mechanism for supporting validation.
+   * To allow for validation of your setting form you must call the parent
+   * in your child class:
+   *
+   * @code
+   *   $element = parent::instanceSettingsForm();
+   * @endcode
+   *
+   * Please note, the form generated with this function does not easily
+   * support AJAX calls in the same way that other Drupal forms do.  If you
+   * need to use AJAX you must manually alter the $form in your ajax call.
+   * The typical way to handle updating the form via an AJAX call is to make
+   * the changes in the form function itself but that doesn't work here.
+   */
+  public function instanceSettingsForm() {
+
+    // Retrieve the current settings.
+    // If this field was just created these will contain the default values.
+    $settings = $this->instance['settings'];
+
+    // Allow the parent Tripal Field to set up the form element for us.
+    $element = parent::instanceSettingsForm();
+
+    $element['is_marker'] = array(
+      '#type' => 'radios',
+      '#title' => 'Type of Content',
+      '#options' => array(
+        TRUE => 'Marker: genotypes are attached directly',
+        FALSE => 'Variant: related to a marker(s) with genotypic data.',
+      ),
+      '#default_value' => $settings['is_marker'],
+    );
+
+    return $element;
   }
 }
