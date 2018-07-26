@@ -47,6 +47,7 @@ class local__variant_genotype_summary_formatter extends ChadoFieldFormatter {
   public static $default_settings = array(
     'title' => 'The ratio of alleles per marker assaying this variant.',
     'legend' => 'The current variant has been assayed by :num_markers different marker(s). The ratio of alleles for each marker is shown as one ring composing the pie chart. This allows you to compare the ratio across marker(s), as well as, get an overall idea of the ratio of alleles.',
+    'assume_biallelic' => TRUE,
   );
 
   /**
@@ -98,6 +99,13 @@ class local__variant_genotype_summary_formatter extends ChadoFieldFormatter {
       '#description' => 'Should describe the figure to the user.',
     );
 
+    $element['assume_biallelic'] = array(
+      '#type' => 'checkbox',
+      '#title' => 'Assume Bi-Allelic',
+      '#description' => 'Transforms A to AA in order to facilliate collapsing these into a single section in the pie/legend.',
+      '#default_value' => self::$default_settings['assume_biallelic'],
+    );
+
     return $element;
   }
 
@@ -146,21 +154,32 @@ class local__variant_genotype_summary_formatter extends ChadoFieldFormatter {
       $colours = unserialize(variable_get('nd_genotypes_SNP_colours'));
       $extra_colours = unserialize(variable_get('nd_genotypes_allele_colours'));
       foreach ($items as $key => $value) {
+
+        // Add the marker details to the data array.
         $data[$key] = array();
         $data[$key]['label'] = $value['value']['rdfs:label'];
         $data[$key]['parts'] = array();
+
+        // For each allele.
         foreach ($value['value']['hydra:member'] as $part) {
+
+          // If we have choosen to assume bi-allelic SNPs then make that transformation now.
+          if ($settings['assume_biallelic'] AND (strlen($part['rdfs:label']) == 1)) {
+            $part['rdfs:label'] = $part['rdfs:label'] . $part['rdfs:label'];
+          }
+
+          // Add this allele to the data array.
           $data[$key]['parts'][] = array(
             'label' => $part['rdfs:label'],
             'count' => $part['local:count'],
           );
 
           // Also add colours as we see them.
-          if (isset($colours[ $part['SO:0001023'] ])) {
-            $js_settings['SNPcolours'][ $part['SO:0001023'] ] = $colours[ $part['SO:0001023'] ];
+          if (isset($colours[ $part['rdfs:label'] ])) {
+            $js_settings['SNPcolours'][ $part['rdfs:label'] ] = $colours[ $part['rdfs:label'] ];
           }
           else {
-            $js_settings['SNPcolours'][ $part['SO:0001023'] ] = array_shift($extra_colours);
+            $js_settings['SNPcolours'][ $part['rdfs:label'] ] = array_shift($extra_colours);
           }
         }
       }
@@ -170,16 +189,13 @@ class local__variant_genotype_summary_formatter extends ChadoFieldFormatter {
       drupal_add_js(array('nd_genotypes' => array('settings' => $js_settings)), 'setting');
 
       // Add D3.js and our Pie chart javascript.
-      drupal_add_js('https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js');
+      tripald3_load_libraries();
       drupal_add_js(drupal_get_path('module','nd_genotypes').'/theme/js/genotypeFeatureMultiPieChart.js');
 
       // Add CSS
       drupal_add_css('
         #nd-genotypes-pie-chart {
           padding: 50px 20px 20px 20px;
-        }
-        #nd-genotypes-summary .legend-title{
-          font-weight: bold;
         }', 'inline');
 
       // Used in the figure legend.
@@ -191,12 +207,12 @@ class local__variant_genotype_summary_formatter extends ChadoFieldFormatter {
       $element[0] = array(
         '#type' => 'markup',
         '#markup' => '
-          <div id="nd-genotypes-summary" class="figure">
+          <div id="nd-genotypes-summary" class="tripald3-chart">
             <div id="nd-genotypes-pie-chart"></div>
-            <div class="legend">
-              <span class="legend-title">Figure: '.strtr($settings['title'], $tokens).'</span>
-              <span class="legend-description">'.strtr($settings['legend'], $tokens).'</span>
-          </div>
+            <span class="tripald3-legend">
+              <span class="tripald3-title">Figure: '.strtr($settings['title'], $tokens).'</span>
+              <span class="tripald3-desc">'.strtr($settings['legend'], $tokens).'</span>
+          </span>
         </div>',
       );
     }

@@ -149,8 +149,8 @@ class local__sequence_with_variants extends ChadoField {
     // Determine whether this is a variant or marker entity type based on the
     // bundle name. Then ensure we have a $variant_id and $marker_id set.
     // @todo add admin configuration for the following arrays.
-    $variant_bundles = array('bio_data_8');
-    $marker_bundles = array('bio_data_9');
+    $variant_bundles = array('bio_data_34');
+    $marker_bundles = array('bio_data_35');
     if (in_array($entity->bundle, $variant_bundles)) {
       $variant_id = $feature_id;
       $marker_id = NULL;
