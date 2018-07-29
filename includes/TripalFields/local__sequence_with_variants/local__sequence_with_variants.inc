@@ -196,79 +196,96 @@ class local__sequence_with_variants extends ChadoField {
       return FALSE;
     }
 
-    // Pick a default location: locagroup=0 and alphabetic parent name.
-    $current_location = reset($locations);
+    // Now, for each location...
+    $value['hydra:member'] = array();
+    foreach ($locations as $k => $loc) {
 
-    // Save the current location to the value of this field using the same format
-    // as is used for the sequence coordinates field.
-    $value['data:3002'] = $current_location->backbone_name;
-    $value['local:variant_coordinates'] = $current_location->backbone_name . ':' . ($current_location->fmin + 1);
-    $value['local:fmin'] = $current_location->fmin + 1;
-    $value['local:fmax'] = $current_location->fmax;
+      // Save the current location to the value of this field using the same format
+      // as is used for the sequence coordinates field.
+      $value['hydra:member'][$k]['data:3002'] = $loc->backbone_name;
+      $value['hydra:member'][$k]['local:variant_coordinates'] = $loc->backbone_name . ':' . ($loc->fmin + 1);
+      $value['hydra:member'][$k]['local:fmin'] = $loc->fmin + 1;
+      $value['hydra:member'][$k]['local:fmax'] = $loc->fmax;
+      $value['hydra:member'][$k]['SO:0000983'] = $loc->strand;
 
-    // Retrieve the information including the sequence substring for the parent
-    // feature.
-    $srcfeature = chado_query('
-      SELECT
-        f.feature_id,
-        f.name,
-        f.uniquename,
-        (fmin::int-250) as substring_start,
-        substring(residues from fmin::int+1-250 for 500) as residues
-      FROM {featureloc} fl
-        LEFT JOIN {feature} f ON f.feature_id=fl.srcfeature_id
-      WHERE fl.feature_id=:id AND fl.srcfeature_id=:parent',
-    array(':id' => $variant_id, ':parent' => $current_location->srcfeature_id))->fetchObject();
-    // Again, if we don't have a parent or sequence information then unfortunalty
-    // we cannot provide this display...
-    if (!$srcfeature OR empty($srcfeature->residues)) {
-      $entity->local__sequence_with_variants['und'][0]['value'] = FALSE;
-      return FALSE;
-    }
+      // Retrieve the information including the sequence substring for the parent
+      // feature.
+      if ($loc->strand == -1) {
+        // @todo See Issue #
+        $srcfeature = NULL;
+      }
+      else {
+        $srcfeature = chado_query('
+          SELECT
+            f.feature_id,
+            f.name,
+            f.uniquename,
+            (fmin::int-250) as substring_start,
+            substring(residues from fmin::int+1-250 for 500) as residues
+          FROM {featureloc} fl
+            LEFT JOIN {feature} f ON f.feature_id=fl.srcfeature_id
+          WHERE fl.feature_id=:id AND fl.srcfeature_id=:parent',
+        array(':id' => $variant_id, ':parent' => $loc->srcfeature_id))->fetchObject();
+      }
 
-    // Do some checks on the sequence to handle "edge" (literally ;-)) cases.
-    // Specifically, we want to handle the case where the current variant/marker
-    // is within 250 residues of the start of the parent feature. In this case
-    // we won't be able to return 500 residues and the start position will need
-    // to be updated accordingly.
-    if ($srcfeature->substring_start < 0) {
-      $srcfeature->substring_start = 0;
-    }
+      // We can only provide a display if we have a sequence...
+      if (!$srcfeature OR empty($srcfeature->residues)) {
+        if ($loc->strand != -1) {
+          unset($value['hydra:member'][$k]);
+        }
+        else {
+          $value['hydra:member'][$k]['data:2044'] = NULL;
+          $value['hydra:member'][$k]['local:sequence_with_variants'] = NULL;
+          $value['hydra:member'][$k]['SO:0001060'] = array();
+        }
+      }
+      else {
 
-    // Update the range to match the sequence rather then the variant.
-    $value['local:fmin'] = (int) $srcfeature->substring_start;
-    $value['local:fmax'] = $value['local:fmin'] + strlen($srcfeature->residues) -1;
-    $value['data:2044'] = $srcfeature->residues;
+        // Do some checks on the sequence to handle "edge" (literally ;-)) cases.
+        // Specifically, we want to handle the case where the current variant/marker
+        // is within 250 residues of the start of the parent feature. In this case
+        // we won't be able to return 500 residues and the start position will need
+        // to be updated accordingly.
+        if ($srcfeature->substring_start < 0) {
+          $srcfeature->substring_start = 0;
+        }
 
-    // Add the marked-up sequence ;-P
-    $info = array(
-      'srcfeature_id' => $srcfeature->feature_id,
-      'srcfeature_name' => $srcfeature->name,
-      'variant_id' => $variant_id,
-      'sequence' => $srcfeature->residues,
-      'sequence_start' => $value['local:fmin'],
-      'sequence_end' => $value['local:fmax'],
-      'sequence_strand' => 1, // assume the positive strand.
-    );
-    $value['local:sequence_with_variants'] = nd_genotypes_markup_sequence_with_variants(
-      $info,
-      array(),
-      $partition
-    );
+        // Update the range to match the sequence rather then the variant.
+        $value['hydra:member'][$k]['local:fmin'] = (int) $srcfeature->substring_start;
+        $value['hydra:member'][$k]['local:fmax'] = $srcfeature->substring_start + strlen($srcfeature->residues) -1;
+        $value['hydra:member'][$k]['data:2044'] = $srcfeature->residues;
 
-    // And process the variant list to provide to the formatter/ws.
-    $value['SO:0001060'] = array();
-    foreach ($info['variants'] as $variant) {
-      $value['SO:0001060'][] = array(
-        'SO:0001023' => $variant['code'],
-        'SIO:000056' => $variant['index'],
-        'rdfs:label' => $variant['tooltip'],
-      );
+        // Add the marked-up sequence ;-P
+        $info = array(
+          'srcfeature_id' => $srcfeature->feature_id,
+          'srcfeature_name' => $srcfeature->name,
+          'variant_id' => $variant_id,
+          'sequence' => $srcfeature->residues,
+          'sequence_start' => $value['hydra:member'][$k]['local:fmin'],
+          'sequence_end' => $value['hydra:member'][$k]['local:fmax'],
+          'sequence_strand' => $loc->strand, // assume the positive strand.
+        );
+        $value['hydra:member'][$k]['local:sequence_with_variants'] = nd_genotypes_markup_sequence_with_variants(
+          $info,
+          array(),
+          $partition
+        );
+
+        // And process the variant list to provide to the formatter/ws.
+        $value['hydra:member'][$k]['SO:0001060'] = array();
+        foreach ($info['variants'] as $variant) {
+          $value['hydra:member'][$k]['SO:0001060'][] = array(
+            'SO:0001023' => $variant['code'],
+            'SIO:000056' => $variant['index'],
+            'rdfs:label' => $variant['tooltip'],
+          );
+        }
+      }
     }
 
     // Finally assign the value to the entity.
     $entity->local__sequence_with_variants['und'][0]['value'] = $value;
-
+    //@debug dpm($value, 'value in load');
   }
 
   /**

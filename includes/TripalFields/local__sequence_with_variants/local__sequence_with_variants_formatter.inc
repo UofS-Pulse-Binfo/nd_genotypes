@@ -205,110 +205,176 @@ class local__sequence_with_variants_formatter extends ChadoFieldFormatter {
           color: blue;
         }', 'inline');
 
-      // Each item is a sequence based on a location for the current variant/marker.
-      foreach ($items as $key => $item) {
-        $value = $item['value'];
+      // We only support a single "item" for this field.
+      if (sizeof($items) > 1) {
+        tripal_report_error('local__sequence_with_variants', TRIPAL_WARNING,
+          "This field doesn't support multiple items. Please change the cardinality of this field back to 1. NOTE: multiple locations for the same variant are handled within the same 'item' via the featureloc table.");
+      }
+      else {
 
-        // First determine the FASTA header.
-        $fasta_header = strtr(
-          '&gt@backbone:@min-@max (@type: @coords)',
-          array(
-            '@backbone' => $value['data:3002'],
-            '@min' => $value['local:fmin'],
-            '@max' => $value['local:fmax'],
-            '@type' => 'SNP',
-            '@coords' => $value['local:variant_coordinates'],
-          )
+        $type = field_get_items($entity_type, $entity, 'rdfs__type');
+        $type = $type[0]['value'];
+        $element[0] = array(
+          '#type' => 'markup',
+          '#prefix' => '<p>The current '.$type.' has <strong>'.sizeof($items[0]['value']['hydra:member']).' locations</strong>. The flanking sequence for each location is shown below.</p>',
+          '#tree' => TRUE,
         );
 
-        // Second, further mark-up the sequence.
-        // Specifically, we have a sequence with the alleles substituted but would
-        // further like to colour code those alleles and link to their variants.
-        // We have a lot of additional information passed in as sequence variants
-        // (SO:0001060), which can be added in using the index (SIO:000056).
-        $sequence_with_variants = $value['local:sequence_with_variants'];
-        $seq_array = array();
-        $in_brackets = FALSE;
-        $i = 0;
-        // However, we have to be careful since the index considers [A/T/C] as one
-        // character... split with caution!
-        foreach (str_split($sequence_with_variants) as $char) {
+        // @debug dpm($items[0]['value']['hydra:member'], 'hydra');
 
-          $seq_array[$i] = (isset($seq_array[$i])) ? $seq_array[$i] . $char : $char;
+        // Each member is a sequence based on a location for the current variant/marker.
+        foreach ($items[0]['value']['hydra:member'] as $key => $value) {
 
-          if ($char == '[') {
-            $in_brackets = TRUE;
+          // Add a fieldset to contain this location.
+          $element[0][$key] = array(
+            '#type' => 'fieldset',
+            '#title' => $value['local:variant_coordinates'],
+            '#attributes' => array('class' => array('collapsible')),
+            '#attached' => array('js' => array('misc/collapse.js', 'misc/form.js')),
+          );
+
+          // Only open the first one.
+          if ($key > 0) {
+            $element[0][$key]['#attributes']['class'][] = 'collapsed';
           }
-          elseif ($char == ']') {
-            $in_brackets = FALSE;
-            $i++;
-          }
-          elseif ($in_brackets === TRUE) {
-            // Do not iterate $i b/c we want them to collapse into the same cell.
+
+          // If the marked-up sequence is NULL we can't support this location at this time.
+          if ($value['local:sequence_with_variants'] === NULL) {
+
+            if ($value['SO:0000983'] == '-1') {
+              $msg = 'We are unable to show the flanking sequence for <strong>variant locations on the negative strand</strong>. We are sorry for the inconvience.';
+            }
+            else {
+              $msg = 'We are unable to show the flanking sequence for this variant location. We are sorry for the inconvience.';
+            }
+
+            $element[0][$key]['warning'] = array(
+              '#type' => 'markup',
+              '#markup' => '<div class="messages warning"><p>'.$msg.'</p></div>',
+            );
+
           }
           else {
-            $i++;
-          }
-        }
 
-        // Now we can add information using the index (SIO:000056).
-        foreach ($value['SO:0001060'] as $variant) {
-          if (isset($variant['SIO:000056'])) {
-            $index = $variant['SIO:000056'];
-            if (isset($seq_array[ $index ])) {
+            // First determine the FASTA header.
+            $fasta_header = strtr(
+              '&gt@backbone:@min-@max (@type: @coords)',
+              array(
+                '@backbone' => $value['data:3002'],
+                '@min' => $value['local:fmin'],
+                '@max' => $value['local:fmax'],
+                '@type' => 'SNP',
+                '@coords' => $value['local:variant_coordinates'],
+              )
+            );
 
-              // Determine classes based on if this is an IUPAC code or not.
-              $classes = array('variant');
-              if (strlen($variant['SO:0001023']) == 1) {
-                $classes[] = 'variant-IUPAC';
-                $classes[] = 'variant-' . $variant['SO:0001023'];
+            // Second, further mark-up the sequence.
+            // Specifically, we have a sequence with the alleles substituted but would
+            // further like to colour code those alleles and link to their variants.
+            // We have a lot of additional information passed in as sequence variants
+            // (SO:0001060), which can be added in using the index (SIO:000056).
+            $sequence_with_variants = $value['local:sequence_with_variants'];
+            $seq_array = array();
+            $in_brackets = FALSE;
+            $i = 0;
+            // However, we have to be careful since the index considers [A/T/C] as one
+            // character... split with caution!
+            foreach (str_split($sequence_with_variants) as $char) {
+
+              $seq_array[$i] = (isset($seq_array[$i])) ? $seq_array[$i] . $char : $char;
+
+              if ($char == '[') {
+                $in_brackets = TRUE;
+              }
+              elseif ($char == ']') {
+                $in_brackets = FALSE;
+                $i++;
+              }
+              elseif ($in_brackets === TRUE) {
+                // Do not iterate $i b/c we want them to collapse into the same cell.
               }
               else {
-                $classes[] = 'variant-expanded';
-                $classes[] = 'current';
+                $i++;
               }
+            }
 
-              // Expand the current index with the added information.
-              $seq_array[ $index ] = strtr(
-                // @todo allow this to be configured!
-                '<span class="@classes" title="@label">@allele</span>',
-                array(
-                  '@classes' => implode(' ', $classes),
-                  '@label' => $variant['rdfs:label'],
-                  '@allele' => $variant['SO:0001023'],
-                )
+            // Now we can add information using the index (SIO:000056).
+            foreach ($value['SO:0001060'] as $variant) {
+              if (isset($variant['SIO:000056'])) {
+                $index = $variant['SIO:000056'];
+                if (isset($seq_array[ $index ])) {
+
+                  // Determine classes based on if this is an IUPAC code or not.
+                  $classes = array('variant');
+                  if (strlen($variant['SO:0001023']) == 1) {
+                    $classes[] = 'variant-IUPAC';
+                    $classes[] = 'variant-' . $variant['SO:0001023'];
+                  }
+                  else {
+                    $classes[] = 'variant-expanded';
+                    $classes[] = 'current';
+                  }
+
+                  // Expand the current index with the added information.
+                  $seq_array[ $index ] = strtr(
+                    // @todo allow this to be configured!
+                    '<span class="@classes" title="@label">@allele</span>',
+                    array(
+                      '@classes' => implode(' ', $classes),
+                      '@label' => $variant['rdfs:label'],
+                      '@allele' => $variant['SO:0001023'],
+                    )
+                  );
+                }
+              }
+            }
+  
+            // Finally, recombine for display :-).
+            $sequence_with_variants = implode('', $seq_array);
+  
+            $element[0][$key] = array(
+              '#type' => 'fieldset',
+              '#title' => $value['local:variant_coordinates'],
+              '#attributes' => array('class' => array('collapsible')),
+              '#attached' => array('js' => array('misc/collapse.js', 'misc/form.js')),
+            );
+ 
+            // Only open the first one.
+            if ($key > 0) {
+              $element[0][$key]['#attributes']['class'][] = 'collapsed';
+            }
+
+            // Marked-up FASTA.
+            $element[0][$key]['markedup'] = array(
+              '#type' => 'markup',
+              '#markup' => '
+                <h4>'.$settings['title'].'</h4>
+                <p>'.$settings['description'].'</p>
+                <div id="tripal_feature-fasta-record">
+                  <div id="tripal_feature-sequence-header">'.$fasta_header.'</div>
+                  <div id="tripal_feature-sequence-residues" class="variant-marked-up-sequence">
+                    '.$sequence_with_variants.'
+                  </div>
+                </div>
+                <br />',
+            );
+
+            // Blank FASTA.
+            if ($settings['show_blank_fasta']) {
+              $element[0][$key]['blank_fasta'] = array(
+                '#type' => 'markup',
+                '#markup' => '
+                <h4>'.$settings['blank_fasta_title'].'</h4>
+                <p>'.$settings['blank_fasta_desc'].'</p>
+                <div id="tripal_feature-fasta-record">
+                  <div id="tripal_feature-sequence-header">'.$fasta_header.'</div>
+                  <div id="tripal_feature-sequence-residues" class="variant-marked-up-sequence">
+                    '.$value['data:2044'].'
+                  </div>
+                </div>'
               );
             }
           }
-        }
-
-        // Finally, recombine for display :-).
-        $sequence_with_variants = implode('', $seq_array);
-
-        $element[$key] = array(
-          '#type' => 'markup',
-          '#markup' => '
-            <h4>'.$settings['title'].'</h4>
-            <p>'.$settings['description'].'</p>
-            <div id="tripal_feature-fasta-record">
-              <div id="tripal_feature-sequence-header">'.$fasta_header.'</div>
-              <div id="tripal_feature-sequence-residues" class="variant-marked-up-sequence">
-                '.$sequence_with_variants.'
-              </div>
-            </div>
-            <br />',
-        );
-
-        if ($settings['show_blank_fasta']) {
-          $element[$key]['#markup'] .= '
-            <h4>'.$settings['blank_fasta_title'].'</h4>
-            <p>'.$settings['blank_fasta_desc'].'</p>
-            <div id="tripal_feature-fasta-record">
-              <div id="tripal_feature-sequence-header">'.$fasta_header.'</div>
-              <div id="tripal_feature-sequence-residues" class="variant-marked-up-sequence">
-                '.$value['data:2044'].'
-              </div>
-            </div>';
         }
       }
     }
