@@ -420,6 +420,10 @@ function nd_genotypes_admin_settings_cvterms_submit($form, $form_state) {
   variable_set('nd_genotypes_rel_type_name', $reltypes[ $form_state['values']['marker_reltype'] ]);
   variable_set('nd_genotypes_rel_position', $form_state['values']['marker_relposition']);
 
+  // Sample => Germplasm Relationship.
+  variable_set('nd_genotypes_stock_rel_type_id', $form_state['values']['stock_reltype']);
+  variable_set('nd_genotypes_stock_rel_position', $form_state['values']['stock_relposition']);
+
   // Projects.
   variable_set('ndg_follow_project_rels', $form_state['values']['follow_project_rels']);
   variable_set('nd_genotypes_subproject_rel_type_id', $form_state['values']['subproject_type_id']);
