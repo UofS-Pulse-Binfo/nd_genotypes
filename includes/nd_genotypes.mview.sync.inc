@@ -153,8 +153,9 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
     print "    - Working on genotype_id=$genotype_id ($i of $total)...\n";
 
     // Copy it to a file.
+    $db_name = $databases['default']['default']['database'];
     print "       - Copying to file...\n";
-    $result = ndg_remote_chado_copy("COPY (" . $query . ") TO '/tmp/mview_ndg_calls.copy'",
+    $result = ndg_remote_chado_copy("COPY (" . $query . ") TO '/tmp/mview_ndg_calls.".$db_name.".copy'",
       array(':id' => $genotype_id, ':partition' => $partition,
         ':markerprop_type' => $markerprop_type_id, ':stockrel_type' => $stock_rel['type_id']));
 
@@ -173,7 +174,7 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
           project_id,
           genotype_id,
           allele_call,
-          meta_data) FROM '/tmp/mview_ndg_calls.copy'");
+          meta_data) FROM '/tmp/mview_ndg_calls.".$db_name.".copy'");
     print "       - Finished this chunk.\n";
   }
 
@@ -181,6 +182,7 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
   print "    - Creating Indexes\n";
   nd_genotypes_create_mview_ndg_calls_indexes($table_name);
 
+  unlink("/tmp/mview_ndg_calls.$db_name.copy");
 }
 
 /**
@@ -212,6 +214,8 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
   print "    - Dropping indexes on $table_name...\n";
   nd_genotypes_drop_indexes($table_name);
   print "       - Complete.\n";
+
+  $db_name = $databases['default']['default']['database'];
 
   // We would like to chunk the dataset into hopefully reasonable pieces for updating
   // the materialized view. However, we would also like to avoid sorting first since
@@ -298,10 +302,10 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
     // Copy it to a file.
     print "       - Copying to file...\n";
     $result = ndg_remote_chado_copy(
-        "COPY (" . $query . ") TO '/tmp/mview_ndg_variants.copy'",
+        "COPY (" . $query . ") TO '/tmp/mview_ndg_variants.".$db_name.".copy'",
         array(':min' => $min, ':max' => $max, ':variantprop_type' => $variantprop_type_id));
 
-    if (!file_exists('/tmp/mview_ndg_variants.copy')) {
+    if (!file_exists('/tmp/mview_ndg_variants.'.$db_name.'.copy')) {
       drush_log('No variants selected by: '
         . str_replace(array(':min', ':max'), array($min, $max), str_replace(array('{','}'), array('chado.',''), $query)),
         'warning');
@@ -310,7 +314,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
 
     // Then we have to collapse it.
     print "       - Collapsing it to unique variants...\n";
-    system('sort --unique --output /tmp/mview_ndg_variants.copy.unique /tmp/mview_ndg_variants.copy');
+    system("sort --unique --output /tmp/mview_ndg_variants.".$db_name.".copy.unique /tmp/mview_ndg_variants.".$db_name.".copy");
 
     // Then copy it back into the mview.
     print "       - Copying it into the mview...\n";
@@ -323,7 +327,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
       fmin,
       fmax,
       meta_data)
-      FROM '/tmp/mview_ndg_variants.copy.unique'");
+      FROM '/tmp/mview_ndg_variants.".$db_name.".copy.unique'");
     print "       - Finished $result records.\n";
 
     $min += $chunk_size;
@@ -332,6 +336,9 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
   // Create the indexes you dropped earlier.
   print "    - Creating Indexes\n";
   nd_genotypes_create_mview_ndg_variants_indexes($table_name);
+
+  unlink("/tmp/mview_ndg_variants.$db_name.copy");
+  unlink("/tmp/mview_ndg_variants.$db_name.copy.unique");
 }
 
 /**
