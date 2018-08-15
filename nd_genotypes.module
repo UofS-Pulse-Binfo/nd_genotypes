@@ -522,7 +522,8 @@ function nd_genotypes_preprocess_nd_genotypes_feature_genotypes(&$variables) {
  */
 function nd_genotypes_lookup_germplasm_name_callback($partition, $string = "") {
   $matches = array();
-  if (!empty($partition) AND trim($string)) {
+
+  if (!empty($partition) AND trim($string) AND ndg_mview_tables_exist($partition)) {
     $result = ndg_mview_query($partition, '
       SELECT germplasm_name
       FROM {mview_ndg_germplasm_genotyped} m
@@ -542,7 +543,7 @@ function nd_genotypes_lookup_germplasm_name_callback($partition, $string = "") {
  */
 function nd_genotypes_lookup_backbone_name_callback($partition, $string = "") {
   $matches = array();
-  if (!empty($partition) AND trim($string)) {
+  if (!empty($partition) AND trim($string) AND ndg_mview_tables_exist($partition)) {
     $result = ndg_mview_query($partition, '
       SELECT srcfeature_name as name
       FROM {mview_ndg_variants} m
@@ -593,6 +594,9 @@ function nd_genotypes_count_genotype_matrix_results_callback($partition = '', $t
   // @PARTITION: This is where the partition is set for the genotype matrix. From here
   // if is carried throughout the rest of the functions.
   $vars = array('genus' => $partition, 'partition' => $partition);
+  if (!ndg_mview_tables_exist($partition)) {
+    return FALSE;
+  }
 
   // Save the query paramters.
   $vars['q'] = drupal_get_query_parameters();
@@ -927,36 +931,4 @@ function nd_genotypes_count_genotype_matrix_variants_callback($partition = '', $
     'formatted' => number_format($count),
   ));
 
-}
-
-/**
- * Ajax Callback: Deliver the sequence pane via ajax to allow for seamless switching
- * between locations.
- */
-function nd_genotypes_get_sequence_pane_ajax_callback($nid, $location, $ajax) {
-
-  // First render the sequence content only.
-  $node = node_load($nid);
-  $content = theme('nd_genotypes_feature_sequence', array('node' => $node, 'location' => $location));
-
-  // If the use has ajax available then provide the content via agax!
-  if ($ajax == 'ajax') {
-
-    $commands = array();
-    // Ajax command to replace the #ajax-display element with the current time.
-    $commands[] = ajax_command_replace('#sequence-tripal-data-pane-content', $content);
-    // Add a visual "changed" marker to the '#ajax-display' element.
-    $commands[] = ajax_command_changed('#sequence-tripal-data-pane-content');
-
-    // Menu 'page callback' and #ajax['callback'] functions are supposed to
-    // return render arrays. If returning an Ajax commands array, it must be
-    // encapsulated in a render array structure.
-    ajax_deliver(array('#type' => 'ajax', '#commands' => $commands));
-  }
-  else {
-    // No ajax, just display the content.
-    return array(
-      '#markup' => $content,
-    );
-  }
 }
