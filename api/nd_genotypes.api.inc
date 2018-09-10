@@ -460,6 +460,8 @@ function nd_genotypes_get_alleles_for_variant($variant_id, $partition = 'All', $
  */
 function nd_genotypes_markup_sequence_with_variants(&$values, $options = array(), $partition = 'All') {
 
+  if (is_object($values)) { $values = (array) $values; }
+
   $sequence = str_split($values['sequence']);
 
   // Now get all the markers with their associated genotypes for the range
