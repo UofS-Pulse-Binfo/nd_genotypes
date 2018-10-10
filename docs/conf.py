@@ -6,6 +6,14 @@
 # full list see the documentation:
 # http://www.sphinx-doc.org/en/master/config
 
+# -- PHP highlighting ---------------------------------------------------------
+#see: https://www.sitepoint.com/using-sphinx-for-php-project-documentation/
+
+from sphinx.highlighting import lexers
+from pygments.lexers.web import PhpLexer
+lexers["php"] = PhpLexer(startinline=True, linenos=1)
+lexers["php-annotations"] = PhpLexer(startinline=True, linenos=1)
+
 # -- Path setup --------------------------------------------------------------
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -67,7 +75,7 @@ language = None
 exclude_patterns = [u'_build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = None
+pygments_style = 'sphinx'
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -98,6 +106,11 @@ html_static_path = ['_static']
 #
 # html_sidebars = {}
 
+# Override the base theme.
+# We add the stylesheet this way so that it's loaded after the default.css
+# See https://docs.readthedocs.io/en/latest/guides/adding-custom-css.html
+def setup(app):
+  app.add_stylesheet('theme_overrides.css');
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
