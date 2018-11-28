@@ -29,6 +29,12 @@ function ndg_mview_query($partition, $query, $variables = array(), $options = ar
   $query = str_replace('mview_ndg_variants', 'mview_ndg_'.$partition.'_variants', $query);
 
   // @todo: handle mview_ndg_germplasm_genotyped.
+  if (!chado_table_exists('mview_ndg_'.$partition.'_calls')) {
+    return FALSE;
+  }
+  if (!chado_table_exists('mview_ndg_'.$partition.'_variants')) {
+    return FALSE;
+  }
 
   if ($options['return_query']) {
     return $query;
@@ -160,6 +166,10 @@ function nd_genotype_get_consensus_call($alleles) {
  */
 function tripal_germplasm_has_nd_genotypes($stock_id, $partition = 'All') {
 
+  if (!ndg_mview_tables_exist($partition)) {
+    return FALSE;
+  }
+
   $query = "SELECT count(*) as nd_genotypes FROM {mview_ndg_calls} WHERE stock_id=:stock_id OR germplasm_id=:stock_id";
   $result = ndg_mview_query($partition, $query, array(':stock_id' => $stock_id))->fetchField();
   if ($result > 0) {
@@ -180,6 +190,10 @@ function tripal_germplasm_has_nd_genotypes($stock_id, $partition = 'All') {
  *   TRUE if there are genotypes available and FALSE otherwise
  */
 function nd_genotypes_has_genotypes($feature_id, $partition = 'All') {
+
+  if (!ndg_mview_tables_exist($partition)) {
+    return FALSE;
+  }
 
   $query = "SELECT count(*) as nd_genotypes FROM {mview_ndg_calls} WHERE variant_id=:id OR marker_id=:id";
   $result = ndg_mview_query($partition, $query, array(':id' => $feature_id))->fetchField();
@@ -367,6 +381,10 @@ function nd_genotypes_get_variant($marker_id, $id_only = FALSE) {
  */
 function nd_genotypes_get_alleles_for_variant($variant_id, $partition = 'All', $options = array()) {
   $variant = array();
+
+  if (!ndg_mview_tables_exist($partition)) {
+    return FALSE;
+  }
 
   // If the option 'single marker' is provided then the $variant_id should
   // be the marker_id and we should only retrieve calls associated with that
@@ -582,6 +600,10 @@ function nd_genotypes_markup_sequence_with_variants(&$values, $options = array()
  */
 function nd_genotypes_get_variants_for_sequence($srcfeature_name, $start, $end, $partition = 'All') {
   $variants = array();
+
+  if (!ndg_mview_tables_exist($partition)) {
+    return FALSE;
+  }
 
   // First get a list of variants.
   $sql = 'SELECT
