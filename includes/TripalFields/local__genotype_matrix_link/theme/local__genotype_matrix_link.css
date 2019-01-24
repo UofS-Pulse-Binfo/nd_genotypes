@@ -1,0 +1,43 @@
+/**
+ * CSS for the local__genotype_matrix_link Field
+ */
+
+.field-type-local--genotype-matrix-link {
+  margin: 20px 20px 0 0;
+  min-width: 700px;
+  min-height: 200px;
+  clear: both;
+}
+.field-type-local--genotype-matrix-link .thumbnail {
+  float: left;
+}
+.field-type-local--genotype-matrix-link .thumbnail img {
+  display: block;
+  width: 320px;
+}
+
+.field-type-local--genotype-matrix-link .help-text {
+  padding: 25px 50px;
+  margin-left: 320px;
+  font-size: 1.1em;
+  text-align: left;
+}
+.field-type-local--genotype-matrix-link .nd-button a {
+  margin-left: 50px;
+  display: inline-block;
+  vertical-align: middle;
+  vertical-align: auto;
+  zoom: 1;
+  display: inline;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 0;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  font-size: .8em;
+  line-height: 1em;
+  padding: 0.75em 2em;
+  background: #314355;
+  color: #fff;
+}
