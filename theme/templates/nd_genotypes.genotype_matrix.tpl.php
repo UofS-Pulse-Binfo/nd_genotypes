@@ -52,9 +52,9 @@ if (isset($variants)) {
 
     // Then fill in the core information.
     if (!$is_merge) {
-      if ($v->nid) {
+      if ($v->entity_id) {
         $table['rows'][$row_id]['data']['variant_name'] = array(
-          'data' => l($v->variant_name, 'node/'.$v->nid, $l_options),
+          'data' => l($v->variant_name, 'bio_data/'.$v->entity_id, $l_options),
           'class' => array('variant_name')
         );
       }

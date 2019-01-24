@@ -653,9 +653,14 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   }
 
   // Now determine the query for the variants.
-  $sql = "SELECT v.*, cf.nid \n"
+  $entity_type = chado_query("
+    SELECT 'bio_data_'||bundle_id FROM chado_bundle
+    WHERE data_table='feature'
+      AND type_id IN (SELECT cvterm_id FROM chado.cvterm WHERE name='sequence_variant');
+  ")->fetchField();
+  $sql = "SELECT v.*, cf.entity_id \n"
        . "FROM {mview_ndg_variants} v \n"
-       . "  LEFT JOIN [chado_feature] cf ON cf.feature_id=v.variant_id "
+       . "  LEFT JOIN [chado_".$entity_type."] cf ON cf.record_id=v.variant_id "
        . implode("\n", $variant_joins)
        . "WHERE \n";
 
