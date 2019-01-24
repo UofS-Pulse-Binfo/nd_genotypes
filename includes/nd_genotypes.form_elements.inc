@@ -194,6 +194,9 @@ function multiple_organism_stock_value_callback(&$element, $input = FALSE, &$for
       }
     }
   }
+  else {
+    $input['existing'] = array();
+  }
 
   // Remove a germplasm.
   foreach ($input['existing'] as $k => $v) {
