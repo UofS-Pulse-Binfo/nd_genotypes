@@ -554,7 +554,7 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   if (isset($query_args['start_backbone'])) {
     if (isset($query_args['start_pos'])) {
       $variant_args[':sbackbone'] = $query_args['start_backbone'];
-      $variant_args[':sfmin'] = (int) $query_args['start_pos'];
+      $variant_args[':sfmin'] = (int) $query_args['start_pos'] -1;
     }
     else {
       $variant_args[':sbackbone'] = $query_args['start_backbone'];
@@ -565,7 +565,7 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   if (isset($query_args['end_backbone'])) {
     if (isset($query_args['end_pos'])) {
       $variant_args[':ebackbone'] = $query_args['end_backbone'];
-      $variant_args[':efmin'] = (int) $query_args['end_pos'];
+      $variant_args[':efmin'] = (int) $query_args['end_pos'] -1;
     }
     else {
       $variant_args[':ebackbone'] = $query_args['end_backbone'];
@@ -740,11 +740,18 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
 
   // Now grab the allele calls.
   if ($ids) {
-    $sql = "SELECT variant_id, germplasm_id, allele_call \n"
+    if (sizeof($ids) > 1) {
+      $sql = "SELECT variant_id, germplasm_id, allele_call \n"
           ."FROM unnest(ARRAY[" . implode(',',$ids) . "]) variant_id \n"
           ."JOIN {mview_ndg_calls} call USING(variant_id) \n"
           ."WHERE " . implode("\n  AND ",$call) . "\n";
     //dpm(array('sql' => $sql, 'args' => $call_args), 'Call Query');
+    }
+    else {
+      $sql = "SELECT variant_id, germplasm_id, allele_call \n"
+         ."FROM {mview_ndg_calls} call \n"
+         ."WHERE call.variant_id=".$ids[0]." AND ".implode("\n AND ",$call) . "\n";
+    }
     $resource = ndg_mview_query($vars['partition'], $sql, $call_args);
     foreach($resource as $r) {
       $vars['data'][$r->variant_id][$r->germplasm_id][] = $r->allele_call;
