@@ -107,7 +107,42 @@ class local__genotype_matrix_link extends ChadoField {
 
     // THIS FIELD MUST CONTAIN DATA IN ORDER FOR THE FORMATTER TO BE RENDERED.
     $field_name = $this->instance['field_name'];
-    $entity->{$field_name}['und'][0]['value'] = $entity->chado_record_id;
+
+    // schema:url for the path to link to.
+    // taxrank::genus for the genus
+    // NCIT:C47885 for the project name
+    // CO_010:0000044 (accession) for the germplasm names
+    // SO:sequence_variant for the variant names
+
+    // @debug dpm($entity, 'entity');
+    // Determine the type of page we're on.
+    // And set genus/filter criteria based on that.
+    $value = array();
+    // to be used internally. all values must also be stored in $values.
+    $qparams = array();
+    if ($entity->chado_record->type_id->name == 'sequence_variant') {
+      // Sequence variant name.
+      $value['SO:sequence_variant'] = array($entity->chado_record->name);
+      $value['TAXRANK:genus'] = $entity->chado_record->organism_id->genus;
+      $qparams['variant_name'] = $value['SO:sequence_variant'];
+    }
+    elseif ($entity->chado_table == 'project') {
+      // Chado Project ID.
+      $value['NCIT:C47885'] = array($entity->chado_record_id);
+      $genus = chado_query(
+        "SELECT value FROM {projectprop} WHERE project_id=:id
+          AND type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='genus')",
+        array(':id' => $entity->chado_record_id))->fetchField();
+      $value['TAXRANK:genus'] = (!empty($genus)) ? $genus : NULL;
+      $qparams['project_id'] = $value['NCIT:C47885'];
+    }
+
+    // Assuming we have a genus, build the URL.
+    if ($value['TAXRANK:genus'] !== NULL) {
+      $value['schema:url'] = '/chado/genotype/' . $value['TAXRANK:genus'];
+      $entity->{$field_name}['und'][0]['value'] = $value;
+      $entity->{$field_name}['und'][0]['qparams'] = $qparams;
+    }
   }
 
 

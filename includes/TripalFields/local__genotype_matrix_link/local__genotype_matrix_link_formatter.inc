@@ -41,35 +41,44 @@ class local__genotype_matrix_link_formatter extends ChadoFieldFormatter {
       if (!isset($settings[$k])) { $settings[$k] = self::$default_settings[$k]; }
     }
 
-    $module_path = drupal_get_path('module', 'nd_genotypes');
-    $element['#attached']['css'][] = $module_path . '/includes/TripalFields/local__genotype_matrix_link/theme/local__genotype_matrix_link.css';
+    if ($items[0]['value']['TAXRANK:genus']) {
 
-    $element[0] = array(
-      '#tree' => TRUE,
-    );
+      // Add our CSS.
+      $module_path = drupal_get_path('module', 'nd_genotypes');
+      $element['#attached']['css'][] = $module_path . '/includes/TripalFields/local__genotype_matrix_link/theme/local__genotype_matrix_link.css';
 
-    // Matrix Thumbnail.
-    $img_path = url($module_path . '/includes/TripalFields/local__genotype_matrix_link/theme/GenotypeMatrixThumbnail.png');
-    $element[0][0] = array(
-      '#type' => 'markup',
-      '#prefix' => '<span class="thumbnail">',
-      '#markup' =>  '<img src="'.$img_path.'" alt="Genotype Matrix Thumbnail">' ,
-      '#suffix' => '</span>',
-    );
+      // Use #tree to support multiple sub-elements.
+      $element[0] = array(
+        '#tree' => TRUE,
+      );
 
-    // Help text.
-    $element[0][1] = array(
-      '#type' => 'markup',
-      '#markup' => '<p class="help-text">' . $settings['help_text'] . '</p>',
-    );
+      // Matrix Thumbnail.
+      $img_path = url($module_path . '/includes/TripalFields/local__genotype_matrix_link/theme/GenotypeMatrixThumbnail.png');
+      $element[0][0] = array(
+        '#type' => 'markup',
+        '#prefix' => '<span class="thumbnail">',
+        '#markup' =>  '<img src="'.$img_path.'" alt="Genotype Matrix Thumbnail">' ,
+        '#suffix' => '</span>',
+      );
 
-    // Link.
-    $element[0][2] = array(
-      '#type' => 'markup',
-      '#prefix' => '<div class="nd-button">',
-      '#markup' => l($settings['button_text'], '/chado/genotype/Lens'),
-      '#suffix' => '</div>',
-    );
+      // Help text.
+      $element[0][1] = array(
+        '#type' => 'markup',
+        '#markup' => '<p class="help-text">' . $settings['help_text'] . '</p>',
+      );
+
+      // Link.
+      $element[0][2] = array(
+        '#type' => 'markup',
+        '#prefix' => '<div class="nd-button">',
+        '#markup' => l(
+          $settings['button_text'],
+          $items[0]['value']['schema:url'],
+          array('query' => $items[0]['qparams'])
+        ),
+        '#suffix' => '</div>',
+      );
+    }
   }
 
  /**

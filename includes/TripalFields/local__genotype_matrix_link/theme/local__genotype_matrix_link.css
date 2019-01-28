@@ -8,6 +8,10 @@
   min-height: 200px;
   clear: both;
 }
+
+.field-type-local--genotype-matrix-link .field-label {
+  padding-bottom: 10px;
+}
 .field-type-local--genotype-matrix-link .thumbnail {
   float: left;
 }
