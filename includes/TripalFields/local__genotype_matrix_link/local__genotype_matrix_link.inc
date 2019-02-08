@@ -143,6 +143,16 @@ class local__genotype_matrix_link extends ChadoField {
       $value['TAXRANK:genus'] = $entity->chado_record->organism_id->genus;
       $qparams['variant_name'] = $value['SO:sequence_variant'];
     }
+    elseif ($entity->chado_table == 'stock') {
+      // Only show if there are genotype calls for this germplasm.
+      $sql = 'SELECT true FROM {mview_ndg_calls} WHERE germplasm_id=:germid LIMIT 1';
+      $has_genotypes = ndg_mview_query($entity->chado_record->organism_id->genus, $sql, [':germid' => $entity->chado_record->stock_id])->fetchField();
+      if ($has_genotypes) {
+        $value['CO_010:0000044'] = $entity->chado_record->name;
+        $value['TAXRANK:genus'] = $entity->chado_record->organism_id->genus;
+        $qparams['germplasm'] = [ $entity->chado_record->stock_id  ];
+      }
+    }
     elseif ($entity->chado_table == 'project') {
       // Chado Project ID.
       $value['NCIT:C47885'] = array($entity->chado_record_id);
@@ -152,6 +162,14 @@ class local__genotype_matrix_link extends ChadoField {
         array(':id' => $entity->chado_record_id))->fetchField();
       $value['TAXRANK:genus'] = (!empty($genus)) ? $genus : NULL;
       $qparams['project_id'] = $value['NCIT:C47885'];
+      //Ensure we have genotypes.
+      if ($value['TAXRANK:genus'] AND $value['NCIT:C47885']) {
+	$query = 'SELECT true FROM {mview_ndg_calls} WHERE project_id=:project_id LIMIT 1';
+	$has_genotypes = ndg_mview_query($value['TAXRANK:genus'], $query, [':project_id' => $value['NCIT:C47885']])->fetchField();
+	if (!$has_genotypes) {
+          $value['TAXRANK:genus'] = $value['NCIT:C47855'] = NULL;
+	}
+      }
     }
 
     // Assuming we have a genus, build the URL.
