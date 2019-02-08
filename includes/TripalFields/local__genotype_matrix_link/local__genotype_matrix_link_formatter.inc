@@ -16,7 +16,7 @@ class local__genotype_matrix_link_formatter extends ChadoFieldFormatter {
 
   // The list of default settings for this formatter.
   public static $default_settings = array(
-    'help_text' => 'You can access the genotypic data through the genotypic matrix by specifying the germplasm and marker/variants you are interested in.',
+    'help_text' => 'You can access the genotypic data through the genotypic matrix. By clicking the link below, you will be redirected to the genotype matrix with filter criteria filled in based on the page you are on. Keep in mind at a minimum, germplasm needs to be supplied in order to access the data.',
     'button_text' => 'Filtered Genotype Matrix',
   );
 
