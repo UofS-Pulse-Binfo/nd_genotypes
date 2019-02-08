@@ -126,6 +126,23 @@ class local__genotype_matrix_link extends ChadoField {
       $value['TAXRANK:genus'] = $entity->chado_record->organism_id->genus;
       $qparams['variant_name'] = $value['SO:sequence_variant'];
     }
+    if ($entity->chado_record->type_id->name == 'genetic_marker') {
+      // Sequence variant name.
+      // We access this through the relationships
+      // Specifically, by looking for a related entity of type sequence_variant.
+      if (isset($entity->sbo__relationship)) {
+        foreach ($entity->sbo__relationship['und'] as $rel) {
+          if ($rel['value']['local:relationship_subject']['rdfs:type'] == 'sequence_variant') {
+            $value['SO:sequence_variant'][] = $rel['value']['local:relationship_subject']['schema:name'];
+          }
+          elseif ($rel['value']['local:relationship_object']['rdfs:type'] == 'sequence_variant') {
+            $value['SO:sequence_variant'][] = $rel['value']['local:relationship_object']['schema:name'];
+          }
+        }
+      }
+      $value['TAXRANK:genus'] = $entity->chado_record->organism_id->genus;
+      $qparams['variant_name'] = $value['SO:sequence_variant'];
+    }
     elseif ($entity->chado_table == 'project') {
       // Chado Project ID.
       $value['NCIT:C47885'] = array($entity->chado_record_id);
