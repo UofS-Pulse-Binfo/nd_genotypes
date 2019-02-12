@@ -6,7 +6,7 @@
  * Data:
  * Assumptions:
  */
-class local__genotype_matrix_link extends ChadoField {
+class so__genetic_marker extends ChadoField {
 
   // --------------------------------------------------------------------------
   //                     EDITABLE STATIC CONSTANTS
@@ -17,16 +17,16 @@ class local__genotype_matrix_link extends ChadoField {
   // --------------------------------------------------------------------------
 
   // The default label for this field.
-  public static $default_label = 'Genotype Matrix Link';
+  public static $default_label = 'Genetic Marker List';
 
   // The default description for this field.
-  public static $default_description = 'Provides a link to the Genotype Matrix.';
+  public static $default_description = 'Lists genetic markers for a given sequence variant.';
 
   // The default widget for this field.
-  public static $default_widget = 'local__genotype_matrix_link_widget';
+  public static $default_widget = 'so__genetic_marker_widget';
 
   // The default formatter for this field.
-  public static $default_formatter = 'local__genotype_matrix_link_formatter';
+  public static $default_formatter = 'so__genetic_marker_formatter';
 
   // The module that manages this field.
   // If no module manages the field (IE it's added via libraries)
@@ -65,11 +65,11 @@ class local__genotype_matrix_link extends ChadoField {
   // required for all TripalFields.
   public static $default_instance_settings = array(
     // The DATABASE name, as it appears in chado.db.  This also builds the link-out url.  In most cases this will simply be the CV name.  In some cases (EDAM) this will be the SUBONTOLOGY.
-    'term_vocabulary' => 'local',
+    'term_vocabulary' => 'SO',
     // The name of the term.
-    'term_name' => 'genotype_matrix_link',
+    'term_name' => 'genetic_marker',
     // The unique ID (i.e. accession) of the term.
-    'term_accession' => 'genotype_matrix_link',
+    'term_accession' => '0001645',
     // Set to TRUE if the site admin is not allowed to change the term
     // type, otherwise the admin can change the term mapped to a field.
     'term_fixed' => FALSE,
@@ -97,111 +97,82 @@ class local__genotype_matrix_link extends ChadoField {
   // should exclude the field from web services or downloads.  An example
   // could be a quick search field that appears on the page that redirects
   // the user but otherwise provides no data.
-  public static $no_data = TRUE;
+  public static $no_data = FALSE;
 
  /**
-  * @see ChadoField::load()
-  *
-  **/
+   * @see ChadoField::load()
+   *
+   */
   public function load($entity) {
+    global $base_url;
+    $field_name = $this->field['field_name'];
 
-    // THIS FIELD MUST CONTAIN DATA IN ORDER FOR THE FORMATTER TO BE RENDERED.
-    $field_name = $this->instance['field_name'];
+    // ChadoFields automatically load the chado column specified in the
+    // default settings above. If that is all you need then you don't even
+    // need to implement this function. However, if you need to add any
+    // additional data to be used in the display, you should add it here.
+    parent::load($entity);
 
-    // schema:url for the path to link to.
-    // taxrank::genus for the genus
-    // NCIT:C47885 for the project name
-    // CO_010:0000044 (accession) for the germplasm names
-    // SO:sequence_variant for the variant names
+    // This field can only be attached to variants...
+    $variant_id = $entity->chado_record_id;
 
-    // @debug dpm($entity, 'entity');
-    // Determine the type of page we're on.
-    // And set genus/filter criteria based on that.
-    $value = array();
-    // to be used internally. all values must also be stored in $values.
-    $qparams = array();
-    if ($entity->chado_record->type_id->name == 'sequence_variant') {
-      // Sequence variant name.
-      $value['SO:sequence_variant'] = array($entity->chado_record->name);
-      $value['TAXRANK:genus'] = $entity->chado_record->organism_id->genus;
-      $qparams['variant_name'] = $value['SO:sequence_variant'];
-    }
-    if ($entity->chado_record->type_id->name == 'genetic_marker') {
-      // Sequence variant name.
-      // We access this through the relationships
-      // Specifically, by looking for a related entity of type sequence_variant.
-      // @todo we should be careful of this...
-      if (isset($entity->sbo__relationship)) {
-        foreach ($entity->sbo__relationship['und'] as $rel) {
-          if ($rel['value']['local:relationship_subject']['rdfs:type'] == 'sequence_variant') {
-            $value['SO:sequence_variant'][] = $rel['value']['local:relationship_subject']['schema:name'];
-          }
-          elseif ($rel['value']['local:relationship_object']['rdfs:type'] == 'sequence_variant') {
-            $value['SO:sequence_variant'][] = $rel['value']['local:relationship_object']['schema:name'];
-          }
-        }
+    // Retrieve all the marker_ids for the current variant.
+    $marker_ids = nd_genotypes_get_marker($variant_id, TRUE,FALSE);
+
+    // Determine the table storing record_id from the genetic_marker content type.
+    // ASSUMPTION: chado record_ids are stored in a table matching
+    //   chado_[bundle_name] (e.g. chado_bio_data_17).
+    $chado_bundle_table = db_query(
+      "SELECT 'chado_'||b.name FROM {tripal_bundle} b
+      LEFT JOIN {tripal_term} t ON t.id=b.term_id
+      WHERE t.name='genetic_marker'")->fetchField();
+
+    // Retrieve extra details for the markers.
+    // We do this rather then through the api function above for performance.
+    $markers = chado_query(
+      'SELECT f.feature_id, f.name, f.uniquename, b.entity_id FROM {feature} f
+      LEFT JOIN '.$chado_bundle_table.' b ON b.record_id=f.feature_id
+      WHERE feature_id IN (:ids)',
+      array(':ids' => $marker_ids))->fetchAll();
+
+    // Add the information to the entity.
+    $entity->{$field_name}['und'] = array();
+    foreach ($markers as $m) {
+      $value = array(
+        'schema:name' => $m->name,
+        'data:accession' => $m->uniquename,
+      );
+      if ($m->entity_id) {
+        $value['schema:url'] = $base_url . '/bio_data/' . $m->entity_id;
       }
-      $value['TAXRANK:genus'] = $entity->chado_record->organism_id->genus;
-      $qparams['variant_name'] = $value['SO:sequence_variant'];
-    }
-    elseif ($entity->chado_table == 'stock') {
-      // Only show if there are genotype calls for this germplasm.
-      $sql = 'SELECT true FROM {mview_ndg_calls} WHERE germplasm_id=:germid LIMIT 1';
-      $has_genotypes = ndg_mview_query($entity->chado_record->organism_id->genus, $sql, [':germid' => $entity->chado_record->stock_id])->fetchField();
-      if ($has_genotypes) {
-        $value['CO_010:0000044'] = $entity->chado_record->name;
-        $value['TAXRANK:genus'] = $entity->chado_record->organism_id->genus;
-        $qparams['germplasm'] = [ $entity->chado_record->stock_id  ];
-      }
-    }
-    elseif ($entity->chado_table == 'project') {
-      // Chado Project ID.
-      $value['NCIT:C47885'] = array($entity->chado_record_id);
-      $genus = chado_query(
-        "SELECT value FROM {projectprop} WHERE project_id=:id
-          AND type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='genus')",
-        array(':id' => $entity->chado_record_id))->fetchField();
-      $value['TAXRANK:genus'] = (!empty($genus)) ? $genus : NULL;
-      $qparams['project_id'] = $value['NCIT:C47885'];
-      //Ensure we have genotypes.
-      if ($value['TAXRANK:genus'] AND $value['NCIT:C47885']) {
-	$query = 'SELECT true FROM {mview_ndg_calls} WHERE project_id=:project_id LIMIT 1';
-	$has_genotypes = ndg_mview_query($value['TAXRANK:genus'], $query, [':project_id' => $value['NCIT:C47885']])->fetchField();
-	if (!$has_genotypes) {
-          $value['TAXRANK:genus'] = $value['NCIT:C47855'] = NULL;
-	}
-      }
-    }
-
-    // Assuming we have a genus, build the URL.
-    if ($value['TAXRANK:genus'] !== NULL) {
-      $value['schema:url'] = '/chado/genotype/' . $value['TAXRANK:genus'];
-      $entity->{$field_name}['und'][0]['value'] = $value;
-      $entity->{$field_name}['und'][0]['qparams'] = $qparams;
+      $entity->{$field_name}['und'][] = array(
+        'values' => $value,
+        'chado-feature_feature_id' => $m->feature_id,
+      );
     }
   }
 
 
 
   /**
-  * @see ChadoField::query()
-  *
-  **/
+   * @see ChadoField::query()
+   *
+   */
   public function query($query, $condition) {
   }
 
   /**
-  * @see ChadoField::queryOrder()
-  *
-  **/
+   * @see ChadoField::queryOrder()
+   *
+   */
   public function queryOrder($query, $order) {
   }
 
 
   /**
-  * @see ChadoField::elementInfo()
-  *
-  **/
+   * @see ChadoField::elementInfo()
+   *
+   */
   public function elementInfo() {
     $field_term = $this->getFieldTermID();
     return array(

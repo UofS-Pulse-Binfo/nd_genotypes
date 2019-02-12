@@ -216,7 +216,7 @@ function nd_genotypes_has_genotypes($feature_id, $partition = 'All') {
  *   By default a feature object for the marker but if $id_only=TRUE then
  *   just the feature_id of the marker.
  */
-function nd_genotypes_get_marker($variant_id, $id_only = FALSE) {
+function nd_genotypes_get_marker($variant_id, $id_only = FALSE, $only_one = TRUE) {
 
   $rel_type = variable_get('nd_genotypes_rel_type_id', 0);
   $variant_position = variable_get('nd_genotypes_rel_position', 'subject_id');
@@ -228,13 +228,26 @@ function nd_genotypes_get_marker($variant_id, $id_only = FALSE) {
   else {
     $sql = 'SELECT subject_id FROM {feature_relationship} WHERE object_id=:variant_id AND type_id=:type_id';
   }
-  $marker_id = chado_query($sql, array(':variant_id' => $variant_id, ':type_id' => $rel_type))->fetchField();
+  $marker_ids = chado_query($sql, array(':variant_id' => $variant_id, ':type_id' => $rel_type))->fetchCol();
   if ($id_only) {
-    return $marker_id;
+    if ($only_one) {
+      return array_pop($marker_ids);
+    }
+    else {
+      return $marker_ids;
+    }
   }
   else {
-    $marker = chado_generate_var('feature', array('feature_id' => $marker_id));
-    return $marker;
+    $markers = array();
+    foreach ($marker_ids as $marker_id) {
+      if ($only_one) {
+        return chado_generate_var('feature', array('feature_id' => $marker_id));
+      }
+      else {
+        $markers[] = chado_generate_var('feature', array('feature_id' => $marker_id));
+      }
+    }
+    return $markers;
   }
 }
 

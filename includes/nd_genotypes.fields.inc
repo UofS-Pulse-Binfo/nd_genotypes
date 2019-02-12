@@ -110,6 +110,29 @@ function nd_genotypes_bundle_fields_info($entity_type, $bundle) {
       ),
     );
 
+    // Marker List Field.
+    //----------------------
+    // First add my term.
+    tripal_insert_cvterm(array(
+      'id' => 'SO:0001645',
+      'name' => 'genetic_marker',
+      'cv_name' => 'sequence',
+      'definition' => 'A measurable sequence feature that varies within a population. [SO:db]',
+    ));
+
+    // Then describe the field defined by that term.
+    $field_name = 'so__genetic_marker';
+    $field_type = 'so__genetic_marker';
+    $fields[$field_name] = array(
+      'field_name' => $field_name,
+      'type' => $field_type,
+      'cardinality' => 1,
+      'locked' => FALSE,
+      'storage' => array(
+        'type' => 'field_chado_storage',
+      ),
+    );
+
     // Sequence with Variants Field.
     //---------------------------------
     // First add my term.
@@ -197,6 +220,39 @@ function nd_genotypes_bundle_instances_info($entity_type, $bundle) {
           'default' => array(
             'label' => 'hidden',
             'type' => 'local__variant_genotype_summary_formatter',
+            'settings' => array(),
+          ),
+        ),
+      );
+
+      // Genetic Marker List
+      //----------------------
+      $field_name = 'so__genetic_marker';
+      $field_type = 'so__genetic_marker';
+      $instances[$field_name] =  array(
+        'field_name' => $field_name,
+        'entity_type' => $entity_type,
+        'bundle' => $bundle->name,
+        'label' => 'Genetic Marker List',
+        'description' => 'Lists genetic markers for a given sequence variant.',
+        'required' => FALSE,
+        'settings' => array(
+          'term_vocabulary' => 'SO',
+          'term_name' => 'genetic_marker',
+          'term_accession' => '0001645',
+          'auto_attach' => FALSE,
+          'chado_table' => $bundle->data_table,
+          'chado_column' => 'organism_id',
+          'base_table' => $bundle->data_table,
+        ),
+        'widget' => array(
+          'type' => 'so__genetic_marker_widget',
+          'settings' => array(),
+        ),
+        'display' => array(
+          'default' => array(
+            'label' => 'hidden',
+            'type' => 'so__genetic_marker_formatter',
             'settings' => array(),
           ),
         ),
