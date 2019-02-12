@@ -10,8 +10,7 @@ This module provides support and visualization of genotypic data stored in a mod
    :maxdepth: 2
    :caption: Contents:
 
+   features
    install
    configuration
    data_storage
-   features
-
