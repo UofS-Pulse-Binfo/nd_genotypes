@@ -137,6 +137,8 @@ class local__marker_genotype_summary extends ChadoField {
    *   value of the field.
    */
   public function load($entity) {
+    // THIS FIELD MUST CONTAIN DATA IN ORDER FOR THE FORMATTER TO BE RENDERED.
+    $field_name = $this->instance['field_name'];
 
     // ChadoFields automatically load the chado column specified in the
     // default settings above. If that is all you need then you don't even
@@ -158,7 +160,7 @@ class local__marker_genotype_summary extends ChadoField {
         '"Marker Genotype Summary" field was unable to determine what the organism is for entity :id.',
         array( ':id' => $entity->id, )
       );
-      $entity->local__marker_genotype_summary['und'][0]['value'] = FALSE;
+      $entity->{$field_name}['und'][0]['value'] = FALSE;
       return FALSE;
     }
 
@@ -175,21 +177,21 @@ class local__marker_genotype_summary extends ChadoField {
     // If there are no genotypes attached to this marker, we would like to
     // indicate that the genotype summary should be empty.
     if (empty($variant)) {
-      $entity->local__marker_genotype_summary['und'][0]['value'] = array();
+      $entity->{$field_name}['und'][0]['value'] = array();
     }
     else {
       $marker_name = $variant['markers'][$marker_id];
 
       // First store information about the marker so we can lebel the donut/ring.
-      $entity->local__marker_genotype_summary['und'][0]['value'] = array();
-      $entity->local__marker_genotype_summary['und'][0]['value']['rdfs:label'] = $marker_name;
-      $entity->local__marker_genotype_summary['und'][0]['value']['SO:0001645'] = $marker_name;
-      $entity->local__marker_genotype_summary['und'][0]['value']['hydra:member'] = array();
+      $entity->{$field_name}['und'][0]['value'] = array();
+      $entity->{$field_name}['und'][0]['value']['rdfs:label'] = $marker_name;
+      $entity->{$field_name}['und'][0]['value']['SO:0001645'] = $marker_name;
+      $entity->{$field_name}['und'][0]['value']['hydra:member'] = array();
 
       // Then store information about each allele so we can draw/label each
       // part or pie piece of the donut/ring.
       foreach ($variant['marker_alleles'][$marker_id] as $d) {
-        $entity->local__marker_genotype_summary['und'][0]['value']['hydra:member'][] = array(
+        $entity->{$field_name}['und'][0]['value']['hydra:member'][] = array(
           'SO:0001023' => $d['allele'],
           'rdfs:label' => $d['allele'],
           'local:count' => $d['num_germplasm'],

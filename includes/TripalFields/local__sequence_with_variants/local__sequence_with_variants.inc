@@ -134,6 +134,9 @@ class local__sequence_with_variants extends ChadoField {
    *
    */
   public function load($entity) {
+    // THIS FIELD MUST CONTAIN DATA IN ORDER FOR THE FORMATTER TO BE RENDERED.
+    $field_name = $this->instance['field_name'];
+
     // Placeholder for the value of this field.
     // Populating this is just cleaner code-wise then populating the entity
     // directly. At the end this will be assigned to
@@ -150,7 +153,7 @@ class local__sequence_with_variants extends ChadoField {
     $settings = $this->instance['settings'];
 
     // First, retrieve the chado feature_id for the current Tripal Content.
-    $feature_id = $entity->local__sequence_with_variants['und'][0]['chado-feature__feature_id'];
+    $feature_id = $entity->{$field_name}['und'][0]['chado-feature__feature_id'];
 
     // Ensure we have a $variant_id and $marker_id set based on what we are attached to.
     //  - Attached to a Variant.
@@ -177,7 +180,7 @@ class local__sequence_with_variants extends ChadoField {
         '"Sequence with Variants" field was unable to determine what the organism for entity :id is.',
         array( ':id' => $entity->id, )
       );
-      $entity->local__sequence_with_variants['und'][0]['value'] = FALSE;
+      $entity->{$field_name}['und'][0]['value'] = FALSE;
       return FALSE;
     }
 
@@ -192,7 +195,7 @@ class local__sequence_with_variants extends ChadoField {
     // If there are no locations on parents with sequence then unfortunalty
     // we cannot provide this display...
     if (!$locations) {
-      $entity->local__sequence_with_variants['und'][0]['value'] = FALSE;
+      $entity->{$field_name}['und'][0]['value'] = FALSE;
       return FALSE;
     }
 
@@ -284,7 +287,7 @@ class local__sequence_with_variants extends ChadoField {
     }
 
     // Finally assign the value to the entity.
-    $entity->local__sequence_with_variants['und'][0]['value'] = $value;
+    $entity->{$field_name}['und'][0]['value'] = $value;
     //@debug dpm($value, 'value in load');
   }
 

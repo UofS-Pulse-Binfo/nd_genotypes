@@ -35,7 +35,7 @@ class local__genotype_matrix_link_formatter extends ChadoFieldFormatter {
   public function view(&$element, $entity_type, $entity, $langcode, $items, $display) {
 
     // Retrieve the current settings not handled by our parent.
-    $settings = $this->instance['display'][$view_mode]['settings'];
+    $settings = $display['settings'];
     $our_setting_keys = array('help_text', 'button_text');
     foreach ($our_setting_keys as $k) {
       if (!isset($settings[$k])) { $settings[$k] = self::$default_settings[$k]; }

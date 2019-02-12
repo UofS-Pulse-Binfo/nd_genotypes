@@ -105,7 +105,9 @@ class so__genetic_marker extends ChadoField {
    */
   public function load($entity) {
     global $base_url;
-    $field_name = $this->field['field_name'];
+    
+    // THIS FIELD MUST CONTAIN DATA IN ORDER FOR THE FORMATTER TO BE RENDERED.
+    $field_name = $this->instance['field_name'];
 
     // ChadoFields automatically load the chado column specified in the
     // default settings above. If that is all you need then you don't even
