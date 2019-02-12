@@ -11,7 +11,7 @@ Features
         - On Marker/Variant pages: restricted to specific variant
         - On Germplasm pages: germplasm is pre-selected
         - On Project pages: project is pre-selected if genus is a property of the project.
-- Genotype Matrix search allowing users to extract genotypes for a user-defined set of germplasm. Includes filtering by marker/variant type, variant location, and pairwise polymorphism. Filtering by quality is comming soon.
+- Genotype Matrix search allowing users to extract genotypes for a user-defined set of germplasm. Includes filtering by marker/variant type, variant location, and pairwise polymorphism. Filtering by quality is coming soon.
 - Integration of all fields with Tripal 3 web services allowing you to share your genotypic data with other groups.
 
 .. toctree::
@@ -21,6 +21,7 @@ Features
    features/genotype_matrix
    features/feature_genotype_summaries
    features/sequence_with_variants_field
+   features/genotype_matrix_link
 
 The following screenshots are meant to visually summarize the features. For more detail, please click on one of the features above.
 
