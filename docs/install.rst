@@ -18,8 +18,8 @@ Quickstart
 Dependencies
 ------------
 
-1. [Tripal 3.x](https://drupal.org/project/tripal)
-2. [Tripal Download API](https://github.com/tripal/trpdownload_api)
+1. `Tripal 3.x <https://drupal.org/project/tripal>`_
+2. `Tripal Download API <https://github.com/tripal/trpdownload_api>`_
 3. PostgreSQL 9.3 (9.4+ recommended)
 
 Installation
