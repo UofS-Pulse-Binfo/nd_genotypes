@@ -29,8 +29,9 @@ This module is available as a project on Drupal.org. As such, the preferred meth
 
 .. code:: bash
 
-  cd /var/www/html
-  drush pm-download nd_genotypes trpdownload_api
+  cd [your drupal root]/sites/all/modules
+  git clone https://github.com/tripal/trpdownload_api.git
+  git clone https://github.com/UofS-Pulse-Binfo/nd_genotypes.git
 
 The above command downloads the module into the expected directory (e.g. /var/www/html/sites/all/modules/nd_genotypes). Next we need to install the module:
 
