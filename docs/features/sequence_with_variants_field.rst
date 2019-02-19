@@ -8,7 +8,7 @@ This field adds a FASTA record showing the flanking sequence for the current mar
 
 Both the title and description of the figure legend can be configured by going to Administration » Structure » Tripal Content Types » [Variant/Marker] » Manage Display and clicking on the gear beside the genotype summary field.
 
-.. image:: sequence_with_Variants_field.2.config.png
+.. image:: sequence_with_variants_field.2.config.png
 
 .. warning::
 
