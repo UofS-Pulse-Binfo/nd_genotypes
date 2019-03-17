@@ -117,7 +117,7 @@ function nd_genotypes_recheck_postgresql_version() {
   $version = '9.2';
 
   // Pull it out via REGEX.
-  if (preg_match('/PostgreSQL (9\.\d+)\.\d+/', $version_string, $matches)) {
+  if (preg_match('/PostgreSQL (\d+\.\d+)\.\d+/', $version_string, $matches)) {
     $version = $matches[1];
   }
 
