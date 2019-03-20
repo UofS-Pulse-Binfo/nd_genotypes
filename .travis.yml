@@ -15,4 +15,4 @@ script:
   - sleep 30 # We pause here so postgres and apache complete booting up
   - docker exec -it tripal bash -c "cd /var/www/html/sites/all/modules && git clone https://github.com/tripal/trpdownload_api.git"
   - docker exec -it tripal drush pm-enable -y trpdownload_api nd_genotypes
-  #- docker exec -it tripal bash -c "cd /modules/nd_genotypes && composer install && DRUPAL_ROOT=/var/www/html ./vendor/bin/phpunit"
+  - docker exec -it tripal bash -c "cd /modules/nd_genotypes && composer install && DRUPAL_ROOT=/var/www/html ./vendor/bin/phpunit"
