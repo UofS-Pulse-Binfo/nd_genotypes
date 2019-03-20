@@ -35,6 +35,9 @@ class local__germ_marker_summary extends ChadoChartField {
   // The default formatter for this field.
   public static $default_formatter = 'local__germ_marker_summary_formatter';
 
+  // The module that manages this field.
+  public static $module = 'nd_genotypes';
+
   // Provide a list of instance specific settings. These can be access within
   // the instanceSettingsForm.  When the instanceSettingsForm is submitted
   // then Drupal with automatically change these settings for the instance.
