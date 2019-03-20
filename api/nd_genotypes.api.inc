@@ -114,10 +114,11 @@ function nd_genotypes_recheck_postgresql_version() {
 
   // Determine the PostgreSQL version.
   $version_string = db_query('SELECT version()')->fetchField();
-  $version = '9.2';
+  $version = NULL;
 
   // Pull it out via REGEX.
-  if (preg_match('/PostgreSQL (9\.\d+)\.\d+/', $version_string, $matches)) {
+  drupal_set_message('Your version is reported as "'.$version_string.'".');
+  if (preg_match('/PostgreSQL (\d+\.\d+)\.\d+/', $version_string, $matches)) {
     $version = $matches[1];
   }
 
