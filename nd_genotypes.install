@@ -71,13 +71,11 @@ function nd_genotypes_enable() {
  */
 function nd_genotypes_install() {
 
-  // Determine the PostgreSQL version.
-  nd_genotypes_recheck_postgresql_version();
-
   // Create the genotype_call table for storing genotypes in chado.
   chado_create_custom_table(
     'genotype_call',
-    nd_genotypes_genotype_call_schema_template()
+    nd_genotypes_genotype_call_schema_template(),
+    TRUE, NULL, FALSE
   );
 
   // Move our module up in the list priority-wise
@@ -91,8 +89,7 @@ function nd_genotypes_install() {
      array(':name' => 'nd_genotypes', ':weight' => $tripal_weight + 1));
 
   // Give them some guidance!
-  drupal_set_message('In order to see the genotype and sequence pane on feature nodes, you have to set the type(s) used for variants and markers in the module settings. Click the configure link beside the module name.','warning');
-
+  // drupal_set_message('In order to see the genotype and sequence pane on feature nodes, you have to set the type(s) used for variants and markers in the module settings. Click the configure link beside the module name.','warning');
 
   // Register term required by Germplasm Marker Summary field.
   $germ_marker_summary = array(
