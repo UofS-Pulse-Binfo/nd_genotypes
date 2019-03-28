@@ -89,7 +89,35 @@ function nd_genotypes_install() {
      array(':name' => 'nd_genotypes', ':weight' => $tripal_weight + 1));
 
   // Give them some guidance!
-  //drupal_set_message('In order to see the genotype and sequence pane on feature nodes, you have to set the type(s) used for variants and markers in the module settings. Click the configure link beside the module name.','warning');
+  // drupal_set_message('In order to see the genotype and sequence pane on feature nodes, you have to set the type(s) used for variants and markers in the module settings. Click the configure link beside the module name.','warning');
+
+  // Register term required by Germplasm Marker Summary field.
+  $germ_marker_summary = array(
+    'id' => 'local:germ_marker_summary',
+    'name' => 'germ_marker_summary',
+    'cv_name' => 'local',
+    'definition' => 'Germplasm Marker Summary',
+  );
+
+  // Test term to ensure no duplicate exists in the system.
+  $is_in = FALSE;
+
+  if (function_exists('chado_get_cvterm')) {
+    $is_in = chado_get_cvterm($germ_marker_summary);
+  }
+  else {
+    $is_in = tripal_get_cvterm($germ_marker_summary);
+  }
+
+  if (!$is_in) {
+    // Is clear, insert term.
+    if (function_exists('cahdo_insert_cvterm')) {
+      chado_insert_cvterm($germ_marker_summary);
+    }
+    else {
+      tripal_insert_cvterm($germ_marker_summary);
+    }
+  }
 }
 
 /**

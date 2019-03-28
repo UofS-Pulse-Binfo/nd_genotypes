@@ -1,0 +1,17 @@
+/**
+ * @file
+ * Style germ_marker_summary field.
+ */
+
+/**
+ * Field wrapper
+ */
+#field-germ-marker-summary-wrapper {
+  background: #F9F9F9;
+  border: 1px solid #ECECEC;
+  padding: 20px;
+}
+
+#field-germ-marker-summary-wrapper h1 {
+  display: inline;
+}
