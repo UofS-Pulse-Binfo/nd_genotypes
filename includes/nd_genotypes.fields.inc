@@ -53,6 +53,31 @@ function nd_genotypes_bundle_fields_info($entity_type, $bundle) {
     );
   }
 
+  if (isset($bundle->data_table) AND ($bundle->data_table == 'stock')) {
+    // Magnitude of Genotypes.
+    tripal_insert_cvterm(array(
+      'id' => 'local:germ_marker_summary',
+      'name' => 'germ_marker_summary',
+      'cv_name' => 'local',
+      'definition' => 'Germplasm Marker Summary',
+    ));
+
+    $field_name = 'local__germ_marker_summary';
+    $field_type = 'local__germ_marker_summary';
+    $fields[$field_name] = array(
+      'field_name' => $field_name,
+      'type' => $field_type,
+      // Controlls how many values you expect your field to have.
+      'cardinality' => 0,
+      // This locks your field so it can't be deleted by an administrator --use with care!
+      'locked' => FALSE,
+      // Indicated the storage API this field uses.
+      'storage' => array(
+        'type' => 'field_chado_storage',
+      ),
+    );
+  }
+
   // Because we are expecting data housed in Chado we can use the 'data_table'
   // property of the bundle to determine if this bundle is really the one
   // we want the field to be associated with.
@@ -347,8 +372,8 @@ function nd_genotypes_bundle_instances_info($entity_type, $bundle) {
           'chado_column' => $bundle->data_table . '_id',
           'base_table' => $bundle->data_table,
           'term_vocabulary' => 'local',
-          'term_accession' => 'local__genotype_matrix_link',
-          'term_name' => 'local__genotype_matrix_link',
+          'term_accession' => 'genotype_matrix_link',
+          'term_name' => 'genotype_matrix_link',
         ),
         'widget' => array(
           'type' => 'local__genotype_matrix_link_widget',
