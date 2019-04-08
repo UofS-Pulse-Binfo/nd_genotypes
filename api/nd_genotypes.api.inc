@@ -117,8 +117,8 @@ function nd_genotypes_recheck_postgresql_version() {
   $version = NULL;
 
   // Pull it out via REGEX.
-  drupal_set_message('Your version is reported as "'.$version_string.'".');
-  if (preg_match('/PostgreSQL (\d+\.\d+)\.\d+/', $version_string, $matches)) {
+  // @debug drupal_set_message('Your version is reported as "'.$version_string.'".');
+  if (preg_match('/PostgreSQL (\d+\.\d+)/', $version_string, $matches)) {
     $version = $matches[1];
   }
 
