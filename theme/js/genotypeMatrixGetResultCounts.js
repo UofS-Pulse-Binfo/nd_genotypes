@@ -26,7 +26,7 @@
       $('.matrix-counts .result-count .ajax-waiting').replaceWith('<span class="ajax-progress ajax-progress-throbber">Counting<div class="throbber"> </div></span>');
 
       // Next, use jQuery to retrieve the count.
-      var url = Drupal.settings.basePath + 'chado/genotype/' + Drupal.settings.NDgenotypes.partition + '/num_results.json' + location.search;
+      var url = '/chado/genotype/' + Drupal.settings.NDgenotypes.partition + '/num_results.json' + location.search;
       $.getJSON(url,
         function(data) {
           // Once the count has been retrieved, substitute it into the page.
@@ -44,7 +44,7 @@
       $('.matrix-counts .variant-count .ajax-waiting').replaceWith('<span class="ajax-progress ajax-progress-throbber">Counting<div class="throbber"> </div></span>');
 
       // Next, use jQuery to retrieve the count.
-      var url = Drupal.settings.basePath + 'chado/genotype/' + Drupal.settings.NDgenotypes.partition + '/num_variants.json' + location.search;
+      var url = '/chado/genotype/' + Drupal.settings.NDgenotypes.partition + '/num_variants.json' + location.search;
       $.getJSON(url,
         function(data) {
           // Once the count has been retrieved, substitute it into the page.
