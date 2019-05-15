@@ -13,7 +13,7 @@
  *     one chart, a current work around is to extend this class using a different
  *     term.
  */
-class local__germ_marker_summary extends ChadoChartField {
+class local__germ_marker_summary extends TripalField {
 
   // --------------------------------------------------------------------------
   //                     EDITABLE STATIC CONSTANTS

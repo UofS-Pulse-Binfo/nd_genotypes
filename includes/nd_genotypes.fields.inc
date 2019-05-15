@@ -25,6 +25,8 @@
 function nd_genotypes_bundle_fields_info($entity_type, $bundle) {
   $fields = array();
 
+  // ANY CHADO-BASED CONTENT TYPES.
+  /////////////////////////////////////
   if (isset($bundle->data_table)) {
     // Genotype Matrix Link.
     //---------------------------------
@@ -53,8 +55,12 @@ function nd_genotypes_bundle_fields_info($entity_type, $bundle) {
     );
   }
 
+  // STOCK-BASED CONTENT TYPES.
+  /////////////////////////////////////
   if (isset($bundle->data_table) AND ($bundle->data_table == 'stock')) {
+
     // Magnitude of Genotypes.
+    //---------------------------------
     tripal_insert_cvterm(array(
       'id' => 'local:germ_marker_summary',
       'name' => 'germ_marker_summary',
@@ -78,9 +84,8 @@ function nd_genotypes_bundle_fields_info($entity_type, $bundle) {
     );
   }
 
-  // Because we are expecting data housed in Chado we can use the 'data_table'
-  // property of the bundle to determine if this bundle is really the one
-  // we want the field to be associated with.
+  // FEATURE-BASED CONTENT TYPES.
+  /////////////////////////////////////
   if (isset($bundle->data_table) AND ($bundle->data_table == 'feature')) {
 
     // Variant Genotype Summary Field.
@@ -208,9 +213,43 @@ function nd_genotypes_bundle_instances_info($entity_type, $bundle) {
   // Load the term used for the content type.
   $term = tripal_load_term_entity(array('term_id' => $bundle->term_id));
 
-  // Because we are expecting data housed in Chado we can use the 'data_table'
-  // property of the bundle to determine if this bundle is really the one
-  // we want the field to be associated with.
+  // STOCK-BASED CONTENT TYPES.
+  /////////////////////////////////////
+  if (isset($bundle->data_table) AND ($bundle->data_table == 'stock')) {
+
+    // Magnitude of Genotypes.
+    //---------------------------------
+    $info['local__germ_marker_summary'] =  array(
+      'field_name' => 'local__germ_marker_summary',
+      'entity_type' => $entity_type,
+      'bundle' => $bundle->name,
+      'label' => 'Germplasm Marker Summary',
+      'description' => 'Summarizes the markers associated with a given germplasm.',
+      'required' => FALSE,
+      'settings' => array(
+        'auto_attach' => FALSE,
+        'term_vocabulary' => 'local',
+        'term_accession' => 'germ_marker_summary',
+        'term_name' => 'germ_marker_summary',
+      ),
+      'widget' => array(
+        'type' => 'local__germ_marker_summary_widget',
+        'settings' => array(
+          'display_label' => 1,
+        ),
+      ),
+      'display' => array(
+        'default' => array(
+          'label' => 'hidden',
+          'type' => 'local__germ_marker_summary_formatter',
+          'settings' => array(),
+        ),
+      ),
+    );
+  }
+
+  // FEATURE-BASED CONTENT TYPES.
+  /////////////////////////////////////
   if (isset($bundle->data_table) AND ($bundle->data_table == 'feature')) {
 
     // Variant Genotype Summary Field.
