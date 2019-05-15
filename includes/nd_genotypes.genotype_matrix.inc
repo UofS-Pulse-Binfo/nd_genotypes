@@ -52,7 +52,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
   $form['s1'] = array(
     '#type' => 'fieldset',
     '#title' => 'Choose germplasm you are interested in.',
-    '#description' => 'Simply enter the name of one germplasm (e.g. CDC Redberry) of interest below and then click the green plus (+) button. You can enter any number of germplasm you are interested in and each will be added to the matrix as they are entered.',
+    '#description' => 'Simply enter the name of one germplasm (e.g. "Eston AGL", "CDC Robin AGL", or "ILL 8007 AGL") of interest below and then click the green plus (+) button. You can enter any number of germplasm you are interested in and each will be added to the matrix as they are entered.',
     '#collapsible' => TRUE,
     '#collapsed' => FALSE,
     '#prefix' => '<span class="stages stage1">1</span>',
@@ -88,7 +88,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
   $form['s2'] = array(
     '#type' => 'fieldset',
     '#title' => 'Restrict to the region of the genome. (optional)',
-    '#description' => 'If applicable, we recommend you filter to a given region of the genome to make the genotype set more managable.',
+    '#description' => 'If applicable, we recommend you filter to a given region of the genome to make the genotype set more managable. For example, to see all of Lentil Chromosome 4 you would enter <em>From "LcChr4" to "LcChr4"</em> leaving the start and end position blank.',
     '#collapsible' => TRUE,
     '#collapsed' => FALSE,
     '#prefix' => '<span class="stages stage2">2</span>',
