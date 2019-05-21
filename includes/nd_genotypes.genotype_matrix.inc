@@ -615,7 +615,7 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
       if (!$variant_name_filter) {
         $variant_joins[] = "LEFT JOIN (
             SELECT a.variant_id, a.allele_call=b.allele_call as monomorphic
-            FROM mview_ndg_calls a, mview_ndg_calls b
+            FROM {mview_ndg_calls} a, {mview_ndg_calls} b
             WHERE a.variant_id=b.variant_id AND a.germplasm_id=:poly1 AND b.germplasm_id=:poly2
           ) p ON p.variant_id=v.variant_id ";
         $variant_args[':poly1'] = $query_args['polymorphic']['first'];
@@ -683,7 +683,7 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
       . $sql . ") v \n"
       . "LEFT JOIN (
             SELECT a.variant_id, a.allele_call=b.allele_call as monomorphic
-            FROM mview_ndg_calls a, mview_ndg_calls b
+            FROM {mview_ndg_calls} a, {mview_ndg_calls} b
             WHERE a.variant_id=b.variant_id AND a.germplasm_id=:poly1 AND b.germplasm_id=:poly2
           ) p ON p.variant_id=v.variant_id \n"
       . "WHERE p.monomorphic IS FALSE \n";
@@ -723,6 +723,7 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   }
 
   $args = array_merge($call_args, $variant_args);
+  // @debug dpm($sql, 'SQL: 1st Query'); dpm($args, 'SQL Arguements: 1st Query');
   $resource = ndg_mview_query($vars['partition'], $sql, $args);
 
   //dpm(array('sql' => $sql, 'args' => $args),'Variant Query');
@@ -745,13 +746,13 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
           ."FROM unnest(ARRAY[" . implode(',',$ids) . "]) variant_id \n"
           ."JOIN {mview_ndg_calls} call USING(variant_id) \n"
           ."WHERE " . implode("\n  AND ",$call) . "\n";
-    //dpm(array('sql' => $sql, 'args' => $call_args), 'Call Query');
     }
     else {
       $sql = "SELECT variant_id, germplasm_id, allele_call \n"
          ."FROM {mview_ndg_calls} call \n"
          ."WHERE call.variant_id=".$ids[0]." AND ".implode("\n AND ",$call) . "\n";
     }
+    // @debug dpm(array('sql' => $sql, 'args' => $call_args), 'Call Query');
     $resource = ndg_mview_query($vars['partition'], $sql, $call_args);
     foreach($resource as $r) {
       $vars['data'][$r->variant_id][$r->germplasm_id][] = $r->allele_call;
