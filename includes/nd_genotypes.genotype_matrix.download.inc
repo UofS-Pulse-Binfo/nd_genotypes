@@ -300,18 +300,59 @@ function trpdownload_genotype_matrix_download_generate_csv_file($vars, $job_id =
  *   The ID of the tripal job executing this function ;-).
  */
 function trpdownload_genotype_matrix_download_generate_hapmap_file($vars, $job_id = NULL) {
+
   // First, process the query parameters passed to the download to determine the query.
   nd_genotypes_process_query_parameters($vars);
+
   // Create the file and ready it for writting to.
   $filepath = variable_get('trpdownload_fullpath', '') . $vars['filename'];
   drush_print("File: " . $filepath);
   $FILE = fopen($filepath, 'w') or die ("Unable to create file to write to.\n");
+
+  // @debug drush_print("VARS: ".print_r($vars, TRUE));
+
   // Write the header to the file.
-  $header = array();
-  foreach ($vars['header'] as $h) {
-    $header[] = $h['data'];
+  $header = array(
+    'rs' => 'rs#',
+    'alleles' => 'alleles',
+    'chrom' => 'chrom',
+    'pos' => 'pos',
+    'strand' => 'strand',
+    'assembly' => 'assembly#',
+    'center' => 'center',
+    'prot' => 'protLSID',
+    'assay' => 'assayLSID',
+    'panel' => 'panel',
+    'qccode' => 'QCcode');
+
+  foreach ($vars['header'] as $k => $h) {
+    if (!in_array($k, array('variant_name','srcfeature_name','fmin','fmax'))) {
+      $header[] = $h['data'];
+    }
   }
   fputcsv($FILE, $header);
+  // @debug print_r($header);
+
+  // Match the template row to hapmap format.
+  $template_row = array();
+  $template_row['rs'] = 'NA';
+  $template_row['alleles'] = 'NA';
+  $template_row['chrom'] = 'NA';
+  $template_row['pos'] = 'NA';
+  $template_row['strand'] = 'NA';
+  $template_row['assembly'] = 'NA';
+  $template_row['center'] = 'NA';
+  $template_row['prot'] = 'NA';
+  $template_row['assay'] = 'NA';
+  $template_row['panel'] = 'NA';
+  $template_row['qccode'] = 'NA';
+  foreach ($vars['template_row'] as $k => $v) {
+    if (is_numeric($k)) {
+      $template_row[$k] = 'NN';
+    }
+  }
+  // @debug print_r($template_row);
+
   // Now, determine the query.
   // Unfortuntly we can't just use the same query as to generate the page since that is done
   // using two queries: 1 to select the variants for the page and 2 to grab the calls for
@@ -325,6 +366,7 @@ function trpdownload_genotype_matrix_download_generate_hapmap_file($vars, $job_i
   $args = array();
   $variant_where = array();
   $variant_args = array();
+
   // Sequence Ranges:
   // First get the arguements. There must always be a backbone and fmin even if the user
   // did not provide one.
@@ -477,14 +519,16 @@ function trpdownload_genotype_matrix_download_generate_hapmap_file($vars, $job_i
         }
         // Start a new row.
         $current_key = $r->ndg_variants_id;
-        $row = $vars['template_row'];
-        $row['variant_name'] = $r->variant_name;
-        $row['srcfeature_name'] = $r->srcfeature_name;
-        $row['fmin'] = $r->fmin;
-        $row['fmax'] = $r->fmax;
+        $row = $template_row;
+        $row['rs'] = $r->variant_name;
+        $row['chrom'] = $r->srcfeature_name;
+        $row['pos'] = $r->fmin;
+
       }
       // Add the call to the current row.
       $row[ $r->germplasm_id ] = $r->allele_call;
+
+      // @debug print_r($row);
     }
     if (!$some_results) { break; }
   }
