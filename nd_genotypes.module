@@ -121,6 +121,14 @@ function nd_genotypes_menu() {
        'type' => MENU_CALLBACK,
       );
 
+      $items['chado/genotype/' . $organism->genus . '/hapmap'] = array(
+       'title' => 'Download Genotypes: HAPMAP',
+       'page callback' => 'trpdownload_download_page',
+       'page arguments' => array('genotype_matrix_hapmap', 4),
+       'access arguments' => array('download nd_genotype_matrix'),
+       'type' => MENU_CALLBACK,
+      );
+
       // JSON Callback: Number of results for genotype matrix.
      $items['chado/genotype/' . $organism->genus . '/num_results.json'] = array(
        'title' => 'Number of Results',
