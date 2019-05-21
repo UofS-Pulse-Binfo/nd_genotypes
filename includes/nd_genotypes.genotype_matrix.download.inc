@@ -505,6 +505,10 @@ function trpdownload_genotype_matrix_download_generate_hapmap_file($vars, $job_i
       if (!isset($current_key) OR $current_key != $r->ndg_variants_id) {
         // Print the last row unless this is the first one.
         if (isset($row)) {
+
+          // Set the allele column.
+          $row['alleles'] = implode('/', $alleles);
+
           fputcsv($FILE, $row);
           $num_rows_exported++;
           // Update progress if we've reached an increment.
@@ -517,6 +521,10 @@ function trpdownload_genotype_matrix_download_generate_hapmap_file($vars, $job_i
           }
           $last_percent = $percent;
         }
+
+        // Reset alleles.
+        $alleles = array();
+
         // Start a new row.
         $current_key = $r->ndg_variants_id;
         $row = $template_row;
@@ -527,6 +535,9 @@ function trpdownload_genotype_matrix_download_generate_hapmap_file($vars, $job_i
       }
       // Add the call to the current row.
       $row[ $r->germplasm_id ] = $r->allele_call;
+      foreach (str_split($r->allele_call) as $call) {
+        $alleles[$call] = $call;
+      }
 
       // @debug print_r($row);
     }
@@ -534,6 +545,7 @@ function trpdownload_genotype_matrix_download_generate_hapmap_file($vars, $job_i
   }
   // print the last row.
   if (!empty($row)) {
+    $row['alleles'] = implode('/', $alleles);
     fputcsv($FILE, $row);
     $num_rows_exported++;
   }
