@@ -188,8 +188,11 @@ function trpdownload_genotype_matrix_download_generate_csv_file($vars, $job_id =
     ORDER BY '. implode(' ASC, ', $order) .' ASC';
 
   // Get an estimated number of rows.
-  $count_query = 'SELECT v.variant_id FROM {mview_ndg_variants} v ' . $join . '
-    WHERE '. implode(' AND ', $variant_where);
+  $count_query = 'SELECT v.variant_id FROM {mview_ndg_variants} v ' . $join;
+  if (!empty($variant_where)) {
+    $count_query .= ' WHERE '. implode(' AND ', $variant_where);
+  }
+  // @debug print "SQL: " . print_r($count_query, TRUE) . "; ARGS: " . print_r($variant_args, TRUE);
   $count_query = ndg_mview_query($vars['query_args']['partition'], $count_query, $variant_args, array('return_query' => TRUE));
   $total_rows = trpdownload_estimate_rows($count_query, $variant_args);
   print "Estimated number of rows: $total_rows.\n";
@@ -200,6 +203,7 @@ function trpdownload_genotype_matrix_download_generate_csv_file($vars, $job_id =
   print "\nStarting Export...\n";
   $cursor_name = 'download_calls';
   chado_query('BEGIN WORK');
+  // @debug print_r($query); print_r($args);
   ndg_mview_query($vars['query_args']['partition'], 'DECLARE '.$cursor_name.' NO SCROLL CURSOR WITH HOLD FOR '.$query, $args);
 
   // Next start grabing chunks.
