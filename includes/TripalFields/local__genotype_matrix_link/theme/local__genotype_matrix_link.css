@@ -2,8 +2,10 @@
  * CSS for the local__genotype_matrix_link Field
  */
 
+
 .field-type-local--genotype-matrix-link {
-  margin: 20px 20px 0 0;
+  /* 30px bottom margin to allow some margin for underlying field (ie. VCF filter) */
+  margin: 20px 20px 30px 0;
   min-width: 700px;
   min-height: 200px;
   clear: both;
@@ -45,3 +47,9 @@
   background: #314355;
   color: #fff;
 }
+
+/* Infographics - no border */
+.field-type-local--genotype-matrix-link .thumbnail img {
+  border: 0;
+}
+
