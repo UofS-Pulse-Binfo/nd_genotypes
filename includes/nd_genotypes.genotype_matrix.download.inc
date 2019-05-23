@@ -330,7 +330,7 @@ function trpdownload_genotype_matrix_download_generate_hapmap_file($vars, $job_i
       $header[] = $h['data'];
     }
   }
-  fputcsv($FILE, $header);
+  fputcsv($FILE, $header, "\t");
   // @debug print_r($header);
 
   // Match the template row to hapmap format.
@@ -509,7 +509,7 @@ function trpdownload_genotype_matrix_download_generate_hapmap_file($vars, $job_i
           // Set the allele column.
           $row['alleles'] = implode('/', $alleles);
 
-          fputcsv($FILE, $row);
+          fputcsv($FILE, $row, "\t");
           $num_rows_exported++;
           // Update progress if we've reached an increment.
           $percent = round(($num_rows_exported/$total_rows)*100);
@@ -546,7 +546,7 @@ function trpdownload_genotype_matrix_download_generate_hapmap_file($vars, $job_i
   // print the last row.
   if (!empty($row)) {
     $row['alleles'] = implode('/', $alleles);
-    fputcsv($FILE, $row);
+    fputcsv($FILE, $row, "\t");
     $num_rows_exported++;
   }
   // Finally, complete.
