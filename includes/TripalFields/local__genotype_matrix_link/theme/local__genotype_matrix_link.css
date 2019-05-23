@@ -2,8 +2,10 @@
  * CSS for the local__genotype_matrix_link Field
  */
 
+
 .field-type-local--genotype-matrix-link {
-  margin: 20px 20px 0 0;
+  /* 30px bottom margin to allow some margin for underlying field (ie. VCF filter) */
+  margin: 20px 20px 30px 0;
   min-width: 700px;
   min-height: 200px;
   clear: both;
@@ -12,10 +14,14 @@
 .field-type-local--genotype-matrix-link .field-label {
   padding-bottom: 10px;
 }
+
 .field-type-local--genotype-matrix-link .thumbnail {
   float: left;
 }
+
 .field-type-local--genotype-matrix-link .thumbnail img {
+  /* No border for thumbnail */
+  border: 0;
   display: block;
   width: 320px;
 }
@@ -26,6 +32,7 @@
   font-size: 1.1em;
   text-align: left;
 }
+
 .field-type-local--genotype-matrix-link .nd-button a {
   margin-left: 50px;
   display: inline-block;
