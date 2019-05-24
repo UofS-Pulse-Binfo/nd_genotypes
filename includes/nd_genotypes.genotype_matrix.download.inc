@@ -327,7 +327,7 @@ function trpdownload_genotype_matrix_download_generate_hapmap_file($vars, $job_i
 
   foreach ($vars['header'] as $k => $h) {
     if (!in_array($k, array('variant_name','srcfeature_name','fmin','fmax'))) {
-      $header[] = $h['data'];
+      $header[] = str_replace(' ', '_', $h['data']);
     }
   }
   fputcsv($FILE, $header, "\t");
