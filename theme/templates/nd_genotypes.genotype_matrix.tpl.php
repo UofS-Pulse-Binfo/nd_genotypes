@@ -228,7 +228,8 @@ if ($num_rows < 100) {
 <?php   if (user_access('download nd_genotype_matrix')) {
           $q = drupal_get_query_parameters();
           $q['partition'] = $partition;
-          print l('CSV', 'chado/genotype/'.$genus.'/csv', array('query' => $q, 'attributes' => array('target' => '_blank')));
+	  print l('CSV', 'chado/genotype/'.$genus.'/csv', array('query' => $q, 'attributes' => array('target' => '_blank')))
+            . ', ' .  l('HAPMAP', 'chado/genotype/'.$genus.'/hapmap', array('query' => $q, 'attributes' => array('target' => '_blank')));
         }
         elseif (user_is_anonymous()) {
           print "<em>Requires log in</em>";
