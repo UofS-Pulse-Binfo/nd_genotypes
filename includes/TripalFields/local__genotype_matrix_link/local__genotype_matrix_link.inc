@@ -147,7 +147,9 @@ class local__genotype_matrix_link extends ChadoField {
     elseif ($entity->chado_table == 'stock') {
       // Only show if there are genotype calls for this germplasm.
       $sql = 'SELECT true FROM {mview_ndg_calls} WHERE germplasm_id=:germid LIMIT 1';
-      $has_genotypes = ndg_mview_query($entity->chado_record->organism_id->genus, $sql, [':germid' => $entity->chado_record->stock_id])->fetchField();
+      $has_genotypes = FALSE;
+      $resource = ndg_mview_query($entity->chado_record->organism_id->genus, $sql, [':germid' => $entity->chado_record->stock_id]);
+      if (!is_bool($resource)) { $has_genotypes = $resource->fetchField(); }
       if ($has_genotypes) {
         $value['CO_010:0000044'] = $entity->chado_record->name;
         $value['TAXRANK:genus'] = $entity->chado_record->organism_id->genus;
