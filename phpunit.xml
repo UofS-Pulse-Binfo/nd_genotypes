@@ -12,4 +12,13 @@
       <directory suffix="Test.php">tests</directory>
     </testsuite>
   </testsuites>
+  <filter>
+     <whitelist addUncoveredFilesFromWhitelist="true">
+       <file>./nd_genotypes.module</file>
+       <directory suffix=".inc">./includes</directory>
+       <directory suffix=".php">./includes</directory>
+       <directory suffix=".inc">./api</directory>
+       <directory suffix=".php">./api</directory>
+     </whitelist>
+   </filter>
 </phpunit>

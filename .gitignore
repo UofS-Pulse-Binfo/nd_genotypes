@@ -6,3 +6,4 @@ tests/.env
 .project
 .settings/
 docs/_build/
+tests/_build

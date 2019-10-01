@@ -713,7 +713,7 @@ function nd_genotypes_complement_calls($calls) {
     return $complement[$calls];
   }
 
-  return $calls;
+  return FALSE;
 }
 
 /**

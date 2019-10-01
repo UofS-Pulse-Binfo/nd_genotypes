@@ -25,6 +25,7 @@ class allelesTest extends TripalTestCase {
       'CG' => 'S',
       'AT' => 'W',
       'CGT' => 'B',
+      'GTA' => 'D',
       'C' => 'C',
       'CGGCCGCCG' => 'S',
       'TTTTTTTTT' => 'T',
@@ -33,8 +34,12 @@ class allelesTest extends TripalTestCase {
       $result = nd_genotypes_get_IUPAC_code($alleles);
       $this->assertEquals($code, $result);
     }
+
+    // We should also test one that should not work.
+    $result = nd_genotypes_get_IUPAC_code('FRED');
+    $this->assertFalse($result);
   }
- 
+
   /**
    * Tests nd_genotypes_expand_IUPAC_code().
    */
@@ -81,18 +86,27 @@ class allelesTest extends TripalTestCase {
     $calls = 'T';
     $expect = 'A';
     $result = nd_genotypes_complement_calls($calls);
-    $this->assertEquals($expect, $result);
+    $this->assertEquals($expect, $result,
+      "Unable to complement single allele string.");
 
     $calls = ['T'];
     $expect = ['A'];
     $result = nd_genotypes_complement_calls($calls);
-    $this->assertEquals($expect, array_values($result));
+    $this->assertEquals($expect, array_values($result),
+      "Unable to complement single allele array.");
 
     $calls = ['T', 'T', 'C', 'A'];
     $expect = ['A', 'G', 'T'];
     $result = nd_genotypes_complement_calls($calls);
-    $this->assertEquals($expect, array_values($result));
+    $this->assertEquals($expect, array_values($result),
+      "Unable to complement multi-allele array.");
 
+    // Expect it to not be able to complement.
+    $calls = 'FRED';
+    $expect = FALSE;
+    $result = nd_genotypes_complement_calls($calls);
+    $this->assertEquals($expect, array_values($result),
+      "Did not fail to complement when it should have.");
   }
 
   /**
@@ -103,4 +117,25 @@ class allelesTest extends TripalTestCase {
   public function testGetAlleles4Variant() {
     $this->assertTrue(true);
   }*/
+
+  /**
+   * Tests nd_genotypes_set_default_colours().
+   */
+  public function testSetDefaultColours() {
+    nd_genotypes_set_default_colours();
+
+    $result = variable_get('nd_genotypes_SNP_colours', FALSE);
+    $this->assertNotFalse($result,
+      "Unable to retrieve nd_genotypes_SNP_colours.");
+    $unserialized = unserialize($result);
+    $this->assertIsArray($unserialized,
+      "Unable to unserialize nd_genotypes_SNP_colours.");
+
+    $result = variable_get('nd_genotypes_allele_colours', FALSE);
+    $this->assertNotFalse($result,
+      "Unable to retrieve nd_genotypes_allele_colours.");
+    $unserialized = unserialize($result);
+    $this->assertIsArray($unserialized,
+      "Unable to unserialize nd_genotypes_allele_colours.");
+  }
 }

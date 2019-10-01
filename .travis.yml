@@ -7,12 +7,24 @@ php:
 services:
   - docker
 
+env:
+  - DRUPAL_ROOT=/var/www/html IS_TRAVIS=TRUE CC_TEST_REPORTER_ID=1f13b5053c892bfbb9fe08101853ec6763af1ae81f43f698ccd556615f09548b
+
 before_script:
   - docker pull statonlab/tripal3
+  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+  - chmod +x ./cc-test-reporter
+  - ./cc-test-reporter before-build --debug
+  - GIT_BRANCH=$TRAVIS_PULL_REQUEST_BRANCH
+  - GIT_COMMIT_SHA=$TRAVIS_PULL_REQUEST_SHA
 
 script:
   - docker run -it -d --rm --name tripal -v "$(pwd)":/modules/nd_genotypes statonlab/tripal3
   - sleep 30 # We pause here so postgres and apache complete booting up
   - docker exec -it tripal bash -c "cd /var/www/html/sites/all/modules && git clone https://github.com/tripal/trpdownload_api.git"
   - docker exec -it tripal drush pm-enable -y trpdownload_api nd_genotypes
-  - docker exec -it tripal bash -c "cd /modules/nd_genotypes && composer install && DRUPAL_ROOT=/var/www/html ./vendor/bin/phpunit"
+  - docker exec -it tripal yum install -y php-pecl-xdebug.x86_64
+  - docker exec -it tripal bash -c "cd /modules/nd_genotypes && composer install && DRUPAL_ROOT=/var/www/html IS_TRAVIS=TRUE ./vendor/bin/phpunit  --coverage-clover ./clover.xml"
+
+after_script:
+  - ./cc-test-reporter after-build clover.xml --debug -t clover -p /var/www/html/sites/all/modules/custom/nd_genotypes --exit-code $TRAVIS_TEST_RESULT
