@@ -17,6 +17,12 @@ This module provides support and visualization of genotypic data stored in a mod
 ## Installation
  This module is installed by downloading it and it's dependencies in `[your drupal site]/sites/all/modules` and enabling it through the Drupal Administrative UI.
 
+## Features
+- Extensive configuration allowing for flexiblity in ontology terms used, as well as, colours and wording used in visualizations.
+- Multiple Tripal 3 Fields which provide flexible, configurable summaries of genotypic data.
+- Genotype Matrix search allowing users to extract genotypes for a user-defined set of germplasm.
+- Integration of all fields with Tripal 3 web services allowing you to share your genotypic data with other groups.
+
 ## Documentation [![Documentation Status](https://readthedocs.org/projects/nd-genotypes/badge/?version=latest)](https://nd-genotypes.readthedocs.io/en/latest/?badge=latest)
 
 Please visit our [online documentation](https://nd-genotypes.readthedocs.io/en/latest/index.html) to learn more about installation, usage and features.
