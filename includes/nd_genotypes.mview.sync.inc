@@ -471,7 +471,7 @@ function nd_genotypes_summarize_mviews($print = FALSE) {
   chado_query("TRUNCATE {mview_ndg_summary}");
 
   if ($print) print "    - Determining the partitions sync'd...\n";
-  $resource = ndg_mview_query($partition, "
+  $resource = chado_query("
     WITH RECURSIVE t AS (
       (SELECT partition
         FROM {mview_ndg_germplasm_genotyped}
