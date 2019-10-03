@@ -67,7 +67,6 @@ function nd_genotypes_update_mview($partitions, $job_id) {
  * Notice that we will attempt to create the table if it doesn't already exist.
  */
 function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
-  global $databases;
 
   // Determine the name of the mview table in this partition.
   $table_name = 'mview_ndg_'.$partition.'_calls';
@@ -154,7 +153,9 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
     print "    - Working on genotype_id=$genotype_id ($i of $total)...\n";
 
     // Copy it to a file.
+    global $databases;
     $db_name = $databases['default']['default']['database'];
+    print_r($databases);
     print "       - Copying to file...\n";
     $result = ndg_remote_chado_copy("COPY (" . $query . ") TO '/tmp/mview_ndg_calls.".$db_name.".copy'",
       array(':id' => $genotype_id, ':partition' => $partition,
@@ -183,7 +184,7 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
   print "    - Creating Indexes\n";
   nd_genotypes_create_mview_ndg_calls_indexes($table_name);
 
-  unlink("/tmp/mview_ndg_calls.$db_name.copy");
+  unlink("/tmp/mview_ndg_calls.".$db_name.".copy");
 }
 
 /**
@@ -198,7 +199,6 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
  */
 function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
   $pg_version = nd_genotypes_get_postgresql_version();
-  global $databases;
 
   // Determine the name of the mview table in this partition.
   $table_name = 'mview_ndg_'.$partition.'_variants';
@@ -217,6 +217,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
   nd_genotypes_drop_indexes($table_name);
   print "       - Complete.\n";
 
+  global $databases;
   $db_name = $databases['default']['default']['database'];
 
   // We would like to chunk the dataset into hopefully reasonable pieces for updating
@@ -230,6 +231,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
   // For this approach we first need to get the list of genotype_ids to use for chunk
   // delimiters.
   $total_min = chado_query("SELECT min(variant_id) FROM {".$ndg_calls_name."}")->fetchField();
+  if ($total_min < 1) {$total_min = 1;}
   $total_max = chado_query("SELECT max(variant_id) FROM {".$ndg_calls_name."}")->fetchField();
   // Seems relatively performant at 50 million.
   $chunk_size = 500000;
