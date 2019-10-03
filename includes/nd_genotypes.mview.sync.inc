@@ -155,7 +155,7 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
     // Copy it to a file.
     global $databases;
     $db_name = $databases['default']['default']['database'];
-    print_r($databases);
+    if (empty($db_name)) { $db_name = 'local'; }
     print "       - Copying to file...\n";
     $result = ndg_remote_chado_copy("COPY (" . $query . ") TO '/tmp/mview_ndg_calls.".$db_name.".copy'",
       array(':id' => $genotype_id, ':partition' => $partition,
@@ -184,7 +184,13 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
   print "    - Creating Indexes\n";
   nd_genotypes_create_mview_ndg_calls_indexes($table_name);
 
-  unlink("/tmp/mview_ndg_calls.".$db_name.".copy");
+  $file = "/tmp/mview_ndg_calls.".$db_name.".copy";
+  if (file_exists($file)) {
+    unlink($file);
+  }
+  else {
+    drush_log("File $file was not created.", "warning");
+  }
 }
 
 /**
@@ -219,6 +225,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
 
   global $databases;
   $db_name = $databases['default']['default']['database'];
+  if (empty($db_name)) { $db_name = 'local'; }
 
   // We would like to chunk the dataset into hopefully reasonable pieces for updating
   // the materialized view. However, we would also like to avoid sorting first since
@@ -341,8 +348,18 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
   print "    - Creating Indexes\n";
   nd_genotypes_create_mview_ndg_variants_indexes($table_name);
 
-  unlink("/tmp/mview_ndg_variants.$db_name.copy");
-  unlink("/tmp/mview_ndg_variants.$db_name.copy.unique");
+  $files = [
+    "/tmp/mview_ndg_variants.".$db_name.".copy",
+    "/tmp/mview_ndg_variants.".$db_name.".copy.unique"
+  ];
+  foreach ($files as $file) {
+    if (file_exists($file)) {
+      unlink($file);
+    }
+    else {
+      drush_log("File $file was not created.", "warning");
+    }
+  }
 }
 
 /**
