@@ -67,6 +67,7 @@ function nd_genotypes_update_mview($partitions, $job_id) {
  * Notice that we will attempt to create the table if it doesn't already exist.
  */
 function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
+  global $databases;
 
   // Determine the name of the mview table in this partition.
   $table_name = 'mview_ndg_'.$partition.'_calls';
@@ -197,6 +198,7 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
  */
 function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
   $pg_version = nd_genotypes_get_postgresql_version();
+  global $databases;
 
   // Determine the name of the mview table in this partition.
   $table_name = 'mview_ndg_'.$partition.'_variants';
