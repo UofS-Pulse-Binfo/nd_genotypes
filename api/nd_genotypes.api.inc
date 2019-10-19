@@ -220,7 +220,7 @@ function nd_genotypes_has_genotypes($feature_id, $partition = 'All') {
 function nd_genotypes_get_marker($variant_id, $id_only = FALSE, $only_one = TRUE) {
 
   $rel_type = variable_get('nd_genotypes_rel_type_id', 0);
-  $variant_position = variable_get('nd_genotypes_rel_position', 'subject_id');
+  $variant_position = variable_get('nd_genotypes_rel_position', 'subject');
 
   // Retrieve the id using a simple SQL statement to save overhead.
   if ($variant_position == 'subject') {
