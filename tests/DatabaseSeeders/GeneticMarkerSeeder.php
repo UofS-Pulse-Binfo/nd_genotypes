@@ -117,7 +117,7 @@ class GeneticMarkerSeeder extends Seeder
         ]);
       }
 
-      return [
+      $data = [
         'organism' => (array) $organism,
         'chromosome' => [
           'chromosome_id' => $chr_id,
@@ -153,6 +153,8 @@ class GeneticMarkerSeeder extends Seeder
           ],
         ],
       ];
+
+      return $data;
     }
 
     /**
