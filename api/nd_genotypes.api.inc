@@ -220,7 +220,7 @@ function nd_genotypes_has_genotypes($feature_id, $partition = 'All') {
 function nd_genotypes_get_marker($variant_id, $id_only = FALSE, $only_one = TRUE) {
 
   $rel_type = variable_get('nd_genotypes_rel_type_id', 0);
-  $variant_position = variable_get('nd_genotypes_rel_position', 'subject_id');
+  $variant_position = variable_get('nd_genotypes_rel_position', 'subject');
 
   // Retrieve the id using a simple SQL statement to save overhead.
   if ($variant_position == 'subject') {
@@ -342,14 +342,26 @@ function nd_genotypes_get_type_id($type) {
 /**
  * Retrieve the marker type of the given marker.
  *
- * @param $variant_id
+ * @param $marker_id
  *   The feature_id of the variant.
  * @return
  *   The type of marker as stored in the featureprop table.
  */
 function nd_genotypes_get_marker_type($marker_id) {
-  return chado_query("SELECT value FROM {featureprop} WHERE feature_id=:id AND type_id IN (SELECT cvterm_id FROM {cvterm} WHERE name='marker_type')",
-    array(':id' => $marker_id))->fetchField();
+  $value = FALSE;
+
+  $type_id = nd_genotypes_get_type_id('Marker Type');
+  if ($type_id) {
+    $value = chado_query(
+      "SELECT value FROM {featureprop}
+        WHERE feature_id=:id AND type_id=:type_id",
+        array(
+          ':id' => $marker_id,
+          ':type_id' => $type_id,
+        ))->fetchField();
+  }
+
+  return $value;
 }
 
 /**

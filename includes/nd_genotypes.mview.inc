@@ -436,7 +436,7 @@ function nd_genotypes_create_mview_ndg_germplasm_genotyped($table_name = 'mview_
     ),
   );
 
-  chado_create_custom_table( $table_name, $schema, TRUE, NULL, FALSE );
+  return chado_create_custom_table( $table_name, $schema, TRUE, NULL, FALSE );
 
 }
 
@@ -506,7 +506,7 @@ function nd_genotypes_create_mview_summary($table_name = 'mview_ndg_summary') {
     'indexes' => array(),
   );
 
-  chado_create_custom_table( $table_name, $schema, TRUE, NULL, FALSE );
+  chado_create_custom_table($table_name, $schema, TRUE, NULL, FALSE );
 
 }
 
