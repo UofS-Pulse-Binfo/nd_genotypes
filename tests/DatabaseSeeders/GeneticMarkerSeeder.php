@@ -27,7 +27,7 @@ class GeneticMarkerSeeder extends Seeder
       $get_type_sql = "SELECT cvterm_id FROM {cvterm} WHERE name=:type and cv_id IN (SELECT cv_id FROM {cv} WHERE name='sequence')";
 
       // Generate a position for this marker.
-      $position = rand(1000,100000);
+      $position = rand(100,600);
       $this->position;
 
       // Organism.
@@ -382,6 +382,7 @@ class GeneticMarkerSeeder extends Seeder
         'srcfeature_name' => $data['chromosome']['record']->name,
         'fmin' => $data['position']['start'],
         'fmax' => $data['position']['stop'],
+        'meta_data' => json_encode(['strand' => 1]),
       ];
       $variant = chado_insert_record($variant_table, $values);
       $return['variant'] = (array) $variant;

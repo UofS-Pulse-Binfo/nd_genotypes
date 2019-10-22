@@ -146,7 +146,6 @@ class genotypesTest extends TripalTestCase {
    * Tests nd_genotypes_markup_sequence_with_variants().
    *
    * @group genotypes
-   * @group workingon
    */
   public function testMarkupSequence() {
 
@@ -163,27 +162,50 @@ class genotypesTest extends TripalTestCase {
     $mview = $seeder->syncMviews($partition);
     $srcfeature_name = $data['chromosome']['record']->name;
 
+    // Now create a second variant with the same organism.
+    $seeder2 = new GeneticMarkerSeeder();
+    $data2 = $seeder2->up(
+      $data['organism']['organism_id'],
+      $data['chromosome']['chromosome_id']
+    );
+    $genotype_data2 = $seeder2->addGenotypes(1);
+    $mview2 = $seeder2->syncMviews($partition);
+
     // Check when we supply all the parameters in the ideal case...
     $values = [
       'srcfeature_id' => $data['chromosome']['chromosome_id'],
       'srcfeature_name' => $srcfeature_name,
       'variant_id' => $data['variant']['variant_id'],
-      'sequence' => str_repeat('N', 100),
-      'sequence_start' => $data['position']['start'] - 50,
-      'sequence_end' => $data['position']['stop'] + 50,
+      'sequence' => str_repeat('N', 700),
+      'sequence_start' => 50,
+      'sequence_end' => 650,
+      'sequence_strand' => -1,
     ];
     $sequence = nd_genotypes_markup_sequence_with_variants(
       $values, [], $partition);
 
     $allele = $genotype_data[0]['allele'];
     if ($allele[0] == $allele[1]) {
-      $expanded = '['.$allele[0] . '/N]';
+      $expanded = "/\[\w\/N\]/";
     }
     else {
-      $expanded = '['.$allele[0] . '/' . $allele[1] . '/N]';
+      $expanded = "/\[\w\/\w\/N\]/";
     }
-    $this->assertStringContainsString($expanded, $sequence,
+    $this->assertRegExp($expanded, $sequence,
       "The allele should be marked up in the sequence.");
+
+    $complemented = nd_genotypes_complement_calls($mview2['calls'][0]['allele_call']);
+    $code = nd_genotypes_get_IUPAC_code($complemented);
+    $this->assertStringContainsString($code, $sequence,
+      "The IUPAC code of the second variant should be present.");
+
+    // Finally check we recieve an error if we do not provide sequence coords.
+    unset($values['sequence_start'], $values['sequence_end']);
+    $sequence = nd_genotypes_markup_sequence_with_variants(
+      $values, [], $partition);
+    $this->assertEquals(str_repeat('N', 700), $sequence,
+      "The sequence should not contain any variants.");
+
   }
 
   /**
