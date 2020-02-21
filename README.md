@@ -10,7 +10,7 @@
 This module provides support and visualization of genotypic data stored in a modified GMOD Chado schema. The 3.x branch of this module represents a shift towards support for **large scale genotypic datasets** through backwards compatible improvements to the Chado schema including a new gathering table for genotypes (genotype_call) modelled after the chado phenotype table, optimized queries and well-choosen indexes. For benchmarking demonstrating the efficiency of this module, see our [documentation](https://nd-genotypes.readthedocs.io/en/latest/data_storage/benchmarking.html).
 
 ## Dependencies
-1. [Tripal 3.x](https://github.com/tripal/tripal) ((Installation Instructions)[https://tripal.readthedocs.io/en/latest/user_guide.html])
+1. [Tripal 3.x](https://github.com/tripal/tripal) ([Installation Instructions](https://tripal.readthedocs.io/en/latest/user_guide.html))
 2. [Tripal Download API](https://github.com/tripal/trpdownload_api)
 3. PostgreSQL 9.3 (9.4+ recommended; tested with 11.3)
 
