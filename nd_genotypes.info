@@ -7,4 +7,6 @@ configure = admin/tripal/extension/nd_genotypes/settings
 
 dependencies[] = tripal
 dependencies[] = tripal_chado
+dependencies[] = libraries
+dependencies[] = tripald3
 dependencies[] = trpdownload_api

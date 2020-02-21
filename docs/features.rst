@@ -14,6 +14,10 @@ Features
 - Genotype Matrix search allowing users to extract genotypes for a user-defined set of germplasm. Includes filtering by marker/variant type, variant location, and pairwise polymorphism. Filtering by quality is coming soon.
 - Integration of all fields with Tripal 3 web services allowing you to share your genotypic data with other groups.
 
+.. note::
+
+  If ND Genotypes fields are not automatically attached to the genetic marker and sequence variant content types, go to the "Manage Fields" page for each and click "Find new fields". Also, go to the "Manage Display" page and ensure they are not hidden.
+
 .. toctree::
    :maxdepth: 2
    :caption: Further Detail:
