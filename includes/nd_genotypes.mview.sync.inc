@@ -153,7 +153,9 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
     print "    - Working on genotype_id=$genotype_id ($i of $total)...\n";
 
     // Copy it to a file.
+    global $databases;
     $db_name = $databases['default']['default']['database'];
+    if (empty($db_name)) { $db_name = 'local'; }
     print "       - Copying to file...\n";
     $result = ndg_remote_chado_copy("COPY (" . $query . ") TO '/tmp/mview_ndg_calls.".$db_name.".copy'",
       array(':id' => $genotype_id, ':partition' => $partition,
@@ -182,7 +184,13 @@ function nd_genotypes_update_mview_ndg_calls($partition, $job_id) {
   print "    - Creating Indexes\n";
   nd_genotypes_create_mview_ndg_calls_indexes($table_name);
 
-  unlink("/tmp/mview_ndg_calls.$db_name.copy");
+  $file = "/tmp/mview_ndg_calls.".$db_name.".copy";
+  if (file_exists($file)) {
+    unlink($file);
+  }
+  else {
+    drush_log("File $file was not created.", "warning");
+  }
 }
 
 /**
@@ -215,7 +223,9 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
   nd_genotypes_drop_indexes($table_name);
   print "       - Complete.\n";
 
+  global $databases;
   $db_name = $databases['default']['default']['database'];
+  if (empty($db_name)) { $db_name = 'local'; }
 
   // We would like to chunk the dataset into hopefully reasonable pieces for updating
   // the materialized view. However, we would also like to avoid sorting first since
@@ -228,6 +238,7 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
   // For this approach we first need to get the list of genotype_ids to use for chunk
   // delimiters.
   $total_min = chado_query("SELECT min(variant_id) FROM {".$ndg_calls_name."}")->fetchField();
+  if ($total_min < 1) {$total_min = 1;}
   $total_max = chado_query("SELECT max(variant_id) FROM {".$ndg_calls_name."}")->fetchField();
   // Seems relatively performant at 50 million.
   $chunk_size = 500000;
@@ -337,8 +348,18 @@ function nd_genotypes_update_mview_ndg_variants($partition, $job_id) {
   print "    - Creating Indexes\n";
   nd_genotypes_create_mview_ndg_variants_indexes($table_name);
 
-  unlink("/tmp/mview_ndg_variants.$db_name.copy");
-  unlink("/tmp/mview_ndg_variants.$db_name.copy.unique");
+  $files = [
+    "/tmp/mview_ndg_variants.".$db_name.".copy",
+    "/tmp/mview_ndg_variants.".$db_name.".copy.unique"
+  ];
+  foreach ($files as $file) {
+    if (file_exists($file)) {
+      unlink($file);
+    }
+    else {
+      drush_log("File $file was not created.", "warning");
+    }
+  }
 }
 
 /**
@@ -469,7 +490,7 @@ function nd_genotypes_summarize_mviews($print = FALSE) {
   chado_query("TRUNCATE {mview_ndg_summary}");
 
   if ($print) print "    - Determining the partitions sync'd...\n";
-  $resource = ndg_mview_query($partition, "
+  $resource = chado_query("
     WITH RECURSIVE t AS (
       (SELECT partition
         FROM {mview_ndg_germplasm_genotyped}
