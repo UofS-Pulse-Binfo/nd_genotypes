@@ -11,14 +11,16 @@ This module provides support and visualization of genotypic data stored in a mod
 
 ## Dependencies
 1. [Tripal 3.x](https://github.com/tripal/tripal) ([Installation Instructions](https://tripal.readthedocs.io/en/latest/user_guide.html))
-2. [Tripal Download API](https://github.com/tripal/trpdownload_api)
-3. PostgreSQL 9.3 (9.4+ recommended; tested with 11.3)
+2. [Tripal D3.js](https://github.com/tripal/tripald3)
+3. [Tripal Download API](https://github.com/tripal/trpdownload_api)
+4. PostgreSQL 9.3 (9.4+ recommended; tested with 11.3)
 
 ## Installation
 This module is installed by cloning it and it's dependencies in `[your drupal site]/sites/all/modules` and enabling it through the Drupal Administrative UI. Specifically, once you have a working Tripal environment:
 
 ```
 git clone https://github.com/tripal/trpdownload_api.git
+git clone https://github.com/tripal/tripald3.git
 git clone https://github.com/UofS-Pulse-Binfo/nd_genotypes.git
 drush pm-enable nd_genotypes
 ```
