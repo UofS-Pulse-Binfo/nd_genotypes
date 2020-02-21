@@ -242,7 +242,7 @@ class GeneticMarkerSeeder extends Seeder
     /**
      * Add Genotypes to existing markers.
      */
-    public function addGenotypes($max = 1) {
+    public function addGenotypes($max = 1, $stocks = []) {
 
       // Create a project.
       $project = factory('chado.project')->create();
@@ -250,42 +250,59 @@ class GeneticMarkerSeeder extends Seeder
       // Insert all the alleles.
       $alleles = ['AA', 'TT', 'CC', 'GG', 'AT', 'AC', 'AG', 'TC', 'TG', 'CG'];
       foreach ($alleles as $call) {
-        $genotype = chado_insert_record('genotype', [
-          'uniquename' => $project->project_id . '-' . $call,
+        $genotype = chado_select_record('genotype', ['*'], [
+          'uniquename' => $call,
           'description' => $call,
           'type_id' => ['name' => 'SNP', 'cv_id' => ['name' => 'sequence']],
         ]);
+        if ($genotype) {
+          $genotype = array_pop($genotype);
+          $genotype = (array) $genotype;
+        }
+        else {
+          $genotype = chado_insert_record('genotype', [
+            'uniquename' => $call,
+            'description' => $call,
+            'type_id' => ['name' => 'SNP', 'cv_id' => ['name' => 'sequence']],
+          ]);
+        }
         $genotype_ids[$call] = $genotype['genotype_id'];
       }
 
       // For each set requested.
       for ($i = 0; $i < $max; $i++) {
 
-        // Create Germplasm.
-        $germplasm = factory('chado.stock')->create([
-          'organism_id' => $this->organism_id,
-        ]);
-
-        // Create Sample.
-        $sample = factory('chado.stock')->create([
-          'organism_id' => $this->organism_id,
-        ]);
-
-        // Link Sample => Germplasm.
-        $rel_type = nd_genotypes_get_type_id('Stock Relationship');
-        if ($rel_type['position'] == 'subject') {
-          $rel = chado_insert_record('stock_relationship', [
-            'subject_id' => $sample->stock_id,
-            'type_id' => $rel_type['type_id'],
-            'object_id' => $germplasm->stock_id,
-          ]);
+        if ($stocks) {
+          $germplasm = $stocks[$i]['germplasm'];
+          $sample = $stocks[$i]['sample'];
         }
         else {
-          $rel = chado_insert_record('stock_relationship', [
-            'subject_id' => $germplasm->stock_id,
-            'type_id' => $rel_type['type_id'],
-            'object_id' => $sample->stock_id,
+          // Create Germplasm.
+          $germplasm = factory('chado.stock')->create([
+            'organism_id' => $this->organism_id,
           ]);
+
+          // Create Sample.
+          $sample = factory('chado.stock')->create([
+            'organism_id' => $this->organism_id,
+          ]);
+
+          // Link Sample => Germplasm.
+          $rel_type = nd_genotypes_get_type_id('Stock Relationship');
+          if ($rel_type['position'] == 'subject') {
+            $rel = chado_insert_record('stock_relationship', [
+              'subject_id' => $sample->stock_id,
+              'type_id' => $rel_type['type_id'],
+              'object_id' => $germplasm->stock_id,
+            ]);
+          }
+          else {
+            $rel = chado_insert_record('stock_relationship', [
+              'subject_id' => $germplasm->stock_id,
+              'type_id' => $rel_type['type_id'],
+              'object_id' => $sample->stock_id,
+            ]);
+          }
         }
 
         // For each marker...

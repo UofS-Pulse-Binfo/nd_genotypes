@@ -73,7 +73,7 @@ Factory::define('chado.organism', function (Faker\Generator $faker) {
 Factory::define('chado.feature', function (Faker\Generator $faker) {
   return [
     'name' => $faker->word,
-    'uniquename' => $faker->unique()->word,
+    'uniquename' => $faker->unique()->word . '_' . uniqid(),
     'organism_id' => factory('chado.organism')->create()->organism_id,
     'type_id' => factory('chado.cvterm')->create()->cvterm_id,
   ];
@@ -183,7 +183,7 @@ Factory::define('chado.library', function (Faker\Generator $faker) {
 
 Factory::define('chado.project', function (Faker\Generator $faker) {
   return [
-    'name' => $faker->word,
+    'name' => $faker->unique()->word . '_' . uniqid(),
     'description' => $faker->text,
   ];
 });
@@ -192,7 +192,7 @@ Factory::define('chado.stock', function (Faker\Generator $faker) {
   return [
     'organism_id' => factory('chado.organism')->create()->organism_id,
     'name' => $faker->word,
-    'uniquename' => $faker->unique()->word,
+    'uniquename' => $faker->unique()->word . '_' . uniqid(),
     'type_id' => factory('chado.cvterm')->create()->cvterm_id,
   ];
 });
