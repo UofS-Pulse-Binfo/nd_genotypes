@@ -31,6 +31,8 @@ drush pm-enable nd_genotypes
 - Genotype Matrix search allowing users to extract genotypes for a user-defined set of germplasm.
 - Integration of all fields with Tripal 3 web services allowing you to share your genotypic data with other groups.
 
+See [Demonstration](https://nd-genotypes.readthedocs.io/en/latest/contribute.html#manual-testing-demonstration) for how to demonstrate these features on your test site with simulated data.
+
 ## Documentation [![Documentation Status](https://readthedocs.org/projects/nd-genotypes/badge/?version=latest)](https://nd-genotypes.readthedocs.io/en/latest/?badge=latest)
 
 Please visit our [online documentation](https://nd-genotypes.readthedocs.io/en/latest/index.html) to learn more about installation, usage and features.
