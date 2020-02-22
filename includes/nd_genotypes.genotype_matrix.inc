@@ -314,10 +314,9 @@ function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
     $query['sort'] = 'variant_name';
 
     // Check if this list already exists.
-    $list_id = db_select('ndg_matrix_variant_user_lists','l')
-      ->fields('l', array('list_id'))
-      ->condition('l.list', json_encode($list), '=')
-      ->execute()
+    $list_id = db_query('
+      SELECT list_id FROM {ndg_matrix_variant_user_lists} l
+      WHERE l.list::text = :list', [':list' => json_encode($list)])
       ->fetchField();
 
     // If this is from an already saved list, don't re-save it!
