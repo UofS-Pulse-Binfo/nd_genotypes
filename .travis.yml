@@ -23,7 +23,7 @@ script:
   - sleep 30 # We pause here so postgres and apache complete booting up
   - docker exec -it tripal bash -c "cd /var/www/html/sites/all/modules && git clone https://github.com/tripal/trpdownload_api.git && git clone https://github.com/tripal/tripald3"
   - docker exec -it tripal bash -c "cd /var/www/html/sites/all/libraries && mkdir d3 && cd d3 && wget https://github.com/d3/d3/releases/download/v3.5.17/d3.zip && unzip d3.zip"
-  - docker exec -it tripal drush dl libraries -y
+  - docker exec -it tripal drush pm-enable -y libraries
   - docker exec -it tripal drush pm-enable -y trpdownload_api tripald3 nd_genotypes
   - docker exec -it tripal yum install -y php-pecl-xdebug.x86_64
   - docker exec -it tripal bash -c "cd /modules/nd_genotypes && composer install && DRUPAL_ROOT=/var/www/html IS_TRAVIS=TRUE ./vendor/bin/phpunit  --coverage-clover ./clover.xml"
