@@ -26,6 +26,9 @@ Dataset  Query                Rep1           Rep2          Rep3          Average
 #2        Unfiltered Query     6009.39 ms   6741.178 ms   6034.41 ms    6261.659 ms
 #2        Range Query          6538.921 ms  6173.15 ms    6203.673 ms   6305.248 ms
 #2        Polymorphic Filter   751.286 ms   601.563 ms    607.435 ms    653.428 ms
+#3        Unfiltered Query     5.082 ms     6.671 ms      3.424 ms      5.059
+#3        Range Query          6.870 ms     7.582 ms      3.660 ms      6.037
+#3        Polymorphic Filter   68.305 ms    74.741 ms     65.071 ms     69.372
 ======== ==================== ============= ============= ============= =============
 
 NOTE: Each replicate shows both queries executed to extract the data for the genotype matrix.
@@ -38,13 +41,18 @@ NOTE: Each replicate shows both queries executed to extract the data for the gen
 Datasets
 --------
 
-The queries were tested on two SNP datasets with different composition. Both datasets were generated using the Generate Tripal Data Drush module; specifically, the drush generate-genotypes command. While the data is computationally derived, it does attempt to simulate real data by choosing allele frequencies (10-60% AA; 0-20% AB) per SNP before generating calls. However, in contrast to real datasets, the test datasets do not include missing calls.
+The queries were tested on two SNP datasets with different composition.
+
+Datasets #1 and #2 were generated using the Generate Tripal Data Drush module; specifically, the drush generate-genotypes command. While the data is computationally derived, it does attempt to simulate real data by choosing allele frequencies (10-60% AA; 0-20% AB) per SNP before generating calls. However, in contrast to real datasets, the test datasets do not include missing calls.
+
+Dataset #3 is a real world dataset from our research group. Details on this dataset can be found below as well as in `E Ogutcen, et al. (2018) Applications in Plant Sciences 6(7):e01165 <https://doi.org/10.1002/aps3.1165>`_.
 
 ============ ============= ======= ===============
 Name 	     SNPs          Samples Genotype Calls
 ============ ============= ======= ===============
 Dataset #1   45 million    45      2.03 billion
 Dataset #2   445 thousand  4500    2.03 billion
+Dataset #3   372,506       534     105,340,269
 ============ ============= ======= ===============
 
 NOTE: Dataset #1 took 12591m43.393s to load for a final database size of 1135 GB not including published pages.
@@ -59,30 +67,33 @@ The queries tested represent those executed by the genotype matrix provided by t
 
 .. code-block:: sql
 
-  SELECT variant_id, germplasm_id, allele_call 
+  SELECT variant_id, germplasm_id, allele_call
   FROM unnest(ARRAY[
       -- comma-separated list of variant_ids retrieved by the first query
-    ]) variant_id 
-  JOIN chado.mview_ndg_lens_calls call USING(variant_id) 
+    ]) variant_id
+  JOIN chado.mview_ndg_lens_calls call USING(variant_id)
   WHERE germplasm_id IN (:germplasm_0, :germplasm_1, :germplasm_2, :germplasm_3, :germplasm_4, :germplasm_5, :germplasm_6, :germplasm_7, :germplasm_8, :germplasm_9)
 
 
 The timings for both queries were determined for each replicate and were added together before averaging of the replicates. This was done to provide the total query time to retrieve data for the genotype matrix per criteria tested.
 Unfiltered Query
 
+Unfiltered Query
+^^^^^^^^^^^^^^^^^
+
 This is the query executed when you specify a set of germplasm to see genotypes for but do not specify any other criteria. Specifically, the following query represents the case where 10 germplasm have been specified (denoted by :germplasm_0 through :germplasm_9 placeholders in the query).
 
 .. code-block:: sql
 
-  SELECT v.*, cf.nid 
-  FROM chado.mview_ndg_lens_variants v 
-  LEFT JOIN public.chado_feature cf ON cf.feature_id=v.variant_id 
-  WHERE 
-    EXISTS ( 
-      SELECT true FROM chado.mview_ndg_lens_calls call 
-      WHERE germplasm_id IN (:germplasm_0, :germplasm_1, :germplasm_2, :germplasm_3, :germplasm_4, :germplasm_5, :germplasm_6, :germplasm_7, :germplasm_8, :germplasm_9) 
-        AND call.variant_id=v.variant_id ) 
-  ORDER BY srcfeature_name ASC, fmin ASC 
+  SELECT v.*, cf.nid
+  FROM chado.mview_ndg_lens_variants v
+  LEFT JOIN public.chado_feature cf ON cf.feature_id=v.variant_id
+  WHERE
+    EXISTS (
+      SELECT true FROM chado.mview_ndg_lens_calls call
+      WHERE germplasm_id IN (:germplasm_0, :germplasm_1, :germplasm_2, :germplasm_3, :germplasm_4, :germplasm_5, :germplasm_6, :germplasm_7, :germplasm_8, :germplasm_9)
+        AND call.variant_id=v.variant_id )
+  ORDER BY srcfeature_name ASC, fmin ASC
   LIMIT 100
 
 Range Query
@@ -92,16 +103,16 @@ This is the query executed when you restrict the set of variants returned to a s
 
 .. code-block:: sql
 
-  SELECT v.*, cf.nid 
-  FROM chado.mview_ndg_lens_variants v 
-  LEFT JOIN public.chado_feature cf ON cf.feature_id=v.variant_id 
-  WHERE 
-    ROW(v.srcfeature_name, v.fmin) BETWEEN ROW(:sbackbone, :sfmin) AND ROW(:ebackbone,:efmin) 
-    AND EXISTS ( 
-      SELECT true FROM chado.mview_ndg_lens_calls call 
-      WHERE germplasm_id IN (:germplasm_0, :germplasm_1, :germplasm_2, :germplasm_3, :germplasm_4, :germplasm_5, :germplasm_6, :germplasm_7, :germplasm_8, :germplasm_9) 
-        AND call.variant_id=v.variant_id ) 
-  ORDER BY srcfeature_name ASC, fmin ASC 
+  SELECT v.*, cf.nid
+  FROM chado.mview_ndg_lens_variants v
+  LEFT JOIN public.chado_feature cf ON cf.feature_id=v.variant_id
+  WHERE
+    ROW(v.srcfeature_name, v.fmin) BETWEEN ROW(:sbackbone, :sfmin) AND ROW(:ebackbone,:efmin)
+    AND EXISTS (
+      SELECT true FROM chado.mview_ndg_lens_calls call
+      WHERE germplasm_id IN (:germplasm_0, :germplasm_1, :germplasm_2, :germplasm_3, :germplasm_4, :germplasm_5, :germplasm_6, :germplasm_7, :germplasm_8, :germplasm_9)
+        AND call.variant_id=v.variant_id )
+  ORDER BY srcfeature_name ASC, fmin ASC
   LIMIT 100
 
 Polymorphic Filter
@@ -111,24 +122,24 @@ This is the query executed when you indicate that you would like only variants t
 
 .. code-block:: sql
 
-  SELECT v.*, cf.nid 
-  FROM chado.mview_ndg_lens_variants v 
-  LEFT JOIN public.chado_feature cf ON cf.feature_id=v.variant_id 
-  LEFT JOIN ( 
-      SELECT a.variant_id, a.allele_call=b.allele_call as monomorphic 
-      FROM mview_ndg_lens_calls a, mview_ndg_lens_calls b 
-      WHERE 
-        a.variant_id=b.variant_id 
-        AND a.germplasm_id=:poly1 
-        AND b.germplasm_id=:poly2 
-    ) p ON p.variant_id=v.variant_id 
-  WHERE 
-    p.monomorphic IS FALSE 
-    AND EXISTS ( 
-      SELECT true FROM chado.mview_ndg_lens_calls call 
-      WHERE germplasm_id IN (:germplasm_0, :germplasm_1, :germplasm_2, :germplasm_3, :germplasm_4, :germplasm_5, :germplasm_6, :germplasm_7, :germplasm_8, :germplasm_9) 
-        AND call.variant_id=v.variant_id ) 
-  ORDER BY srcfeature_name ASC, fmin ASC 
+  SELECT v.*, cf.nid
+  FROM chado.mview_ndg_lens_variants v
+  LEFT JOIN public.chado_feature cf ON cf.feature_id=v.variant_id
+  LEFT JOIN (
+      SELECT a.variant_id, a.allele_call=b.allele_call as monomorphic
+      FROM mview_ndg_lens_calls a, mview_ndg_lens_calls b
+      WHERE
+        a.variant_id=b.variant_id
+        AND a.germplasm_id=:poly1
+        AND b.germplasm_id=:poly2
+    ) p ON p.variant_id=v.variant_id
+  WHERE
+    p.monomorphic IS FALSE
+    AND EXISTS (
+      SELECT true FROM chado.mview_ndg_lens_calls call
+      WHERE germplasm_id IN (:germplasm_0, :germplasm_1, :germplasm_2, :germplasm_3, :germplasm_4, :germplasm_5, :germplasm_6, :germplasm_7, :germplasm_8, :germplasm_9)
+        AND call.variant_id=v.variant_id )
+  ORDER BY srcfeature_name ASC, fmin ASC
   LIMIT 100
 
 System Specification
@@ -147,4 +158,3 @@ Our Production Tripal site is setup on a dedicated two-box system (webserver + d
     - 8x 600GB 15K 6Gbps SAS 2.5in G3HS HDD
     - Redundant Power Supplies
     - 4x 1GbE Onboard Ethernet
-
