@@ -12,7 +12,7 @@ class GenotypeDatasetSeeder extends Seeder
      *
      * @return void
      */
-    public function up() {
+    public function up($num_markers = 100, $sync = FALSE) {
       $dataset = [];
 
       // First grab or create Tripalus databasica.
@@ -29,11 +29,13 @@ class GenotypeDatasetSeeder extends Seeder
       }
       $dataset['organism'] = $organism;
       $organism_id = $organism->organism_id;
+      $partition = $organism->genus;
 
       // Now create the first genetic marker.
       $seeder = new GeneticMarkerSeeder();
       $data = $seeder->up($organism_id);
       $genotype_data = $seeder->addGenotypes(10);
+      if ($sync) { $seeder->syncMviews($partition); }
       $chr_id = $data['chromosome']['chromosome_id'];
       $dataset['data'][0] = $data;
       $dataset['data'][0]['genotypes'] = $genotype_data;
@@ -49,10 +51,11 @@ class GenotypeDatasetSeeder extends Seeder
       }
 
       // Then create an additional 99 markers.
-      for ($i=1; $i <= 100; $i++) {
+      for ($i=1; $i < ($num_markers); $i++) {
         $seeder = new GeneticMarkerSeeder();
         $data = $seeder->up($organism_id, $chr_id);
         $genotype_data = $seeder->addGenotypes(10, $stocks);
+        if ($sync) { $seeder->syncMviews($partition); }
 
         $dataset['data'][$i] = $data;
         $dataset['data'][$i]['genotypes'] = $genotype_data;

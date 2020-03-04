@@ -18,7 +18,7 @@ class matrixPagedResultsTest extends TripalTestCase {
 
     // Generate a full dataset.
     $seeder = new GenotypeDatasetSeeder();
-    $dataset = $seeder->up();
+    $dataset = $seeder->up(5, TRUE);
     $number_of_markers = count($dataset['data']);
     //print_r($data);
 
@@ -56,7 +56,7 @@ class matrixPagedResultsTest extends TripalTestCase {
     $success = nd_genotypes_retrive_matrix_postgresql($vars);
     //var_dump($vars);
     $this->assertNotFalse($success);
-    //$this->assertCount($number_of_markers, $vars['variants']);
+    $this->assertCount($number_of_markers, $vars['variants']);
 
   }
 }
