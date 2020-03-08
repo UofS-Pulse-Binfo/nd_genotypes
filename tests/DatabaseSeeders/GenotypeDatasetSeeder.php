@@ -29,7 +29,7 @@ class GenotypeDatasetSeeder extends Seeder
       }
       $dataset['organism'] = $organism;
       $organism_id = $organism->organism_id;
-      $partition = $organism->genus;
+      $partition = strtolower($organism->genus);
 
       // Now create the first genetic marker.
       $seeder = new GeneticMarkerSeeder();
