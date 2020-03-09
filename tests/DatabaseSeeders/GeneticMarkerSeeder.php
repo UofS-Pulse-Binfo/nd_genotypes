@@ -118,6 +118,13 @@ class GeneticMarkerSeeder extends Seeder
           [':type' => 'variant_of'])->fetchField();
         variable_set('nd_genotypes_rel_type_id', $rel_type);
       }
+      print "DEBUGGING: Relationship type: $rel_type.\n";
+      $debugging = chado_select_record('cvterm', ['*'], ['cvterm_id' => $rel_type]);
+      print_r($debugging);
+      $debugging = chado_select_record('cvterm', ['*'], ['name' => 'variant_of']);
+      print_r($debugging);
+      $debugging = chado_select_record('cvterm', ['*'], ['name' => 'is marker for']);
+      print_r($debugging);
       $variant_position = variable_get('nd_genotypes_rel_position', 'subject');
       variable_set('nd_genotypes_rel_position', $variant_position);
       if ($variant_position == 'subject') {
