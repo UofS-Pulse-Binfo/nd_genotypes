@@ -111,7 +111,8 @@ class GeneticMarkerSeeder extends Seeder
       ]);
 
       // -- relationship with variant.
-      $rel_type = variable_get('nd_genotypes_rel_type_id', 0);
+      $default_feature_rel = nd_genotypes_get_type_id('Feature Relationship');
+      $rel_type = $default_feature_rel['type_id'];
       if (!$rel_type) {
         $rel_type = chado_query($get_type_sql,
           [':type' => 'variant_of'])->fetchField();
