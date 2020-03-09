@@ -9,6 +9,17 @@ class matrixPagedResultsTest extends TripalTestCase {
   // Uncomment to auto start and rollback db transactions per test method.
   use DBTransaction;
 
+  public function setUp() {
+
+    // Create tables.
+    $partition = 'tripalus';
+    $calls_table = 'mview_ndg_'.$partition.'_calls';
+    nd_genotypes_create_mview_ndg_calls($calls_table);
+    $variant_table = 'mview_ndg_'.$partition.'_variants';
+    nd_genotypes_create_mview_ndg_variants($variant_table);
+    $germplasm_table = 'mview_ndg_germplasm_genotyped';
+    nd_genotypes_create_mview_ndg_germplasm_genotyped($germplasm_table);
+  }
   /**
    * Test the Genotype Matrix with germplasm but no other filter criteria.
    *
@@ -58,7 +69,7 @@ class matrixPagedResultsTest extends TripalTestCase {
     $this->assertNotFalse($success);
 
     // -- We expect the exact # of variants since it's less than 1 page.
-    $this->assertCount($number_of_markers, $vars['variants']);
+    $this->assertCount($small_set, $vars['variants']);
     // -- Next check all the variants and genotypes are there.
     $this->check_full_matrix($dataset['data'], $vars, 'FULL SET');
 
@@ -144,8 +155,7 @@ class matrixPagedResultsTest extends TripalTestCase {
     $this->assertNotFalse($success);
 
     // -- We expect the extra results since it's the second/last page.
-    $this->assertCount(
-      $number_of_markers - $current_page_limit, $vars['variants']);
+    $this->assertCount($small_set, $vars['variants']);
   }
 
   /**
