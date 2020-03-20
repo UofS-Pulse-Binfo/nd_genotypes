@@ -535,8 +535,6 @@ function nd_genotypes_retrive_matrix_postgresql(&$vars) {
   $vars['variants'] = array();
   $vars['data'] = array();
 
-  dpm($vars, 'vars');
-
   if (!ndg_mview_tables_exist($vars['partition'])) {
     return FALSE;
   }
