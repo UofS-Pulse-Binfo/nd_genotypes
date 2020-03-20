@@ -71,8 +71,11 @@ class featuresTest extends TripalTestCase {
       // Retrieve full marker set (2 markers).
       $markers = nd_genotypes_get_marker($data['variant']['variant_id'], TRUE, FALSE);
       $this->assertIsArray($markers, "There should be two markers.");
+      $expected = [$data['marker']['marker_id'], $new_marker['marker_id']];
+      sort($expected);
+      sort($markers);
       $this->assertEquals(
-        [$data['marker']['marker_id'], $new_marker['marker_id']],
+        $expected,
         $markers,
         "The marker array does not contain the IDs we expect."
       );

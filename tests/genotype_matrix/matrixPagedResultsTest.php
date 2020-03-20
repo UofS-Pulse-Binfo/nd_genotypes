@@ -73,6 +73,7 @@ class matrixPagedResultsTest extends TripalTestCase {
     // -- Next check all the variants and genotypes are there.
     $this->check_full_matrix($dataset['data'], $vars, 'FULL SET');
 
+
     // Generate a dataset larger then the page limit and check the first page.
     $seeder = new GenotypeDatasetSeeder();
     $dataset = $seeder->up($current_page_limit + $small_set, TRUE);
@@ -211,17 +212,15 @@ class matrixPagedResultsTest extends TripalTestCase {
     $i = 0;
     foreach ($dataset['data'] as $k => $e) {
       $i++;
-      if (isset($filter_expected['seq_range'][$k])) {
-        if ($i <= 10) {
-          $filter_criteria['variant_name'][] = $e['variant']['record']->name;
+      if ($i <= 10) {
+        $filter_criteria['variant_name'][] = $e['variant']['record']->name;
+        $filter_expected['variant_name'][$k] = $e;
+      }
+      // if we are over 10 then we just want to check for any duplicates
+      // to make sure they are included.
+      else {
+        if (in_array($e['variant']['record']->name, $filter_criteria['variant_name'])) {
           $filter_expected['variant_name'][$k] = $e;
-        }
-        // if we are over 10 then we just want to check for any duplicates
-        // to make sure they are included.
-        else {
-          if (in_array($e['variant']['record']->name, $filter_criteria['variant_name'])) {
-            $filter_expected['variant_name'][$k] = $e;
-          }
         }
       }
     }
@@ -246,32 +245,23 @@ class matrixPagedResultsTest extends TripalTestCase {
     $filter_expected['project_id'][$key] = $value;
     $filter_criteria['project_id'] = $value['genotypes'][0]['project']->project_id;
 
-    //print "EXPECTED:" . print_r($filter_expected, TRUE);
-    //print "CRITERIA:" . print_r($filter_criteria, TRUE);
-
     // Now loop through each filter criteria combination (order doesn't matter).
     // Hard coding this b/c I didn't feel like recursively determining it.
     $combos = [
-      ['seq_range'],
-      ['seq_range', 'variant_name'],
-      ['seq_range', 'variant_name', 'variant_type'],
-      ['seq_range', 'variant_name', 'variant_type', 'marker_type'],
-      ['seq_range', 'variant_name', 'variant_type', 'marker_type', 'project_id'],
-      ['variant_name'],
-      ['variant_name', 'variant_type'],
-      ['variant_name', 'variant_type', 'marker_type'],
-      ['variant_name', 'variant_type', 'marker_type', 'project_id'],
-      ['marker_type'],
-      ['marker_type', 'project_id'],
-      ['project_id'],
+      'SR' => ['seq_range'],
+      'SRN' => ['seq_range', 'variant_name'],
+      'SRNT' => ['seq_range', 'variant_name', 'variant_type'],
+      'SRNTM' => ['seq_range', 'variant_name', 'variant_type', 'marker_type'],
+      'SRNTMP' => ['seq_range', 'variant_name', 'variant_type', 'marker_type', 'project_id'],
+      'N' => ['variant_name'],
+      'NT' => ['variant_name', 'variant_type'],
+      'NTM' => ['variant_name', 'variant_type', 'marker_type'],
+      'NTMP' => ['variant_name', 'variant_type', 'marker_type', 'project_id'],
+      'M' => ['marker_type'],
+      'MP' => ['marker_type', 'project_id'],
+      'P' => ['project_id'],
     ];
-    foreach ($combos as $criteria_combo) {
-      $combo_label = strtoupper(implode('-', $criteria_combo));
-      print "\nTesting...$combo_label.\n";
-
-      // -- This will be used to determine the subset of variants for this combo
-      //    but for now it just contains all variants as a starting point.
-      $variant_subset = array_keys($dataset['data']);
+    foreach ($combos as $combo_label => $criteria_combo) {
 
       // -- Arguements for query.
       $vars = [
@@ -292,6 +282,7 @@ class matrixPagedResultsTest extends TripalTestCase {
       $vars['query_args']['page'] = $vars['q']['page'];
 
       // ::: Add Criteria to Arguements
+      $expected_variants = [];
       foreach ($criteria_combo as $criteria_key) {
         $criterion = $filter_criteria[$criteria_key];
 
@@ -307,11 +298,10 @@ class matrixPagedResultsTest extends TripalTestCase {
           $vars['query_args'][$criteria_key] = $criterion;
         }
 
-        // ::: Determine the variants for this combination.
-        $curr_criterion_variants = array_keys($filter_expected[$criteria_key]);
-        $variant_subset = array_intersect(
-          $variant_subset, $curr_criterion_variants);
-
+        // ::: Determine the expected variants for the current combo.
+        //     For combos with more then one filter, this will be the maximum
+        //     number or variants rather then the exact number.
+        $expected_variants = array_merge($expected_variants, $filter_expected[$criteria_key]);
       }
 
       // -- Now finally, use the function to determine the query.
@@ -319,24 +309,19 @@ class matrixPagedResultsTest extends TripalTestCase {
       $this->assertNotFalse($success);
 
       // -- We expect the exact # of variants since it's less than 1 page.
-      $filtered_num_variants = sizeof($variant_subset);
-      $this->assertCount($filtered_num_variants, $vars['variants'],
-        "There was not the correct expected number of variants for " . $combo_label);
-
-      // -- Next check all the variants and genotypes are there.
-      $variants_expected = [];
-      print "\tVARIANTS EXPECTED: ";
-      foreach ($variant_subset as $dataset_key) {
-        $variants_expected[$dataset_key] = $dataset['data'][$dataset_key];
-        print $dataset['data'][$dataset_key]['chromosome']['record']->name . ':'
-          . $dataset['data'][$dataset_key]['position']['start'] . '_'
-          . $dataset['data'][$dataset_key]['variant']['variant_id'] . ' | ';
+      $filtered_num_variants = sizeof($expected_variants);
+      if (sizeof($criteria_combo) == 1) {
+        $this->assertCount($filtered_num_variants, $vars['variants'],
+          "There was not the correct expected number of variants for " . $combo_label);
       }
-      $this->check_full_matrix($variants_expected, $vars, $combo_label);
+      else {
+        $this->assertLessThanOrEqual($filtered_num_variants, sizeof($vars['variants']),
+          "There was not the correct expected number of variants for " . $combo_label);
+      }
+      // -- Next check all the variants and genotypes are there.
+      $this->check_full_matrix($expected_variants, $vars, $combo_label);
 
     }
-
-
   }
 
   /**
@@ -347,18 +332,32 @@ class matrixPagedResultsTest extends TripalTestCase {
    */
    public function check_full_matrix($expected, $results, $helpful_label) {
 
-     // -- Check all the variants are there. (key: `chr:start_variantid`)
-     foreach ($expected as $record_details) {
+     $mapping = [];
+     foreach ($expected as $expected_key => $expected_details) {
        $parts = [
-         'chr_name' => $record_details['chromosome']['record']->name,
-         'start' => $record_details['position']['start'],
-         'variant_id' => $record_details['variant']['variant_id'],
+         'chr_name' => $expected_details['chromosome']['record']->name,
+         'start' => $expected_details['position']['start'],
+         'variant_id' => $expected_details['variant']['variant_id'],
        ];
-       $key_to_check = $parts['chr_name'].':'.$parts['start'].'_'.$parts['variant_id'];
-       $this->assertArrayHasKey($key_to_check, $results['variants'],
-         "The expected variant was not in the results for $helpful_label.");
+       $result_key = $parts['chr_name'].':'.$parts['start'].'_'.$parts['variant_id'];
+
+       $mapping[$expected_key] = $result_key;
+     }
+
+     //print "EXPECTED:".print_r($expected, TRUE);
+     //print "RESULT:".print_r($results, TRUE);
+     //print "MAPPING:".print_r($mapping, TRUE);
+
+     // -- Check all the variants that are there are expected to be there.
+     // (result_key: `chr:start_variantid`)
+     foreach ($results['variants'] as $result_key => $var_details) {
+
+       $expected_key = array_search($result_key, $mapping);
+       $this->assertNotFalse($expected_key,
+         "The result variant was not in the expected list for $helpful_label.");
 
        // -- Check that the genotypes are as expected.
+       $record_details = $expected[$expected_key];
        foreach ($record_details['genotypes'] as $genotype_details) {
          $expected_call = $genotype_details['genotype_call'];
          $allele = $genotype_details['allele'];
@@ -366,7 +365,7 @@ class matrixPagedResultsTest extends TripalTestCase {
          $germplasm_id = $genotype_details['germplasm']->stock_id;
 
          $this->assertArrayHasKey($variant_id, $results['data'],
-           "The variant is not in the results for $helpful_label.");
+           "The variant is not in the results data for $helpful_label.");
          $this->assertArrayHasKey($germplasm_id, $results['data'][$variant_id],
            "The germplasm is not present for this variant ($helpful_label).");
          $this->assertContains(
