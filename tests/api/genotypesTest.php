@@ -151,7 +151,9 @@ class genotypesTest extends TripalTestCase {
 
     // Always call it first to make sure it doesn't break when
     // the tables don't yet exist.
+    putenv("TRIPAL_SUPPRESS_ERRORS=TRUE");
     $sequence = nd_genotypes_get_variants_for_sequence([], [], uniqid());
+    putenv("TRIPAL_SUPPRESS_ERRORS");
     $this->assertFalse($sequence, "We shouldn't be able to pull up a sequence without any parameters.");
 
     // Create a marker/variant dataset.
@@ -201,8 +203,10 @@ class genotypesTest extends TripalTestCase {
 
     // Finally check we recieve an error if we do not provide sequence coords.
     unset($values['sequence_start'], $values['sequence_end']);
+    putenv("TRIPAL_SUPPRESS_ERRORS=TRUE");
     $sequence = nd_genotypes_markup_sequence_with_variants(
       $values, [], $partition);
+    putenv("TRIPAL_SUPPRESS_ERRORS");
     $this->assertEquals(str_repeat('N', 700), $sequence,
       "The sequence should not contain any variants.");
 

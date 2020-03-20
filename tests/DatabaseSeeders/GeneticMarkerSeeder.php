@@ -111,13 +111,10 @@ class GeneticMarkerSeeder extends Seeder
       ]);
 
       // -- relationship with variant.
-      $rel_type = variable_get('nd_genotypes_rel_type_id', 0);
-      if (!$rel_type) {
-        $rel_type = chado_query($get_type_sql,
-          [':type' => 'variant_of'])->fetchField();
-        variable_set('nd_genotypes_rel_type_id', $rel_type);
-      }
-      $variant_position = variable_get('nd_genotypes_rel_position', 'subject');
+      $rel_type = chado_query($get_type_sql,
+        [':type' => 'variant_of'])->fetchField();
+      variable_set('nd_genotypes_rel_type_id', $rel_type);
+      $variant_position = 'subject';
       variable_set('nd_genotypes_rel_position', $variant_position);
       if ($variant_position == 'subject') {
         $rel = chado_insert_record('feature_relationship', [

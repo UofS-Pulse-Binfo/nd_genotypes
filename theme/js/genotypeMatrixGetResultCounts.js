@@ -27,6 +27,7 @@
 
       // Next, use jQuery to retrieve the count.
       var url = '/chado/genotype/' + Drupal.settings.NDgenotypes.partition + '/num_results.json' + location.search;
+      console.log(url);
       $.getJSON(url,
         function(data) {
           // Once the count has been retrieved, substitute it into the page.

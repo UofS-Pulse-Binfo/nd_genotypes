@@ -162,7 +162,7 @@ else {
 }
 
 // Not the first page...
-if ($_GET['page'] != 1) {
+if (is_numeric($_GET['page']) && ($_GET['page'] != 1)) {
 
   // First page.
   $q = $query_param;

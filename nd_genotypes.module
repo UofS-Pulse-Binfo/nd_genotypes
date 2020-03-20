@@ -402,7 +402,7 @@ function nd_genotypes_count_genotype_matrix_results_callback($partition = '', $t
       if (!$variant_name_filter) {
         $variant_joins[] = "LEFT JOIN (
             SELECT a.variant_id, a.allele_call=b.allele_call as monomorphic
-            FROM mview_ndg_calls a, mview_ndg_calls b
+            FROM {mview_ndg_calls} a, {mview_ndg_calls} b
             WHERE a.variant_id=b.variant_id AND a.germplasm_id=:poly1 AND b.germplasm_id=:poly2
           ) p ON p.variant_id=v.variant_id ";
         $variant_args[':poly1'] = $query_args['polymorphic']['first'];
@@ -464,7 +464,7 @@ function nd_genotypes_count_genotype_matrix_results_callback($partition = '', $t
       . $sql . ") v \n"
       . "LEFT JOIN (
             SELECT a.variant_id, a.allele_call=b.allele_call as monomorphic
-            FROM mview_ndg_calls a, mview_ndg_calls b
+            FROM {mview_ndg_calls} a, {mview_ndg_calls} b
             WHERE a.variant_id=b.variant_id AND a.germplasm_id=:poly1 AND b.germplasm_id=:poly2
           ) p ON p.variant_id=v.variant_id \n"
       . "WHERE p.monomorphic IS FALSE \n";
