@@ -249,7 +249,6 @@ function nd_genotypes_matrix_filter_form_validate($form, &$form_state) {
 
   // -- Variant Names.
   // Warning: if there are commas or tabs, perhaps you messed up the format?
-  dpm($form_state['values']['variant_name']);
   if (strpos($form_state['values']['variant_name'], ',') !== false) {
     drupal_set_message("We have detected a comma in your variant name filter. Note that to search for more than one variant each name should be on it's own line, not separated by comma's.", 'warning');
     $errors['variant-name-comma'] = TRUE;
@@ -414,7 +413,11 @@ function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
   // Initializing paging.
   $query['page'] = 1;
 
-  $form_state['redirect'] = array(current_path(), array('query' => $query));
+  $redirect = array(current_path(), array('query' => $query));
+  if ($form_state['phpunit'] == TRUE) {
+    return $redirect;
+  }
+  $form_state['redirect'] = $redirect;
 }
 
 /**
