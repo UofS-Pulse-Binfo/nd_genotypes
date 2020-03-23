@@ -217,6 +217,7 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
  * Validate the options.
  */
 function nd_genotypes_matrix_filter_form_validate($form, &$form_state) {
+  $errors = [];
 
   // -- Genome Range
   foreach (array('start','end') as $field) {
@@ -278,6 +279,7 @@ function nd_genotypes_matrix_filter_form_validate($form, &$form_state) {
  * Add the fitlers specified to the path.
  */
 function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
+  if (!isset($form_state['phpunit'])) { $form_state['phpunit'] = FALSE; }
 
   $form_state['rebuild'] = FALSE;
 
