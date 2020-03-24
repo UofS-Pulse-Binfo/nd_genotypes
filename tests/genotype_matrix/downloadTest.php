@@ -90,6 +90,8 @@ class downloadTest extends TripalTestCase {
    */
   public function testSummarizeDownload() {
 
+    $this->createTables('tripalus');
+
     // Generate a small dataset.
     $seeder = new GenotypeDatasetSeeder();
     $dataset = $seeder->up(5, TRUE);
@@ -129,6 +131,8 @@ class downloadTest extends TripalTestCase {
    * @group download
    */
   public function testDownloadCsvGenotypes() {
+
+    $this->createTables('tripalus');
 
     // Generate a small dataset.
     $seeder = new GenotypeDatasetSeeder();
@@ -192,6 +196,8 @@ class downloadTest extends TripalTestCase {
    */
   public function testDownloadHapmapGenotypes() {
 
+    $this->createTables('tripalus');
+
     // Generate a small dataset.
     $seeder = new GenotypeDatasetSeeder();
     $dataset = $seeder->up(5, TRUE);
@@ -244,5 +250,20 @@ class downloadTest extends TripalTestCase {
     $file_contents = file_get_contents($fullpath);
     $lines = array_filter(explode("\n",$file_contents));
     $this->assertCount(6, $lines, "We expect the 5 variants plus a header.");
+  }
+
+  /**
+   * HELPER: Create tables needed for mviews.
+   *
+   * @param $partition
+   *   The name of the partition to create tables for (lowercase).
+   */
+  public function createTables($partition) {
+    $calls_table = 'mview_ndg_'.$partition.'_calls';
+    nd_genotypes_create_mview_ndg_calls($calls_table);
+    $variant_table = 'mview_ndg_'.$partition.'_variants';
+    nd_genotypes_create_mview_ndg_variants($variant_table);
+    $germplasm_table = 'mview_ndg_germplasm_genotyped';
+    nd_genotypes_create_mview_ndg_germplasm_genotyped($germplasm_table);
   }
 }
