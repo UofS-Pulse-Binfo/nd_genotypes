@@ -9,7 +9,6 @@ env:
   global:
     secure: e8tj7Zdfmk9g1hFSk0jhjy0eSltjEzzF0pwezkN6WjVT7Z7NUn4M0puQKPjrxaoOZFEeCsBMVnTs5qutx664z/uAoyGYYxpZmODdpVjT9sfF4zuvyNujeLKPELvdZc72JEppM4XviSA302Grt6/yh51RWEzSv1qWgviSjK8hC3/evOvplm11EZH5kC/XlvomLNLDtEkoiXyOLFrDf17eh/qnF6yJ9XR/9aBk/aQm4KNcl5ppwXhGtakb90Cd+U2RDXeKp6Ttuy4RuHzFnlOdDsV7xxBMk8EeyXHBQdQxstkgUNtCPXmcJ/nVfcyLMsq1PNYqK4M9FqwAyRUqF/QmS8USJCVVBWcVKgiHhre0mowRIWrWnxeknM8oIi6BBuhTvRHs4gD7OjSbDiPuPUwKomfA/g6PYSafpD5TAfX55SxE/L0r6oX8xe8NHss96NbN48X8kggvCu41BgAkSfDFOEFo/mp13EcmxbuIk6hwvO24HDsminCxqMuRLjbQBnS3yrHpYpYxmI6EEt7f26seiyO3y05ZzHFG8rlU2RlGxIQ8V5LMpvblmyeiSRi5D2oLsUE2X2TLqrmMWsO0r4TMEV9Ot6pf87SH6H+I+mUcgTk87GJ0MIxEdn8UOehxqZ0I0VPzlyVnYk/shAgXLf2+i/ZTyoLumSKVHqMITAl58Pk=
 before_script:
-- composer config --global github-oauth.github.com "$GITHUB_TOKEN"
 - docker pull statonlab/tripal3
 - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64
   > ./cc-test-reporter
@@ -29,6 +28,7 @@ script:
 - docker exec -it tripal drush pm-enable -y libraries
 - docker exec -it tripal drush pm-enable -y trpdownload_api tripald3 nd_genotypes
 - docker exec -it tripal yum install -y php-pecl-xdebug.x86_64
+- docker exec -it tripal bash -c "composer config --global github-oauth.github.com \"$GITHUB_TOKEN\""
 - docker exec -it tripal bash -c "cd /modules/nd_genotypes && composer install &&
   DRUPAL_ROOT=/var/www/html IS_TRAVIS=TRUE ./vendor/bin/phpunit  --coverage-clover
   ./clover.xml"
