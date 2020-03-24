@@ -18,8 +18,6 @@ class matrixPagedResultsTest extends TripalTestCase {
     $current_page_limit = 100;
     $small_set = 5;
 
-    $this->createTables('tripalus');
-    
     // Generate a small dataset.
     $seeder = new GenotypeDatasetSeeder();
     $dataset = $seeder->up($small_set, TRUE);
@@ -158,8 +156,6 @@ class matrixPagedResultsTest extends TripalTestCase {
   public function testFilteredQueries() {
     $current_page_limit = 100;
     $small_set = 5;
-
-    $this->createTables('tripalus');
 
     // Generate a medium dataset.
     $seeder = new GenotypeDatasetSeeder();
@@ -366,20 +362,5 @@ class matrixPagedResultsTest extends TripalTestCase {
            "The genotype was not present for this germplasm-variant combo ($helpful_label).");
        }
      }
-   }
-
-   /**
-    * HELPER: Create tables needed for mviews.
-    *
-    * @param $partition
-    *   The name of the partition to create tables for (lowercase).
-    */
-   public function createTables($partition) {
-     $calls_table = 'mview_ndg_'.$partition.'_calls';
-     nd_genotypes_create_mview_ndg_calls($calls_table);
-     $variant_table = 'mview_ndg_'.$partition.'_variants';
-     nd_genotypes_create_mview_ndg_variants($variant_table);
-     $germplasm_table = 'mview_ndg_germplasm_genotyped';
-     nd_genotypes_create_mview_ndg_germplasm_genotyped($germplasm_table);
    }
 }

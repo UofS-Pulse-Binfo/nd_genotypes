@@ -29,6 +29,7 @@ script:
 - docker exec -it tripal drush pm-enable -y trpdownload_api tripald3 nd_genotypes
 - docker exec -it tripal yum install -y php-pecl-xdebug.x86_64
 - docker exec -it tripal bash -c "composer config --global github-oauth.github.com \"$GITHUB_TOKEN\""
+- docker exec -it tripal bash -c "cd /modules/nd_genotypes && drush php-script tests/createTables.drush.php"
 - docker exec -it tripal bash -c "cd /modules/nd_genotypes && composer install &&
   DRUPAL_ROOT=/var/www/html IS_TRAVIS=TRUE ./vendor/bin/phpunit  --coverage-clover
   ./clover.xml"
