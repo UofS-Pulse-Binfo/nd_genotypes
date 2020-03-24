@@ -1,32 +1,37 @@
 language: php
-
-# Add php version so composer doesn't complain
 php:
-  - 7.1
-
+- 7.1
 services:
-  - docker
-
+- docker
 env:
+  matrix:
   - DRUPAL_ROOT=/var/www/html IS_TRAVIS=TRUE CC_TEST_REPORTER_ID=1f13b5053c892bfbb9fe08101853ec6763af1ae81f43f698ccd556615f09548b
-
+  global:
+    secure: e8tj7Zdfmk9g1hFSk0jhjy0eSltjEzzF0pwezkN6WjVT7Z7NUn4M0puQKPjrxaoOZFEeCsBMVnTs5qutx664z/uAoyGYYxpZmODdpVjT9sfF4zuvyNujeLKPELvdZc72JEppM4XviSA302Grt6/yh51RWEzSv1qWgviSjK8hC3/evOvplm11EZH5kC/XlvomLNLDtEkoiXyOLFrDf17eh/qnF6yJ9XR/9aBk/aQm4KNcl5ppwXhGtakb90Cd+U2RDXeKp6Ttuy4RuHzFnlOdDsV7xxBMk8EeyXHBQdQxstkgUNtCPXmcJ/nVfcyLMsq1PNYqK4M9FqwAyRUqF/QmS8USJCVVBWcVKgiHhre0mowRIWrWnxeknM8oIi6BBuhTvRHs4gD7OjSbDiPuPUwKomfA/g6PYSafpD5TAfX55SxE/L0r6oX8xe8NHss96NbN48X8kggvCu41BgAkSfDFOEFo/mp13EcmxbuIk6hwvO24HDsminCxqMuRLjbQBnS3yrHpYpYxmI6EEt7f26seiyO3y05ZzHFG8rlU2RlGxIQ8V5LMpvblmyeiSRi5D2oLsUE2X2TLqrmMWsO0r4TMEV9Ot6pf87SH6H+I+mUcgTk87GJ0MIxEdn8UOehxqZ0I0VPzlyVnYk/shAgXLf2+i/ZTyoLumSKVHqMITAl58Pk=
 before_script:
-  - docker pull statonlab/tripal3
-  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
-  - chmod +x ./cc-test-reporter
-  - ./cc-test-reporter before-build --debug
-  - GIT_BRANCH=$TRAVIS_PULL_REQUEST_BRANCH
-  - GIT_COMMIT_SHA=$TRAVIS_PULL_REQUEST_SHA
+- composer config --global github-oauth.github.com "$GITHUB_TOKEN"
+- docker pull statonlab/tripal3
+- curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64
+  > ./cc-test-reporter
+- chmod +x ./cc-test-reporter
+- "./cc-test-reporter before-build --debug"
+- GIT_BRANCH=$TRAVIS_PULL_REQUEST_BRANCH
+- GIT_COMMIT_SHA=$TRAVIS_PULL_REQUEST_SHA
 
 script:
-  - docker run -it -d --rm --name tripal -v "$(pwd)":/modules/nd_genotypes statonlab/tripal3
-  - sleep 45 # We pause here so postgres and apache complete booting up
-  - docker exec -it tripal bash -c "cd /var/www/html/sites/all/modules && git clone https://github.com/tripal/trpdownload_api.git && git clone https://github.com/tripal/tripald3"
-  - docker exec -it tripal bash -c "cd /var/www/html/sites/all/libraries && mkdir d3 && cd d3 && wget https://github.com/d3/d3/releases/download/v3.5.17/d3.zip && unzip d3.zip"
-  - docker exec -it tripal drush pm-enable -y libraries
-  - docker exec -it tripal drush pm-enable -y trpdownload_api tripald3 nd_genotypes
-  - docker exec -it tripal yum install -y php-pecl-xdebug.x86_64
-  - docker exec -it tripal bash -c "cd /modules/nd_genotypes && composer install && DRUPAL_ROOT=/var/www/html IS_TRAVIS=TRUE ./vendor/bin/phpunit  --coverage-clover ./clover.xml"
-
+- docker run -it -d --rm --name tripal -v "$(pwd)":/modules/nd_genotypes statonlab/tripal3
+- sleep 45
+- docker exec -it tripal bash -c "cd /var/www/html/sites/all/modules && git clone
+  https://github.com/tripal/trpdownload_api.git && git clone https://github.com/tripal/tripald3"
+- docker exec -it tripal bash -c "cd /var/www/html/sites/all/libraries && mkdir d3
+  && cd d3 && wget https://github.com/d3/d3/releases/download/v3.5.17/d3.zip && unzip
+  d3.zip"
+- docker exec -it tripal drush pm-enable -y libraries
+- docker exec -it tripal drush pm-enable -y trpdownload_api tripald3 nd_genotypes
+- docker exec -it tripal yum install -y php-pecl-xdebug.x86_64
+- docker exec -it tripal bash -c "cd /modules/nd_genotypes && composer install &&
+  DRUPAL_ROOT=/var/www/html IS_TRAVIS=TRUE ./vendor/bin/phpunit  --coverage-clover
+  ./clover.xml"
 after_script:
-  - ./cc-test-reporter after-build clover.xml --debug -t clover -p /var/www/html/sites/all/modules/custom/nd_genotypes --exit-code $TRAVIS_TEST_RESULT
+- "./cc-test-reporter after-build clover.xml --debug -t clover -p /var/www/html/sites/all/modules/custom/nd_genotypes
+  --exit-code $TRAVIS_TEST_RESULT"
