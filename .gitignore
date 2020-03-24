@@ -7,3 +7,4 @@ tests/.env
 .settings/
 docs/_build/
 tests/_build
+tests/build

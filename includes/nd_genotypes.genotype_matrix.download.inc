@@ -49,13 +49,14 @@ function nd_genotypes_register_trpdownload_type() {
  *   The ID of the tripal job executing this function ;-).
  */
 function trpdownload_genotype_matrix_download_generate_csv_file($vars, $job_id = NULL) {
+  if (!isset($vars['drush'])) { $vars['drush'] = TRUE; }
 
   // First, process the query parameters passed to the download to determine the query.
   nd_genotypes_process_query_parameters($vars);
 
   // Create the file and ready it for writting to.
   $filepath = variable_get('trpdownload_fullpath', '') . $vars['filename'];
-  drush_print("File: " . $filepath);
+  if ($vars['drush']) { drush_print("File: " . $filepath); }
   $FILE = fopen($filepath, 'w') or die ("Unable to create file to write to.\n");
 
 
@@ -65,6 +66,7 @@ function trpdownload_genotype_matrix_download_generate_csv_file($vars, $job_id =
     $header[] = $h['data'];
   }
   fputcsv($FILE, $header);
+
 
   // Now, determine the query.
   // Unfortuntly we can't just use the same query as to generate the page since that is done
@@ -202,8 +204,8 @@ function trpdownload_genotype_matrix_download_generate_csv_file($vars, $job_id =
   if (!empty($variant_where)) {
     $count_query .= ' WHERE '. implode(' AND ', $variant_where);
   }
-  // @debug print "SQL: " . print_r($count_query, TRUE) . "; ARGS: " . print_r($variant_args, TRUE);
   $count_query = ndg_mview_query($vars['query_args']['partition'], $count_query, $variant_args, array('return_query' => TRUE));
+  // @debug print "SQL (".$vars['query_args']['partition']."): " . print_r($count_query, TRUE) . "; ARGS: " . print_r($variant_args, TRUE);
   $total_rows = trpdownload_estimate_rows($count_query, $variant_args);
   print "Estimated number of rows: $total_rows.\n";
 
@@ -300,13 +302,14 @@ function trpdownload_genotype_matrix_download_generate_csv_file($vars, $job_id =
  *   The ID of the tripal job executing this function ;-).
  */
 function trpdownload_genotype_matrix_download_generate_hapmap_file($vars, $job_id = NULL) {
+  if (!isset($vars['drush'])) { $vars['drush'] = TRUE; }
 
   // First, process the query parameters passed to the download to determine the query.
   nd_genotypes_process_query_parameters($vars);
 
   // Create the file and ready it for writting to.
   $filepath = variable_get('trpdownload_fullpath', '') . $vars['filename'];
-  drush_print("File: " . $filepath);
+  if ($vars['drush']) { drush_print("File: " . $filepath); }
   $FILE = fopen($filepath, 'w') or die ("Unable to create file to write to.\n");
 
   // @debug drush_print("VARS: ".print_r($vars, TRUE));

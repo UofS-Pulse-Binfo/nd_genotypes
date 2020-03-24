@@ -9,17 +9,6 @@ class matrixPagedResultsTest extends TripalTestCase {
   // Uncomment to auto start and rollback db transactions per test method.
   use DBTransaction;
 
-  public function setUp() {
-
-    // Create tables.
-    $partition = 'tripalus';
-    $calls_table = 'mview_ndg_'.$partition.'_calls';
-    nd_genotypes_create_mview_ndg_calls($calls_table);
-    $variant_table = 'mview_ndg_'.$partition.'_variants';
-    nd_genotypes_create_mview_ndg_variants($variant_table);
-    $germplasm_table = 'mview_ndg_germplasm_genotyped';
-    nd_genotypes_create_mview_ndg_germplasm_genotyped($germplasm_table);
-  }
   /**
    * Test the Genotype Matrix with germplasm but no other filter criteria.
    *

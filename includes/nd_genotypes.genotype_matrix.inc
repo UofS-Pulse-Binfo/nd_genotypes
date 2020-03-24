@@ -217,16 +217,19 @@ function nd_genotypes_matrix_filter_form($form, &$form_state) {
  * Validate the options.
  */
 function nd_genotypes_matrix_filter_form_validate($form, &$form_state) {
+  $errors = [];
 
   // -- Genome Range
   foreach (array('start','end') as $field) {
     if (!empty($form_state['values']['seq_range'][$field]['pos'])) {
       // If the postition is supplied then the chromosome should be to.
       if (empty($form_state['values']['seq_range'][$field]['backbone'])) {
+        $errors[$field . '-backbone-missing'] = TRUE;
         form_set_error('seq_range]['.$field.'][pos', 'If you supply a '.$field.' position then you need to tell us what sequence that position is on using the drop-down.');
       }
       // The position should be numeric.
       if (!is_numeric($form_state['values']['seq_range'][$field]['pos']) OR $form_state['values']['seq_range']['start']['pos'] < 0 ) {
+        $errors[$field . '-not-numeric'] = TRUE;
         form_set_error('seq_range]['.$field.'][pos', 'The '.$field.' position must be a positive whole number.');
       }
     }
@@ -234,11 +237,13 @@ function nd_genotypes_matrix_filter_form_validate($form, &$form_state) {
   // The start should be smaller than the end.
   if (!empty($form_state['values']['seq_range']['start']['backbone']) AND !empty($form_state['values']['seq_range']['end']['backbone'])) {
     if ($form_state['values']['seq_range']['start']['backbone'] > $form_state['values']['seq_range']['end']['backbone']) {
+      $errors['end<start'] = TRUE;
       form_set_error('seq_range][end][backbone', 'The end position must be greater than the start position.');
     }
     if ($form_state['values']['seq_range']['start']['backbone'] == $form_state['values']['seq_range']['end']['backbone']
       AND !empty($form_state['values']['seq_range']['end']['pos'])
       AND $form_state['values']['seq_range']['start']['pos'] > $form_state['values']['seq_range']['end']['pos']) {
+      $errors['end<start'] = TRUE;
       form_set_error('seq_range][end][pos', 'The end position must be greater than the start position.');
     }
   }
@@ -247,9 +252,11 @@ function nd_genotypes_matrix_filter_form_validate($form, &$form_state) {
   // Warning: if there are commas or tabs, perhaps you messed up the format?
   if (strpos($form_state['values']['variant_name'], ',') !== false) {
     drupal_set_message("We have detected a comma in your variant name filter. Note that to search for more than one variant each name should be on it's own line, not separated by comma's.", 'warning');
+    $errors['variant-name-comma'] = TRUE;
   }
   if (strpos($form_state['values']['variant_name'], "\t") !== false) {
     drupal_set_message("We have detected a tab in your variant name filter. Note that to search for more than one variant each name should be on it's own line, not separated by tabs.", 'warning');
+    $errors['variant-name-tab'] = TRUE;
   }
 
   // Check project exists.
@@ -257,18 +264,22 @@ function nd_genotypes_matrix_filter_form_validate($form, &$form_state) {
     $project_id = chado_query('SELECT project_id FROM {project} WHERE name=:name',
        array(':name' => $form_state['values']['project_name']))->fetchField();
     if (!$project_id) {
+      $errors['project-not-exist'] = TRUE;
       form_set_error('project_name', 'Project "<em>'.$form_state['values']['project_name'].'</em>" doesn\'t exist.');
     }
     else {
       $form_state['values']['project_id'] = array($project_id);
     }
   }
+
+  return $errors;
 }
 
 /**
  * Add the fitlers specified to the path.
  */
 function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
+  if (!isset($form_state['phpunit'])) { $form_state['phpunit'] = FALSE; }
 
   $form_state['rebuild'] = FALSE;
 
@@ -404,7 +415,11 @@ function nd_genotypes_matrix_filter_form_submit(&$form, &$form_state) {
   // Initializing paging.
   $query['page'] = 1;
 
-  $form_state['redirect'] = array(current_path(), array('query' => $query));
+  $redirect = array(current_path(), array('query' => $query));
+  if ($form_state['phpunit'] == TRUE) {
+    return $redirect;
+  }
+  $form_state['redirect'] = $redirect;
 }
 
 /**
