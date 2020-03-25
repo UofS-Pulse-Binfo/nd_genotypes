@@ -53,10 +53,8 @@ class fieldsTest extends TripalTestCase {
     $bundle->data_table = 'feature';
     // Sequence Variant:
     $term = tripal_load_term_entity(['vocabulary' => 'SO', 'accession' => '0001060']);
-    print_r($term);
     $bundle->term_id = $term->id;
     $fields = nd_genotypes_bundle_instances_info($entity_type, $bundle);
-    print_r($fields);
     $this->assertIsArray($fields);
     $this->assertArrayHasKey('local__variant_genotype_summary', $fields);
     $this->assertArrayHasKey('so__genetic_marker', $fields);
@@ -65,10 +63,8 @@ class fieldsTest extends TripalTestCase {
 
     // Genetic Marker:
     $term = tripal_load_term_entity(['vocabulary' => 'SO', 'accession' => '0001645']);
-    print_r($term);
     $bundle->term_id = $term->id;
     $fields = nd_genotypes_bundle_instances_info($entity_type, $bundle);
-    print_r($fields);
     $this->assertIsArray($fields);
     $this->assertArrayHasKey('local__marker_genotype_summary', $fields);
     $this->assertArrayHasKey('local__sequence_with_variants', $fields);
