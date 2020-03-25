@@ -22,6 +22,7 @@ class adminFormTest extends TripalTestCase {
     $seeder = new GenotypeDatasetSeeder();
     $dataset = $seeder->up(2, TRUE);
     $number_of_variants = count($dataset['data']);
+    nd_genotypes_summarize_mviews();
 
     // Now that there is data, test the landing page.
     $output = nd_genotypes_admin_landing_page();

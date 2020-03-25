@@ -352,6 +352,7 @@ class GeneticMarkerSeeder extends Seeder
       $data = $this->inital_data;
 
       // Populate the calls table.
+      $germplasm_saved = [];
       foreach ($this->genotypes as $r) {
         $values = [
           'variant_id' => $this->variant_id,
@@ -369,7 +370,6 @@ class GeneticMarkerSeeder extends Seeder
         $call = chado_insert_record($calls_table, $values);
         $return['calls'][] = (array) $call;
 
-        /* Not sure why this inconsistently fails.
         $germplasm = [
           ':germplasm_id' => $r['germplasm']->stock_id,
           ':germplasm_name' => $r['germplasm']->name,
@@ -377,14 +377,17 @@ class GeneticMarkerSeeder extends Seeder
           ':organism_genus' => $data['organism']['genus'],
           ':partition' => $partition,
         ];
-        chado_query("
-          INSERT INTO {".$germplasm_table."}
-            (germplasm_id, germplasm_name,
-              organism_id, organism_genus, partition)
-            VALUES (:germplasm_id, :germplasm_name,
-              :organism_id, :organism_genus, :partition)",
-          $germplasm);
-          */
+        $exists = chado_query('SELECT true FROM {'.$germplasm_table.'} WHERE germplasm_id=:id',
+          [':id' => $r['germplasm']->stock_id])->fetchField();
+        if (!$exists) {
+          chado_query("
+            INSERT INTO {".$germplasm_table."}
+              (germplasm_id, germplasm_name,
+                organism_id, organism_genus, partition)
+              VALUES (:germplasm_id, :germplasm_name,
+                :organism_id, :organism_genus, :partition)",
+            $germplasm);
+        }
       }
 
       // Finally populate the variant table.
