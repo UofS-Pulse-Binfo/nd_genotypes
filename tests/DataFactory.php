@@ -55,7 +55,7 @@ Factory::define('chado.cvterm', function (Faker\Generator $faker) {
 /** @see  StatonLab\TripalTestSuite\Database\Factory::define() */
 Factory::define('chado.organism', function (Faker\Generator $faker) {
 
-  $genus = $faker->word . $faker->word . $faker->word;
+  $genus = $faker->word . $faker->word;
   $species = $faker->word . $faker->word . $faker->word;
 
   $abbr = substr($genus, 0) + ". " + $species;
