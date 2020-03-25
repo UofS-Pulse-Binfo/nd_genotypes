@@ -33,6 +33,7 @@ class genotypesTest extends TripalTestCase {
     $seeder = new GeneticMarkerSeeder();
     $data = $seeder->up();
     $partition = strtolower($data['organism']['genus']);
+    $this->createTables($partition);
     $mview = $seeder->syncMviews($partition);
 
     // Check if there are genotypes for a non-existent
@@ -68,6 +69,8 @@ class genotypesTest extends TripalTestCase {
     // Create a marker/variant dataset.
     $seeder = new GeneticMarkerSeeder();
     $data = $seeder->up();
+    $partition = strtolower($data['organism']['genus']);
+    $this->createTables($partition);
     $new_marker = $seeder->addMarker();
     $partition = strtolower($data['organism']['genus']);
     $mview = $seeder->syncMviews($partition);
@@ -105,6 +108,8 @@ class genotypesTest extends TripalTestCase {
     // Create a marker/variant dataset.
     $seeder = new GeneticMarkerSeeder();
     $data = $seeder->up();
+    $partition = strtolower($data['organism']['genus']);
+    $this->createTables($partition);
     $genotype_data = $seeder->addGenotypes(1);
     $partition = strtolower($data['organism']['genus']);
     $mview = $seeder->syncMviews($partition);
@@ -159,6 +164,8 @@ class genotypesTest extends TripalTestCase {
     // Create a marker/variant dataset.
     $seeder = new GeneticMarkerSeeder();
     $data = $seeder->up();
+    $partition = strtolower($data['organism']['genus']);
+    $this->createTables($partition);
     $genotype_data = $seeder->addGenotypes(1);
     $partition = strtolower($data['organism']['genus']);
     $mview = $seeder->syncMviews($partition);
@@ -222,5 +229,18 @@ class genotypesTest extends TripalTestCase {
         }
     }
     return FALSE;
+  }
+
+  /**
+   * HELPER: Creates tables necessary for sync'ing germplasm.
+   */
+  private function createTables($partition) {
+
+    $calls_table = 'mview_ndg_'.$partition.'_calls';
+    nd_genotypes_create_mview_ndg_calls($calls_table);
+    $variant_table = 'mview_ndg_'.$partition.'_variants';
+    nd_genotypes_create_mview_ndg_variants($variant_table);
+    $germplasm_table = 'mview_ndg_germplasm_genotyped';
+    nd_genotypes_create_mview_ndg_germplasm_genotyped($germplasm_table);
   }
 }

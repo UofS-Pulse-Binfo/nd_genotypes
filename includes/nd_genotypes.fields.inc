@@ -255,8 +255,8 @@ function nd_genotypes_bundle_instances_info($entity_type, $bundle) {
     // Variant Genotype Summary Field.
     //---------------------------------
     // Only add the Variant Genotype Summary field
-    // if the current Tripal Content Type is SO:sequence_variant.
-    if ($term->name == 'sequence_variant') {
+    // SO:sequence_variant.
+    if (($term->vocab->vocabulary == 'SO') && ($term->accession == '0001060')) {
 
       $info['local__variant_genotype_summary'] =  array(
         'field_name' => 'local__variant_genotype_summary',
@@ -293,7 +293,7 @@ function nd_genotypes_bundle_instances_info($entity_type, $bundle) {
       //----------------------
       $field_name = 'so__genetic_marker';
       $field_type = 'so__genetic_marker';
-      $instances[$field_name] =  array(
+      $info[$field_name] =  array(
         'field_name' => $field_name,
         'entity_type' => $entity_type,
         'bundle' => $bundle->name,
@@ -325,8 +325,8 @@ function nd_genotypes_bundle_instances_info($entity_type, $bundle) {
     // Marker Genotype Summary Field.
     //---------------------------------
     // Only add the Marker Genotype Summary field
-    // if the current Tripal Content Type is SO:genetic_marker.
-    elseif ($term->name == 'genetic_marker') {
+    // SO:genetic_marker.
+    elseif (($term->vocab->vocabulary == 'SO') && ($term->accession == '0001645')) {
 
       $info['local__marker_genotype_summary'] =  array(
         'field_name' => 'local__marker_genotype_summary',
@@ -361,7 +361,8 @@ function nd_genotypes_bundle_instances_info($entity_type, $bundle) {
     }
 
     // Add to both sequence_variants and genetic_markers.
-    if (($term->name == 'sequence_variant') OR ($term->name == 'genetic_marker')) {
+    if (($term->vocab->vocabulary == 'SO')
+      && (($term->accession == '0001060') || ($term->accession == '0001645'))) {
 
       // Sequence with Variants Field.
       //---------------------------------
