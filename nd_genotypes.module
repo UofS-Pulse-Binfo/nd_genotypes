@@ -210,7 +210,9 @@ function nd_genotype_matrix_page($genus) {
 
   // @PARTITION: This is where the partition is set for the genotype matrix. From here
   // if is carried throughout the rest of the functions.
-  $vars = array('genus' => $genus, 'partition' => $genus);
+  global $base_url;
+  $vars = array('genus' => $genus, 'partition' => strtolower($genus),
+    'baseUrl' => $base_url . '/chado/genotype/' . $genus);
 
   // Add the CSS.
   drupal_add_css(drupal_get_path('module', 'nd_genotypes') . '/theme/css/nd_genotype_matrix.css');
@@ -460,8 +462,9 @@ function nd_genotypes_count_genotype_matrix_results_callback($partition = '', $t
        . "  ) \n";
 
   if ($polymorphic_filter AND $variant_name_filter) {
-    $sql = "SELECT * FROM (\n"
-      . $sql . ") v \n"
+    $subsql = str_replace('SELECT count(v.variant_id)', 'SELECT v.variant_id', $sql);
+    $sql = "SELECT count(v.variant_id) FROM (\n"
+      . $subsql . ") v \n"
       . "LEFT JOIN (
             SELECT a.variant_id, a.allele_call=b.allele_call as monomorphic
             FROM {mview_ndg_calls} a, {mview_ndg_calls} b
@@ -576,7 +579,7 @@ function nd_genotypes_count_genotype_matrix_variants_callback($partition = '', $
       if (!$variant_name_filter) {
         $variant_joins[] = "LEFT JOIN (
             SELECT a.variant_id, a.allele_call=b.allele_call as monomorphic
-            FROM mview_ndg_calls a, mview_ndg_calls b
+            FROM {mview_ndg_calls} a, {mview_ndg_calls} b
             WHERE a.variant_id=b.variant_id AND a.germplasm_id=:poly1 AND b.germplasm_id=:poly2
           ) p ON p.variant_id=v.variant_id ";
         $variant_args[':poly1'] = $query_args['polymorphic']['first'];
@@ -614,7 +617,7 @@ function nd_genotypes_count_genotype_matrix_variants_callback($partition = '', $
   }
 
   // Now determine the query for the variants.
-  $sql = "SELECT v.variant_id \n"
+  $sql = "SELECT v.variant_id, v.variant_name \n"
        . "FROM {mview_ndg_variants} v \n"
        . implode("\n", $variant_joins)
        . "WHERE \n";
@@ -634,11 +637,11 @@ function nd_genotypes_count_genotype_matrix_variants_callback($partition = '', $
        . "  ) \n";
 
   if ($polymorphic_filter AND $variant_name_filter) {
-    $sql = "SELECT * FROM (\n"
+    $sql = "SELECT v.variant_id, v.variant_name FROM (\n"
       . $sql . ") v \n"
       . "LEFT JOIN (
             SELECT a.variant_id, a.allele_call=b.allele_call as monomorphic
-            FROM mview_ndg_calls a, mview_ndg_calls b
+            FROM {mview_ndg_calls} a, {mview_ndg_calls} b
             WHERE a.variant_id=b.variant_id AND a.germplasm_id=:poly1 AND b.germplasm_id=:poly2
           ) p ON p.variant_id=v.variant_id \n"
       . "WHERE p.monomorphic IS FALSE \n";
@@ -647,7 +650,7 @@ function nd_genotypes_count_genotype_matrix_variants_callback($partition = '', $
   }
 
 
-  $count_sql = "SELECT count(variant_id) FROM (" . $sql . " GROUP BY v.variant_id) t";
+  $count_sql = "SELECT count(distinct variant_name) FROM (" . $sql . " GROUP BY v.variant_id, v.variant_name) t";
   $args = array_merge($call_args, $variant_args);
   $count = ndg_mview_query($vars['partition'], $count_sql, $args)->fetchField();
 

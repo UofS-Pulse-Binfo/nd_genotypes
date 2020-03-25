@@ -97,6 +97,11 @@ if (isset($variants)) {
     elseif ($is_merge) {
       foreach ($query_args['germplasm_id'] as $germplasm_id) {
         unset($table['rows'][$row_id]['data'][$germplasm_id]);
+        if (empty($table['rows'][$merge_top_row]['data'][$germplasm_id])) {
+          $table['rows'][$merge_top_row]['data'][$germplasm_id] = [
+            'data' => ''
+          ];
+        }
         $table['rows'][$merge_top_row]['data'][$germplasm_id]['rowspan'] = $current_variant['count'];
       }
     }
