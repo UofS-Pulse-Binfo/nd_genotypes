@@ -293,7 +293,7 @@ function nd_genotypes_bundle_instances_info($entity_type, $bundle) {
       //----------------------
       $field_name = 'so__genetic_marker';
       $field_type = 'so__genetic_marker';
-      $instances[$field_name] =  array(
+      $info[$field_name] =  array(
         'field_name' => $field_name,
         'entity_type' => $entity_type,
         'bundle' => $bundle->name,
