@@ -8,7 +8,7 @@ Through other analysis you have a region of the genome which likely contributes 
 
 Fictional Example:
  - Trait: ``FAIRness``
- - Region of interest: ``Chr1:150-300``
+ - Region of interest: ``non:150-300``
  - Germplasm with FAIRness: ``placeat libero cupiditate et``
  - Germplasm without FAIRness: ``omnis fuga molestiae et``
 
