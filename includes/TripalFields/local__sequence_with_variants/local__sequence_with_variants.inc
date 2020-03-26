@@ -277,11 +277,13 @@ class local__sequence_with_variants extends ChadoField {
         // And process the variant list to provide to the formatter/ws.
         $value['hydra:member'][$k]['SO:0001060'] = array();
         foreach ($info['variants'] as $variant) {
-          $value['hydra:member'][$k]['SO:0001060'][] = array(
-            'SO:0001023' => $variant['code'],
-            'SIO:000056' => $variant['index'],
-            'rdfs:label' => $variant['tooltip'],
-          );
+          if (isset($variant['code'])) {
+            $value['hydra:member'][$k]['SO:0001060'][] = array(
+              'SO:0001023' => $variant['code'],
+              'SIO:000056' => $variant['index'],
+              'rdfs:label' => $variant['tooltip'],
+            );
+          }
         }
       }
     }

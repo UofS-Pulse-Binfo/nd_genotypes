@@ -507,6 +507,7 @@ function nd_genotypes_markup_sequence_with_variants(&$values, $options = array()
   if (is_object($values)) { $values = (array) $values; }
 
   $sequence = str_split($values['sequence']);
+  $focus_variant_loc = NULL;
 
   // Now get all the markers with their associated genotypes for the range
   // specified in sequence details.
@@ -560,14 +561,20 @@ function nd_genotypes_markup_sequence_with_variants(&$values, $options = array()
           // Format the code as [allele1/allele2].
           $code = '[' . implode('/', $variant['nucleotides']) . ']';
           $class = 'variant-expanded';
+          // This keeps the expanded variant from being overwritten
+          // if there's another variant in the same location.
+          $focus_variant_loc = $variant_loc;
         }
         // Otherwise this is not the main variant and we would like to use
         // the more condensed IUPAC code notation.
-        else {
+        elseif ($focus_variant_loc != $variant_loc) {
           // Format the code as the matching IUPAC code.
           $str_alleles = implode('', $variant['nucleotides']);
           $code = nd_genotypes_get_IUPAC_code($str_alleles);
           $class = 'variant-IUPAC';
+        }
+        else {
+          $code = FALSE;
         }
 
         if ($code) {
@@ -785,7 +792,7 @@ function nd_genotypes_get_IUPAC_code($alleles) {
     return $IUPAC[$alleles];
   }
   else {
-    return FALSE;
+    return 'N';
   }
 }
 
