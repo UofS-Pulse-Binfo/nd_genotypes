@@ -381,6 +381,7 @@ function nd_genotypes_bundle_instances_info($entity_type, $bundle) {
           'term_vocabulary' => 'local',
           'term_accession' => 'sequence_with_variants',
           'term_name' => 'sequence_with_variants',
+          'is_marker' => TRUE,
         ),
         'widget' => array(
           'type' => 'local__sequence_with_variants_widget',
@@ -396,6 +397,9 @@ function nd_genotypes_bundle_instances_info($entity_type, $bundle) {
           ),
         ),
       );
+      if ($term->accession == '0001060') {
+        $info['local__sequence_with_variants']['settings']['is_marker'] = FALSE;
+      }
 
       // Genotype Matrix Link.
       //---------------------------------
