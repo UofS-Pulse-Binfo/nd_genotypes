@@ -4,10 +4,34 @@ Installation
 
 Quickstart
 -----------
-1. Install the following dependencies: Tripal 3.x and Tripal Download API. Also, ensure you have PostgreSQL 9.3+.
-2. Install this module as you would any Drupal module (ie: download, unpack in ``sites/all/modules`` and enable through ``http://[your site]/admin/modules``)
-3. Load data using the `genotype loader <https://github.com/UofS-Pulse-Binfo/genotypes_loader>`_. Since the Genotype loader is not yet released, we highly suggest test loading each dataset on a development site. Once data is available make sure to sync it (Administration » Tripal » Extensions » Natural Diversity Genotypes » Sync)
+This installation assumes you have Tripal 3.x and PostgreSQL 9.3+.
+
+1. Install the following dependencies: Drupal Libraries API, Tripal D3.js, Tripal Donwload API.
+
+.. code::
+
+  drush pm-download libraries
+  drush pm-enable libraries -y
+  cd [drupal root]/sites/all/modules
+  git clone https://github.com/tripal/tripald3
+  git clone https://github.com/tripal/trpdownload_api
+  cd [drupal root]/sites/all/libraries
+  mkdir d3 && cd d3
+  wget https://github.com/d3/d3/releases/download/v3.5.17/d3.zip
+  unzip d3.zip
+  drush pm-enable trpdownload_api tripald3 -y
+
+2. Install this module as you would any Drupal module.
+
+.. code::
+
+  cd [drupal root]/sites/all/modules
+  git clone https://github.com/UofS-Pulse-Binfo/nd_genotypes.git
+  drush en nd_genotypes -y
+
+3. Load data using the `genotype loader <https://github.com/UofS-Pulse-Binfo/genotypes_loader>`_. Since the Genotype loader is not yet released, we highly suggest test loading each dataset on a development site.
 4. Configure this module by going to Administration » Tripal » Extensions » Natural Diversity Genotypes » Settings.
+5. Once data is available make sure to sync it (Administration » Tripal » Extensions » Natural Diversity Genotypes » Sync)
 
 .. note::
 
@@ -27,27 +51,50 @@ Dependencies
 ------------
 
 1. `Tripal 3.x <https://drupal.org/project/tripal>`_
-2. `Tripal Download API <https://github.com/tripal/trpdownload_api>`_
-3. `Tripal D3.js <https://github.com/tripal/tripald3>`_
-4. PostgreSQL 9.3 (9.4+ recommended; tested with 11.3)
+2. `Drupal Libraries API <https://www.drupal.org/project/libraries>`_
+3. `Tripal Download API <https://github.com/tripal/trpdownload_api>`_
+4. `Tripal D3.js <https://github.com/tripal/tripald3>`_
+5. PostgreSQL 9.3 (9.4+ recommended; tested with 11.3)
 
 Installation
 -------------
 
-This module is available as a project on Drupal.org. As such, the preferred method of installation is using Drush:
+1. Install the following dependencies: Drupal Libraries API, Tripal D3.js, Tripal Donwload API.
 
-.. code:: bash
+    - First we install the Drupal Libraries API which is required for Tripal D3.
 
-  cd [your drupal root]/sites/all/modules
-  git clone https://github.com/tripal/trpdownload_api.git
-  git clone https://github.com/tripal/tripald3.git
+    .. code::
+
+      drush pm-download libraries
+      drush pm-enable libraries -y
+
+    -  Next we grab the latest version of the remaining dependencies from Github.
+
+    .. code::
+
+      cd [drupal root]/sites/all/modules
+      git clone https://github.com/tripal/tripald3
+      git clone https://github.com/tripal/trpdownload_api
+
+    - The charts for the module are drawn using D3.js v3 . As such we need to download it and place it in our libraries folder.
+
+    .. code::
+
+      cd [drupal root]/sites/all/libraries
+      mkdir d3 && cd d3
+      wget https://github.com/d3/d3/releases/download/v3.5.17/d3.zip
+      unzip d3.zip
+
+    - Finally we can enable the last of our dependencies.
+
+    .. code::
+
+      drush pm-enable trpdownload_api tripald3 -y
+
+2. Install this module as you would any Drupal module.
+
+.. code::
+
+  cd [drupal root]/sites/all/modules
   git clone https://github.com/UofS-Pulse-Binfo/nd_genotypes.git
-
-The above command downloads the module into the expected directory (e.g. /var/www/html/sites/all/modules/nd_genotypes). Next we need to install the module:
-
-.. code:: bash
-
-  drush pm-enable libraries trpdownload_api
-  drush pm-enable tripald3 nd_genotypes
-
-Now that the module is installed, we just need to configure it!
+  drush en nd_genotypes -y
