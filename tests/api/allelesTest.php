@@ -40,7 +40,7 @@ class allelesTest extends TripalTestCase {
 
     // We should also test one that should not work.
     $result = nd_genotypes_get_IUPAC_code('FRED');
-    $this->assertFalse($result);
+    $this->assertEquals('N', $result);
   }
 
   /**
