@@ -1,5 +1,5 @@
 ![Tripal Dependency](https://img.shields.io/badge/tripal-%3E=3.0-brightgreen)
-![Module is Generic](https://img.shields.io/badge/generic-tested%20manually-yellow)
+![Module is Generic](https://img.shields.io/badge/generic-tested-green)
 ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/UofS-Pulse-Binfo/nd_genotypes?include_prereleases)
 
 [![Build Status](https://travis-ci.org/UofS-Pulse-Binfo/nd_genotypes.svg?branch=7.x-3.x)](https://travis-ci.org/UofS-Pulse-Binfo/nd_genotypes)
@@ -11,18 +11,28 @@ This module provides support and visualization of genotypic data stored in a mod
 
 ## Dependencies
 1. [Tripal 3.x](https://github.com/tripal/tripal) ([Installation Instructions](https://tripal.readthedocs.io/en/latest/user_guide.html))
-2. [Tripal D3.js](https://github.com/tripal/tripald3)
-3. [Tripal Download API](https://github.com/tripal/trpdownload_api)
-4. PostgreSQL 9.3 (9.4+ recommended; tested with 11.3)
+2. PostgreSQL 9.3 (9.4+ recommended; tested with 11.3)
+3. [Tripal D3.js](https://github.com/tripal/tripald3) & [Drupal Libraries API](https://www.drupal.org/project/libraries)
+4. [Tripal Download API](https://github.com/tripal/trpdownload_api)
+
 
 ## Installation
 This module is installed by cloning it and it's dependencies in `[your drupal site]/sites/all/modules` and enabling it through the Drupal Administrative UI. Specifically, once you have a working Tripal environment:
 
 ```
-git clone https://github.com/tripal/trpdownload_api.git
-git clone https://github.com/tripal/tripald3.git
+drush pm-download libraries
+drush pm-enable libraries -y
+cd [drupal root]/sites/all/modules
+git clone https://github.com/tripal/tripald3
+git clone https://github.com/tripal/trpdownload_api
+cd [drupal root]/sites/all/libraries
+mkdir d3 && cd d3
+wget https://github.com/d3/d3/releases/download/v3.5.17/d3.zip
+unzip d3.zip
+drush pm-enable trpdownload_api tripald3 -y
+cd [drupal root]/sites/all/modules
 git clone https://github.com/UofS-Pulse-Binfo/nd_genotypes.git
-drush pm-enable nd_genotypes
+drush en nd_genotypes -y
 ```
 
 ## Features
