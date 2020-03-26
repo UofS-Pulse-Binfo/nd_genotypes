@@ -8,10 +8,11 @@ This module provides support and visualization of genotypic data stored in a mod
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Resources:
 
    features
    install
    configuration
+   use_cases
    data_storage
    contribute

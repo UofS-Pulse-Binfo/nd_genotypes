@@ -12,5 +12,4 @@ Genotypic data is stored through use of a custom table (genotype_call) created b
    :maxdepth: 2
 
    data_storage/schema
-   data_storage/benchmarking
    data_storage/exampledb
