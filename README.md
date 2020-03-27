@@ -55,4 +55,4 @@ This work was supported by Saskatchewan Pulse Growers [grant: BRE1516, BRE0601],
 
 ## Citation [![DOI](https://zenodo.org/badge/44354762.svg)](https://zenodo.org/badge/latestdoi/44354762)
 
-Lacey-Anne Sanderson. 2020, ND Genotypes: Large-scale Genotypic data integration with Tripal, v3.2, Zenodo, doi:10.5281/zenodo.3731337.
+Sanderson, L.A. (2020). ND Genotypes: Large-scale Genotypic data integration with Tripal. Version 3.2. University of Saskatchewan, Pulse Crop Research Group, Saskatoon, SK, Canada. Zenodo, doi:10.5281/zenodo.3731337.
