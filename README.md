@@ -48,3 +48,11 @@ See [Demonstration](https://nd-genotypes.readthedocs.io/en/latest/contribute.htm
 ## Documentation [![Documentation Status](https://readthedocs.org/projects/nd-genotypes/badge/?version=latest)](https://nd-genotypes.readthedocs.io/en/latest/?badge=latest)
 
 Please visit our [online documentation](https://nd-genotypes.readthedocs.io/en/latest/index.html) to learn more about installation, usage and features.
+
+## Funding
+
+This work was supported by Saskatchewan Pulse Growers [grant: BRE1516, BRE0601], Western Grains Research Foundation, Genome Canada [grant: 8302], Government of Saskatchewan [grant: 20150331], and the University of Saskatchewan.
+
+## Citation [![DOI](https://zenodo.org/badge/44354762.svg)](https://zenodo.org/badge/latestdoi/44354762)
+
+Lacey-Anne Sanderson. 2020, ND Genotypes: Large-scale Genotypic data integration with Tripal, v3.2, Zenodo, doi:10.5281/zenodo.3731337.
