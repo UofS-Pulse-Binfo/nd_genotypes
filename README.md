@@ -51,7 +51,7 @@ Please visit our [online documentation](https://nd-genotypes.readthedocs.io/en/l
 
 ## Funding
 
-This work was supported by Saskatchewan Pulse Growers [grant: BRE1516, BRE0601], Western Grains Research Foundation, Genome Canada [grant: 8302], Government of Saskatchewan [grant: 20150331], and the University of Saskatchewan.
+This work is supported by Saskatchewan Pulse Growers [grant: BRE1516, BRE0601], Western Grains Research Foundation, Genome Canada [grant: 8302, 16302], Government of Saskatchewan [grant: 20150331], and the University of Saskatchewan.
 
 ## Citation [![DOI](https://zenodo.org/badge/44354762.svg)](https://zenodo.org/badge/latestdoi/44354762)
 
