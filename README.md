@@ -1,5 +1,5 @@
+[![Tripal Rating Gold Status](https://tripal.readthedocs.io/en/7.x-3.x/_images/Tripal-Gold.png)](https://tripal.readthedocs.io/en/7.x-3.x/extensions/module_rating.html#Gold)
 ![Tripal Dependency](https://img.shields.io/badge/tripal-%3E=3.0-brightgreen)
-![Module is Generic](https://img.shields.io/badge/generic-tested-green)
 ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/UofS-Pulse-Binfo/nd_genotypes?include_prereleases)
 
 [![Build Status](https://travis-ci.org/UofS-Pulse-Binfo/nd_genotypes.svg?branch=7.x-3.x)](https://travis-ci.org/UofS-Pulse-Binfo/nd_genotypes)
