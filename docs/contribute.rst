@@ -25,7 +25,7 @@ This will run all tests associated with the ND Genotypes extension module. If yo
 Manual Testing (Demonstration)
 --------------------------------
 
-We have provided a `Tripal Test Suite Database Seeder <https://tripaltestsuite.readthedocs.io/en/latest/db-seeders.html>` to make development and demonstration of functionality easier. To populate your development database with fake phenotypic data:
+We have provided a `Tripal Test Suite Database Seeder <https://tripaltestsuite.readthedocs.io/en/latest/db-seeders.html>`_ to make development and demonstration of functionality easier. To populate your development database with fake phenotypic data:
 
 1. Install this module according to the instructions in the administration guide.
 2. Create an organism (genus: Tripalus; species: databasica)
@@ -39,7 +39,7 @@ We have provided a `Tripal Test Suite Database Seeder <https://tripaltestsuite.r
 
 4. Populate the materialized views by going to Administration » Tripal » Extensions » Natural Diversity Genotypes » Sync and Choose "Tripalus" then click the "Sync" button. Finally run the Tripal jobs submitted.
 5. To play with the genotype matrix go to ``[your drupal site]/chado/genotype/[genus]``. You can see what germplasm are available by typing a single random letter in the autocomplete box.
-6. To play with marker/variant pages, go to Administration » Content » Tripal Content » Publish Tripal Content and then select "Genetic Marker"/"Sequence Variant" and publish to create pages. Remember to run the tripal jobs submitted.
+6. To play with marker/variant pages, go to Administration » Content » Tripal Content » Publish Tripal Content and then select "Genetic Marker"/"Sequence Variant" and publish to create pages. Remember to run the tripal jobs submitted on the command-line using Drush ``trp-job-run``.
 
 .. warning::
 
