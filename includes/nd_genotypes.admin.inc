@@ -440,7 +440,8 @@ function nd_genotypes_admin_sync_mviews($form, $form_state) {
     '#title' => 'Materialized Views',
     '#description' => 'Materialized views are used extensively by this module to
       speed up quering and provide flexibility on how you choose to store your data. <strong>It is important to update these
-      materialized views whenever you load in new genotype data.</strong>',
+      materialized views whenever you load in new genotype data.</strong>
+      <div class="messages notice">It is important the sync Tripal job be run on the command-line through Drush using the command displayed when you submit this form.</div>',
     '#collapsible' => TRUE,
     '#collapsed' => FALSE
   );
