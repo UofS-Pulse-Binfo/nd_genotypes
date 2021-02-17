@@ -133,6 +133,7 @@ jobs:
         DRUPAL_ROOT: ${{ steps.tripalsetup.outputs.drupal_root }}
       run: |
         cd $DRUPAL_ROOT/sites/all/modules/nd_genotypes
+        drush php-script tests/createTables.drush.php
         composer require --dev mheap/phpunit-github-actions-printer --quiet
         composer update --quiet
         ./vendor/bin/phpunit --printer mheap\\GithubActionsReporter\\Printer
