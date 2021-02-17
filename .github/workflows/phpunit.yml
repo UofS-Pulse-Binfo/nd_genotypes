@@ -15,7 +15,7 @@ jobs:
       matrix:
         php-versions: ['7.1', '7.2']
     # Name the matrix build so we can tell them apart.
-    name: PHP Unit Testing of Analyzed Phenotypes Module (PHP ${{ matrix.php-versions }})
+    name: PHP Unit Testing of ND Genotypes Module (PHP ${{ matrix.php-versions }})
 
     # Service containers to run with `run-tests`
     services:
