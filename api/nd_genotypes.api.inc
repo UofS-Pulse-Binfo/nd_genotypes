@@ -101,6 +101,13 @@ function ndg_remote_chado_copy($copy_command, $args = array()) {
   // Setup the command within a drush created psql session using \COPY.
   $connection_string = `drush sql-connect`;
   $connection_string = trim($connection_string);
+
+  // Strip the PGPASSFILE variable declaration at the start of the connection string
+  $prefix_pattern = "/^PGPASSFILE=([a-zA-Z0-9\/_\-]*)[\s]/";
+  if (preg_match($prefix_pattern, $connection_string)) {	  
+    $connection_string = preg_replace($prefix_pattern, '', $connection_string);
+  }
+
   $command = $connection_string . ' -c "\\' . $copy_command . '"';
 
   // Execute the command
