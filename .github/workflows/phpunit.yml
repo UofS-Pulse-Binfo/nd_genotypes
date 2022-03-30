@@ -59,6 +59,7 @@ jobs:
         postgres_user: tripaladmin
         postgres_pass: somesupersecurepassword
         postgres_db: testdb
+        tripal_version: 7.x-3.x
 
 
     # LIBRARIES:
